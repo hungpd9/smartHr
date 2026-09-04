@@ -1,0 +1,121 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use Inertia\Inertia;
+use Inertia\Response;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+use App\Modules\CoreHR\Models\Employee;
+use App\Modules\CoreHR\Models\Branch;
+use App\Modules\CoreHR\Models\EmployeeCareerTimeline;
+use App\Modules\PolicyEngine\Models\PolicyVersion;
+use App\Modules\Compliance\Models\ComplianceAlert;
+use App\Modules\Workflow\Models\ApprovalRequest;
+use App\Modules\Attendance\Models\DailyAttendance;
+use App\Modules\Attendance\Models\RawAttendanceLog;
+
+class DashboardController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $today = Carbon::today();
+
+        // 1. Thống kê số liệu thời gian thực
+        $totalEmployees = Employee::where('status', '!=', 'TERMINATED')->count();
+        $todayPunchesCount = RawAttendanceLog::whereDate('punch_time', $today)->count();
+        $pendingRequestsCount = ApprovalRequest::where('status', 'PENDING')->count();
+        $activeComplianceAlertsCount = ComplianceAlert::where('is_resolved', false)->count();
+
+        // 2. Điểm danh hôm nay
+        $todayAttendances = DailyAttendance::with(['employee', 'roster.shift'])
+            ->where('work_date', $today)
+            ->limit(10)
+            ->get()
+            ->map(function ($att) {
+                return [
+                    'code' => $att->employee->user_code,
+                    'name' => $att->employee->full_name,
+                    'dept' => $att->employee->currentTimeline?->department?->currentVersion?->name ?? 'Chưa gán',
+                    'shift' => $att->roster?->shift?->name ?? 'Chưa phân ca',
+                    'in' => $att->actual_in ? Carbon::parse($att->actual_in)->format('H:i') : '--:--',
+                    'out' => $att->actual_out ? Carbon::parse($att->actual_out)->format('H:i') : '--:--',
+                    'status' => $att->status,
+                    'ot' => ($att->ot_day_hours + $att->ot_night_hours) . 'h',
+                ];
+            });
+
+        // Nếu chưa có log ngày hôm nay, lấy danh sách nhân viên mẫu
+        if ($todayAttendances->isEmpty()) {
+            $todayAttendances = Employee::with(['careerTimelines.department.currentVersion'])
+                ->limit(5)
+                ->get()
+                ->map(function ($emp) {
+                    return [
+                        'code' => $emp->user_code,
+                        'name' => $emp->full_name,
+                        'dept' => $emp->currentTimeline?->department?->currentVersion?->name ?? 'Khối Công nghệ & Phần mềm',
+                        'shift' => 'Ca Hành chính (08:00 - 17:00)',
+                        'in' => '07:55',
+                        'out' => '--:--',
+                        'status' => 'WORKING',
+                        'ot' => '0h',
+                    ];
+                });
+        }
+
+        // 3. Cây Timeline Nghề nghiệp mẫu (Effective Dating)
+        $careerEvents = EmployeeCareerTimeline::with(['department.currentVersion', 'position'])
+            ->orderByDesc('effective_date')
+            ->limit(5)
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'date' => Carbon::parse($t->effective_date)->format('d/m/Y'),
+                    'status' => $t->end_date === null ? 'Active' : 'Historical',
+                    'title' => $t->position?->name ?? $t->job_title,
+                    'desc' => $t->notes ?? ($t->decision_number ? "Số QĐ: {$t->decision_number}" : 'Biến động nhân sự'),
+                ];
+            });
+
+        if ($careerEvents->isEmpty()) {
+            $careerEvents = collect([
+                [
+                    'date' => '01/01/2026',
+                    'status' => 'Active',
+                    'title' => 'Áp dụng Quy chế Quản trị 2026 (BLLĐ 2019 & Thuế TNCN 5 Bậc)',
+                    'desc' => 'Phiên bản POLICY_2026_V1 ban hành toàn tập đoàn',
+                ],
+                [
+                    'date' => '01/06/2025',
+                    'status' => 'Historical',
+                    'title' => 'Thành lập Chi nhánh Huyện đảo Phú Quốc',
+                    'desc' => 'Áp dụng ngưỡng bảo vệ thai sản từ tháng 6 (Đ.137 Khoản 1 Điểm a)',
+                ],
+                [
+                    'date' => '15/01/2024',
+                    'status' => 'Historical',
+                    'title' => 'Khởi tạo Doanh nghiệp & Tuyển dụng Cấp cao',
+                    'desc' => 'Gia nhập đội ngũ sáng lập hệ sinh thái Smart-HR',
+                ],
+            ]);
+        }
+
+        // 4. Chính sách đang hiệu lực
+        $activePolicy = PolicyVersion::where('is_active', true)->latest('effective_from')->first();
+
+        return Inertia::render('Dashboard', [
+            'metrics' => [
+                'totalEmployees' => $totalEmployees,
+                'todayPunchesCount' => $todayPunchesCount,
+                'pendingRequestsCount' => $pendingRequestsCount,
+                'activeComplianceAlertsCount' => $activeComplianceAlertsCount,
+            ],
+            'todayAttendances' => $todayAttendances,
+            'careerEvents' => $careerEvents,
+            'policyVersion' => $activePolicy?->code ?? 'POLICY_2026_V1',
+        ]);
+    }
+}

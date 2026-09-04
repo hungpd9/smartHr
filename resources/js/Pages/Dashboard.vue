@@ -10,31 +10,45 @@ import Dialog from 'primevue/dialog';
 import Timeline from 'primevue/timeline';
 import { useToast } from 'primevue/usetoast';
 
+const props = defineProps<{
+    metrics: {
+        totalEmployees: number;
+        todayPunchesCount: number;
+        pendingRequestsCount: number;
+        activeComplianceAlertsCount: number;
+    };
+    todayAttendances: Array<{
+        code: string;
+        name: string;
+        dept: string;
+        shift: string;
+        in: string;
+        out: string;
+        status: string;
+        ot: string;
+    }>;
+    careerEvents: Array<{
+        date: string;
+        status: string;
+        title: string;
+        desc: string;
+    }>;
+    policyVersion: string;
+}>();
+
 const toast = useToast();
 
-// Demo data for Dashboard
+// Dynamic metrics from backend
 const stats = ref([
-    { title: 'Tổng số Nhân sự', value: '1,248', change: '+12 tháng này', icon: 'pi pi-users', color: 'indigo' },
-    { title: 'Quẹt thẻ đúng giờ', value: '94.6%', change: 'Hôm nay: 1,180 / 1,248', icon: 'pi pi-check-circle', color: 'emerald' },
-    { title: 'Đơn chờ phê duyệt', value: '18', change: '5 đơn cần duyệt gấp', icon: 'pi pi-inbox', color: 'amber' },
-    { title: 'Cảnh báo Tuân thủ (BLLĐ)', value: '3', change: '2 chạm trần 35h OT, 1 HĐLĐ', icon: 'pi pi-exclamation-triangle', color: 'rose' },
+    { title: 'Tổng số Nhân sự', value: props.metrics.totalEmployees.toLocaleString(), change: 'Cơ sở dữ liệu thực tế', icon: 'pi pi-users', color: 'indigo' },
+    { title: 'Lượt quẹt thẻ hôm nay', value: props.metrics.todayPunchesCount.toLocaleString(), change: 'Đồng bộ từ Edge Daemon', icon: 'pi pi-check-circle', color: 'emerald' },
+    { title: 'Đơn chờ phê duyệt', value: props.metrics.pendingRequestsCount.toLocaleString(), change: 'Quy trình đa cấp', icon: 'pi pi-inbox', color: 'amber' },
+    { title: 'Cảnh báo Tuân thủ (BLLĐ)', value: props.metrics.activeComplianceAlertsCount.toLocaleString(), change: 'Giám sát trần OT & HĐLĐ', icon: 'pi pi-exclamation-triangle', color: 'rose' },
 ]);
 
-// Demo Today Attendance Records
-const todayAttendances = ref([
-    { code: 'EMP001', name: 'Nguyễn Văn An', dept: 'Kỹ thuật Phần mềm', shift: 'Hành chính (08:00 - 17:00)', in: '07:55', out: '17:05', status: 'ON_TIME', ot: '0h' },
-    { code: 'EMP002', name: 'Trần Thị Mai', dept: 'Kinh doanh & Bán lẻ', shift: 'Ca Sáng (06:00 - 14:00)', in: '06:12', out: '14:00', status: 'LATE', ot: '0h' },
-    { code: 'EMP003', name: 'Lê Hoàng Nam', dept: 'Kho bãi & Vận tải', shift: 'Ca Chiều (14:00 - 22:00)', in: '13:58', out: '--:--', status: 'WORKING', ot: '0h' },
-    { code: 'EMP004', name: 'Phạm Thị Lan', dept: 'Tài chính - Kế toán', shift: 'Hành chính (08:00 - 17:00)', in: '08:00', out: '19:30', status: 'OVERTIME', ot: '2.5h' },
-]);
-
-// Demo Career Timeline (Effective Dating)
-const careerEvents = ref([
-    { date: '15/01/2026', status: 'Active', title: 'Bổ nhiệm Trưởng nhóm Dev', desc: 'Quyết định số 05/QĐ-BN ký bởi Tổng Giám đốc' },
-    { date: '01/07/2025', status: 'Historical', title: 'Tăng bậc lương kỹ sư cấp 2', desc: 'Điều chỉnh theo đánh giá năng lực định kỳ' },
-    { date: '15/03/2024', status: 'Historical', title: 'Chính thức tiếp nhận nhân sự', desc: 'Hoàn tất thời gian thử việc 60 ngày' },
-    { date: '15/01/2024', status: 'Historical', title: 'Gia nhập doanh nghiệp (Onboarding)', desc: 'Ký Hợp đồng thử việc 02 tháng' },
-]);
+// Attendance & Career data from backend
+const todayAttendances = ref(props.todayAttendances);
+const careerEvents = ref(props.careerEvents);
 
 // Consent Modal for Article 137 Labor Code
 const isConsentModalOpen = ref(false);
