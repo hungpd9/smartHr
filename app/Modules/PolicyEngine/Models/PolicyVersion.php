@@ -39,9 +39,19 @@ class PolicyVersion extends Model
         return $this->hasOne(AttendancePolicyConfig::class);
     }
 
+    public function payrollConfig(): HasOne
+    {
+        return $this->hasOne(PayrollPolicyConfig::class);
+    }
+
     public function childWelfarePolicies(): HasMany
     {
         return $this->hasMany(ChildWelfarePolicy::class);
+    }
+
+    public function welfareSchemes(): HasMany
+    {
+        return $this->hasMany(WelfareScheme::class);
     }
 
     public function pitTaxBrackets(): HasMany
@@ -49,3 +59,4 @@ class PolicyVersion extends Model
         return $this->hasMany(PitTaxBracket::class)->orderBy('tier');
     }
 }
+

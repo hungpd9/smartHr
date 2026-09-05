@@ -1,7 +1,7 @@
 # SMART-HR: HỆ THỐNG TÀI LIỆU KỸ THUẬT MODULE CHUẨN HÓA (11 MODULES)
 
 > **Hệ sinh thái Quản trị Nguồn nhân lực Thông minh, Đa Chi nhánh & Tuân thủ Bộ luật Lao động Việt Nam 2019**  
-> *Kiến trúc: Modular Monolith (Laravel 13+ / Vue 3 + Inertia.js + PrimeVue / Golang Edge IoT / MySQL 8.0)*
+> *Kiến trúc: Modular Monolith (Laravel 13+ / Vue 3 + Inertia.js + Element Plus / Golang Edge IoT / MySQL 8.0)*
 
 ---
 

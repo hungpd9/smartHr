@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureUserRole::class,
+            'perm' => \App\Http\Middleware\CheckMatrixPermission::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

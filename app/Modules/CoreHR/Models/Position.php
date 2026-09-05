@@ -14,20 +14,31 @@ class Position extends Model
 
     protected $fillable = [
         'tenant_id',
+        'department_id',
         'code',
         'name',
         'level',
+        'allowance_amount',
+        'bonus_one_time',
+        'description',
         'is_active',
     ];
 
     protected $casts = [
         'level' => 'integer',
+        'allowance_amount' => 'decimal:2',
+        'bonus_one_time' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function careerTimelines(): HasMany

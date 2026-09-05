@@ -17,6 +17,9 @@ return new class extends Migration
             $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
             $table->string('month_year', 7)->comment('Kỳ lương (VD: 2026-09)');
             $table->decimal('gross_salary', 15, 2)->default(0.00);
+            $table->decimal('position_allowance_amount', 15, 2)->default(0.00)->comment('Phụ cấp chức vụ / trách nhiệm');
+            $table->decimal('child_allowance_amount', 15, 2)->default(0.00)->comment('Trợ cấp con nhỏ hàng tháng');
+            $table->decimal('certificate_allowance_amount', 15, 2)->default(0.00)->comment('Phụ cấp bằng cấp / chứng chỉ chuyên môn');
             $table->decimal('tax_exempt_ot_amount', 15, 2)->default(0.00)->comment('Thu nhập OT miễn thuế (3 tầng trần NĐ 145/2020)');
             $table->decimal('taxable_ot_amount', 15, 2)->default(0.00)->comment('Thu nhập OT chịu thuế');
             $table->decimal('social_insurance_employee', 15, 2)->default(0.00)->comment('BHXH NLĐ 8%');

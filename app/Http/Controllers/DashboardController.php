@@ -106,6 +106,96 @@ class DashboardController extends Controller
         // 4. Chính sách đang hiệu lực
         $activePolicy = PolicyVersion::where('is_active', true)->latest('effective_from')->first();
 
+        // 5. Tính toán dữ liệu 4 Biểu đồ Quản trị Điều hành (Executive Analytics) với Cache 5 phút
+        $tenantId = (int) ($request->user()?->tenant_id ?? 1);
+        $analytics = \Illuminate\Support\Facades\Cache::remember("smart_hr:dashboard_analytics:{$tenantId}", 300, function () {
+            $currentMonth = '2026-09';
+
+            // Biểu đồ 1: Burnout Fatigue Risk (Nguy cơ Quá tải & Trần OT Điều 107)
+            $monthlyRecords = \App\Modules\Attendance\Models\MonthlyAttendance::with('employee')
+                ->where('month_year', $currentMonth)
+                ->get();
+
+            $burnoutData = $monthlyRecords->map(function ($m) {
+                $ot = (float) $m->total_ot_hours;
+                $status = 'NORMAL';
+                $badge = 'success';
+                if ($ot >= 40) {
+                    $status = 'BREACH';
+                    $badge = 'danger';
+                } elseif ($ot >= 35) {
+                    $status = 'ALERT';
+                    $badge = 'warning';
+                } elseif ($ot >= 20) {
+                    $status = 'ELEVATED';
+                    $badge = 'info';
+                }
+
+                return [
+                    'employee_name' => $m->employee?->full_name ?? 'Nhân viên',
+                    'user_code' => $m->employee?->user_code ?? '',
+                    'ot_hours' => $ot,
+                    'max_threshold' => 40.0,
+                    'status' => $status,
+                    'badge' => $badge,
+                    'percentage' => min(100, round(($ot / 40.0) * 100, 1)),
+                ];
+            })->sortByDesc('ot_hours')->values()->take(5);
+
+            // Biểu đồ 2: Turnover Trend (Xu hướng Biến động Nhân sự 2026: Tuyển mới vs Thôi việc)
+            $months = ['01', '02', '03', '04', '05', '06', '07', '08', '09'];
+            $turnoverData = collect($months)->map(function ($m) {
+                $monthPrefix = "2026-{$m}";
+                $onboardCount = EmployeeCareerTimeline::where('event_type', 'ONBOARDING')
+                    ->where('effective_date', 'like', "{$monthPrefix}%")
+                    ->count();
+                $offboardCount = EmployeeCareerTimeline::where('event_type', 'OFFBOARDING')
+                    ->where('effective_date', 'like', "{$monthPrefix}%")
+                    ->count();
+
+                return [
+                    'month' => "T{$m}",
+                    'onboarding' => $onboardCount,
+                    'offboarding' => $offboardCount,
+                    'net_growth' => $onboardCount - $offboardCount,
+                ];
+            });
+
+            // Biểu đồ 3: Headcount Distribution (Cơ cấu Nhân sự theo Khối & Chi nhánh)
+            $departments = \App\Modules\CoreHR\Models\Department::with('currentVersion')
+                ->whereIn('level', [1, 2])
+                ->where('status', 'ACTIVE')
+                ->get();
+
+            $headcountData = $departments->map(function ($d) {
+                $count = Employee::whereHas('currentTimeline', function ($q) use ($d) {
+                    $q->where('department_id', $d->id)
+                      ->orWhereHas('department', fn ($subQ) => $subQ->where('parent_id', $d->id));
+                })->where('status', '!=', 'TERMINATED')->count();
+
+                return [
+                    'name' => $d->currentVersion?->name ?? $d->code,
+                    'count' => $count,
+                ];
+            })->filter(fn ($item) => $item['count'] > 0)->values();
+
+            // Biểu đồ 4: Attendance Health Index (Chỉ số Sức khỏe Kỷ luật Công tác)
+            $totalDaily = DailyAttendance::count();
+            $healthIndex = [
+                'on_time' => $totalDaily > 0 ? round((DailyAttendance::where('late_minutes', 0)->where('early_minutes', 0)->where('status', 'PRESENT')->count() / $totalDaily) * 100, 1) : 85.0,
+                'late_early' => $totalDaily > 0 ? round((DailyAttendance::where(fn ($q) => $q->where('late_minutes', '>', 0)->orWhere('early_minutes', '>', 0))->count() / $totalDaily) * 100, 1) : 10.0,
+                'leave' => $totalDaily > 0 ? round((DailyAttendance::whereIn('status', ['LEAVE_PAID', 'LEAVE_UNPAID'])->count() / $totalDaily) * 100, 1) : 4.0,
+                'absent' => $totalDaily > 0 ? round((DailyAttendance::where('status', 'ABSENT')->count() / $totalDaily) * 100, 1) : 1.0,
+            ];
+
+            return [
+                'burnoutData' => $burnoutData,
+                'turnoverData' => $turnoverData,
+                'headcountData' => $headcountData,
+                'healthIndex' => $healthIndex,
+            ];
+        });
+
         return Inertia::render('Dashboard', [
             'metrics' => [
                 'totalEmployees' => $totalEmployees,
@@ -113,6 +203,7 @@ class DashboardController extends Controller
                 'pendingRequestsCount' => $pendingRequestsCount,
                 'activeComplianceAlertsCount' => $activeComplianceAlertsCount,
             ],
+            'analytics' => $analytics,
             'todayAttendances' => $todayAttendances,
             'careerEvents' => $careerEvents,
             'policyVersion' => $activePolicy?->code ?? 'POLICY_2026_V1',

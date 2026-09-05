@@ -56,7 +56,7 @@ Dự án kế thừa các bài học thực chiến quý giá từ hệ thống 
 | Phân hệ | Công nghệ | Vai trò |
 |---|---|---|
 | **Core Backend** | **Laravel 13 / PHP 8.4+** | Application Core, Modular Architecture, Pipeline Engine, RESTful API |
-| **Frontend UI** | **Vue 3 + Inertia.js + PrimeVue** | Single-Page Experience (Server-Driven SPA), Reactive Timesheet Grid (VirtualScroll), Drag-and-Drop Rostering, TailwindCSS, Không phụ thuộc theme thương mại mua ngoài |
+| **Frontend UI** | **Vue 3 + Inertia.js + Element Plus** | Single-Page Experience (Server-Driven SPA), Reactive Timesheet Grid, Drag-and-Drop Rostering, TailwindCSS, 100% MIT License mã nguồn mở |
 | **IoT Edge Daemon** | **Golang (Go 1.26+)** | Kết nối máy chấm công LAN, SQLite Offline buffer, Cloud Sync HMAC |
 | **Cơ sở dữ liệu** | **MySQL 8.0+** | Multi-Tenant Partitioning, Temporal Effective Dating, Immutable Audit Trail |
 | **Hàng đợi & Đệm** | **Redis / Laravel Horizon** | Asynchronous Queue, Distributed Lock, Cache Policy |

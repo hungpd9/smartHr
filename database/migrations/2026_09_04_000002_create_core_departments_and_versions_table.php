@@ -17,11 +17,14 @@ return new class extends Migration
             $table->foreignId('branch_id')->constrained('branches')->cascadeOnDelete();
             $table->string('code', 50)->comment('Mã phòng ban cố định (VD: DEPT_SALE, DEPT_IT)');
             $table->unsignedBigInteger('parent_id')->nullable()->comment('Phòng ban cấp trên (cấu trúc Tree)');
+            $table->unsignedTinyInteger('level')->default(2)->comment('Phân cấp tổ chức (1: Khối, 2: Phòng ban, 3: Đội nhóm/Team)');
+            $table->integer('order')->default(0)->comment('Thứ tự sắp xếp hiển thị trên sơ đồ cây');
             $table->enum('status', ['ACTIVE', 'INACTIVE', 'ARCHIVED'])->default('ACTIVE');
             $table->timestamps();
 
             $table->unique(['tenant_id', 'code'], 'uk_tenant_dept_code');
             $table->foreign('parent_id')->references('id')->on('departments')->nullOnDelete();
+            $table->index(['tenant_id', 'parent_id'], 'idx_tenant_parent_dept');
         });
 
         // 4. Department Versions Table (Lịch sử đổi tên & chức năng nhiệm vụ theo thời gian)

@@ -22,6 +22,7 @@ class ChildWelfarePolicy extends Model
         'prohibit_overtime',
         'is_statutory',
         'is_active',
+        'visibility',
     ];
 
     protected $casts = [
@@ -37,5 +38,18 @@ class ChildWelfarePolicy extends Model
     public function policyVersion(): BelongsTo
     {
         return $this->belongsTo(PolicyVersion::class);
+    }
+
+    public function scopeVisible($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('visibility', 'VISIBLE')->orWhere('is_active', true);
+        });
+    }
+
+    public function setVisibilityAttribute($value): void
+    {
+        $this->attributes['visibility'] = $value;
+        $this->attributes['is_active'] = ($value === 'VISIBLE');
     }
 }

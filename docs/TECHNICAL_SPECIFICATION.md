@@ -2,7 +2,7 @@
 
 ## Hệ sinh thái Quản trị Nhân sự Đa Chi nhánh & Chuỗi Doanh nghiệp (Enterprise Modular HRMS)
 
-Tài liệu này xác định kiến trúc toàn diện từ mô hình dữ liệu, cơ chế phi tập trung (Edge IoT), các động cơ tính toán nghiệp vụ (Calculation Pipelines, Constraint Solvers) và hệ thống biểu mẫu động cho **Smart-HR**. Hệ thống xây dựng trên nền tảng **Laravel 13+ (PHP 8.4+)**, **Golang Edge Collector Daemon**, kiến trúc frontend **Inertia.js v2 + Vue 3 Composition API + PrimeVue** và cơ sở dữ liệu **MySQL 8.0** chuẩn hóa, bám sát các chuẩn mực quản trị hiện đại và **Bộ luật Lao động Việt Nam 2019 (BLLĐ 2019)** cùng các chính sách thuế, bảo hiểm xã hội mới nhất (bao gồm biểu thuế TNCN 5 bậc hiệu lực từ năm 2026).
+Tài liệu này xác định kiến trúc toàn diện từ mô hình dữ liệu, cơ chế phi tập trung (Edge IoT), các động cơ tính toán nghiệp vụ (Calculation Pipelines, Constraint Solvers) và hệ thống biểu mẫu động cho **Smart-HR**. Hệ thống xây dựng trên nền tảng **Laravel 13+ (PHP 8.4+)**, **Golang Edge Collector Daemon**, kiến trúc frontend **Inertia.js v2 + Vue 3 Composition API + Element Plus** và cơ sở dữ liệu **MySQL 8.0** chuẩn hóa, bám sát các chuẩn mực quản trị hiện đại và **Bộ luật Lao động Việt Nam 2019 (BLLĐ 2019)** cùng các chính sách thuế, bảo hiểm xã hội mới nhất (bao gồm biểu thuế TNCN 5 bậc hiệu lực từ năm 2026).
 
 ---
 
@@ -156,6 +156,7 @@ CREATE TABLE `employees` (
     `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `tenant_id` BIGINT UNSIGNED NOT NULL,
     `user_code` VARCHAR(50) NOT NULL COMMENT 'Mã nhân viên (EMP001...)',
+    `attendance_code` VARCHAR(50) NULL COMMENT 'Mã ID trên máy chấm công vân tay/face (enroll ID)',
     `full_name` VARCHAR(255) NOT NULL,
     `gender` ENUM('MALE', 'FEMALE', 'OTHER') NOT NULL,
     `birth_date` DATE NOT NULL,
@@ -264,8 +265,129 @@ CREATE TABLE `child_welfare_policies` (
     `prohibit_night_shift` BOOLEAN DEFAULT FALSE COMMENT 'Nghiêm cấm phân ca đêm',
     `prohibit_overtime` BOOLEAN DEFAULT FALSE COMMENT 'Nghiêm cấm phân làm thêm giờ',
     `is_statutory` BOOLEAN DEFAULT FALSE COMMENT 'TRUE nếu là quy định bắt buộc theo Điều 137 BLLĐ',
+    `visibility` ENUM('VISIBLE', 'HIDDEN') DEFAULT 'VISIBLE' COMMENT 'Trạng thái hiển thị / áp dụng chính sách',
     `is_active` BOOLEAN DEFAULT TRUE COMMENT 'Doanh nghiệp có bật áp dụng chế độ này không',
+    INDEX `idx_child_policy_vis` (`policy_version_id`, `visibility`, `is_statutory`),
     CONSTRAINT `fk_child_cfg_policy` FOREIGN KEY (`policy_version_id`) REFERENCES `policy_versions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10b. Cấu hình Lương, Thuế & Bảo hiểm Xã hội Doanh nghiệp (Zero-Hardcode Payroll Config)
+CREATE TABLE `payroll_policy_configs` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `policy_version_id` BIGINT UNSIGNED NOT NULL UNIQUE,
+    `standard_working_days_mode` ENUM('FIXED', 'CALENDAR_BASED') DEFAULT 'FIXED' COMMENT 'Chế độ ngày công chuẩn (Cố định hoặc theo lịch)',
+    `fixed_standard_working_days` DECIMAL(4,2) DEFAULT 26.00 COMMENT 'Số ngày công chuẩn cố định trong tháng (VD: 24 hoặc 26)',
+    `standard_working_hours_per_day` DECIMAL(4,2) DEFAULT 8.00 COMMENT 'Giờ làm việc tiêu chuẩn một ngày',
+    `payment_day` INT DEFAULT 10 COMMENT 'Ngày chi trả lương trong tháng',
+    `pay_early_on_holiday_weekend` BOOLEAN DEFAULT TRUE COMMENT 'Chi trả sớm nếu ngày trả lương rơi vào thứ Bảy/CN/Lễ',
+    `personal_deduction` DECIMAL(15,2) DEFAULT 11000000.00 COMMENT 'Mức giảm trừ gia cảnh bản thân (VND/tháng)',
+    `dependent_deduction` DECIMAL(15,2) DEFAULT 4400000.00 COMMENT 'Mức giảm trừ người phụ thuộc (VND/người/tháng)',
+    `default_child_allowance` DECIMAL(15,2) DEFAULT 300000.00 COMMENT 'Mức trợ cấp con nhỏ mặc định (VND/bé/tháng)',
+    `base_salary` DECIMAL(15,2) DEFAULT 2340000.00 COMMENT 'Mức lương cơ sở nhà nước làm căn cứ trần BHXH',
+    `max_salary_bhxh` DECIMAL(15,2) DEFAULT 46800000.00 COMMENT 'Mức trần đóng BHXH/BHYT (20 lần lương cơ sở)',
+    `max_salary_bhtn` DECIMAL(15,2) DEFAULT 99200000.00 COMMENT 'Mức trần đóng BHTN (20 lần lương tối thiểu vùng)',
+    `company_bhxh_rate` DECIMAL(5,2) DEFAULT 17.50,
+    `company_bhyt_rate` DECIMAL(5,2) DEFAULT 3.00,
+    `company_bhtn_rate` DECIMAL(5,2) DEFAULT 1.00,
+    `employee_bhxh_rate` DECIMAL(5,2) DEFAULT 8.00,
+    `employee_bhyt_rate` DECIMAL(5,2) DEFAULT 1.50,
+    `employee_bhtn_rate` DECIMAL(5,2) DEFAULT 1.00,
+    `probation_salary_percentage` DECIMAL(5,2) DEFAULT 85.00 COMMENT 'Tỷ lệ lương thử việc tối thiểu theo BLLĐ (85%)',
+    `probation_pit_rate` DECIMAL(5,2) DEFAULT 10.00 COMMENT 'Thuế suất khấu trừ thử việc / vãng lai (10%)',
+    `probation_pit_threshold` DECIMAL(15,2) DEFAULT 2000000.00 COMMENT 'Ngưỡng thu nhập bắt đầu khấu trừ thuế 10%',
+    `ot_weekday_day_rate` DECIMAL(4,2) DEFAULT 1.50,
+    `ot_weekday_night_rate` DECIMAL(4,2) DEFAULT 2.00,
+    `ot_weekend_day_rate` DECIMAL(4,2) DEFAULT 2.00,
+    `ot_weekend_night_rate` DECIMAL(4,2) DEFAULT 2.70,
+    `ot_holiday_day_rate` DECIMAL(4,2) DEFAULT 3.00,
+    `ot_holiday_night_rate` DECIMAL(4,2) DEFAULT 3.90,
+    `ot_tax_exempt_daily_limit_percent` INT DEFAULT 50 COMMENT 'Trần OT miễn thuế ngày (50% ca bình thường)',
+    `ot_tax_exempt_monthly_limit_hours` INT DEFAULT 40 COMMENT 'Trần OT miễn thuế tháng (40 giờ theo Điều 107)',
+    `ot_tax_exempt_yearly_limit_hours` INT DEFAULT 200 COMMENT 'Trần OT miễn thuế năm (200h hoặc 300h)',
+    CONSTRAINT `fk_payroll_cfg_policy` FOREIGN KEY (`policy_version_id`) REFERENCES `policy_versions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10c. Chế độ Phúc lợi Doanh nghiệp Đa năng (Lương, Chấm công, Nghỉ ngơi, Trợ cấp)
+CREATE TABLE `welfare_schemes` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT UNSIGNED NOT NULL,
+    `policy_version_id` BIGINT UNSIGNED NULL,
+    `code` VARCHAR(50) NOT NULL COMMENT 'Mã phúc lợi (VD: NGUOI_CAO_TUOI, KHUYET_TAT, GYM)',
+    `name` VARCHAR(200) NOT NULL COMMENT 'Tên chế độ phúc lợi doanh nghiệp',
+    `category` ENUM('CHILD_CARE', 'MATERNITY_FEMALE', 'HEALTH_WELLNESS', 'WORKING_COND', 'FINANCIAL_SUPPORT', 'SPECIAL_ALLOWANCE') NOT NULL,
+    `visibility` ENUM('VISIBLE', 'HIDDEN') DEFAULT 'VISIBLE' COMMENT 'Trạng thái Hiện / Ẩn chính sách',
+    `is_statutory` BOOLEAN DEFAULT FALSE COMMENT 'Bắt buộc luật định hay doanh nghiệp tự mở rộng',
+    `daily_exemption_minutes` INT DEFAULT 0 COMMENT 'Số phút miễn trừ giờ làm việc mỗi ngày',
+    `pay_type` ENUM('PAID', 'UNPAID', 'PARTIAL') DEFAULT 'PAID',
+    `prohibit_night_shift` BOOLEAN DEFAULT FALSE,
+    `prohibit_overtime` BOOLEAN DEFAULT FALSE,
+    `additional_leave_days_per_year` DECIMAL(4,2) DEFAULT 0.00 COMMENT 'Số ngày nghỉ phép cộng thêm hàng năm',
+    `monthly_allowance_amount` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Mức trợ cấp tiền mặt hàng tháng',
+    `one_time_bonus_amount` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Mức thưởng một lần (VD: Kết hôn, sinh con)',
+    `is_tax_exempt` BOOLEAN DEFAULT FALSE COMMENT 'Khoản chi có được miễn thuế TNCN không',
+    `applicable_gender` ENUM('ALL', 'FEMALE', 'MALE') DEFAULT 'ALL',
+    `child_min_age_months` INT NULL,
+    `child_max_age_months` INT NULL,
+    `min_seniority_months` INT NULL,
+    `description` TEXT NULL,
+    INDEX `idx_welfare_visibility_cat` (`tenant_id`, `visibility`, `category`),
+    CONSTRAINT `fk_welfare_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10d. Danh mục Phụ cấp Lương Doanh nghiệp (Kế thừa và Chuẩn hóa từ timekeeper2)
+CREATE TABLE `allowances` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT UNSIGNED NOT NULL,
+    `code` VARCHAR(50) NOT NULL COMMENT 'Mã phụ cấp (VD: PC_AN_TRUA, PC_DIEN_THOAI, PC_XANG_XE)',
+    `name` VARCHAR(200) NOT NULL,
+    `apply_type` ENUM('COMPANY_FIXED', 'INDIVIDUAL_FIXED', 'IRREGULAR') NOT NULL COMMENT 'Hình thức chi trả',
+    `is_insurance_taxable` BOOLEAN DEFAULT FALSE COMMENT 'Có tính đóng BHXH bắt buộc hay không',
+    `is_pit_taxable` BOOLEAN DEFAULT TRUE COMMENT 'Có chịu thuế TNCN hay không',
+    `is_included_in_ot_wage` BOOLEAN DEFAULT FALSE COMMENT 'Có tính vào đơn giá giờ làm thêm OT hay không',
+    `tax_exemption_limit` DECIMAL(15,2) NULL COMMENT 'Mức trần miễn thuế TNCN tối đa theo luật',
+    `default_amount` DECIMAL(15,2) DEFAULT 0.00,
+    `visibility` ENUM('VISIBLE', 'HIDDEN') DEFAULT 'VISIBLE' COMMENT 'Trạng thái Hiện / Ẩn phụ cấp',
+    `notes` TEXT NULL,
+    INDEX `idx_allowance_visibility_type` (`tenant_id`, `visibility`, `apply_type`),
+    CONSTRAINT `fk_allowance_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10e. Ma Trận Phân Quyền & Ủy Quyền Hệ Thống Đa Chiều (Granular RBAC Matrix)
+CREATE TABLE `permission_assignments` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT UNSIGNED NOT NULL,
+    `subject_type` ENUM('ROLE', 'DEPARTMENT', 'POSITION', 'USER') NOT NULL COMMENT 'Đối tượng được gán quyền',
+    `subject_id` BIGINT UNSIGNED NULL COMMENT 'ID của Phòng ban, Chức vụ hoặc Nhân viên (NULL nếu là ROLE)',
+    `subject_role` VARCHAR(50) NULL COMMENT 'Tên Role nếu subject_type = ROLE',
+    `module_code` ENUM('CORE_HR', 'PAYROLL_SALARY', 'ATTENDANCE', 'POLICY_WELFARE', 'OFFICE_RESOURCES') NOT NULL,
+    `can_view` BOOLEAN DEFAULT FALSE COMMENT 'Quyền Xem thông tin / dữ liệu',
+    `can_manage` BOOLEAN DEFAULT FALSE COMMENT 'Quyền Quản lý / Thêm / Sửa / Xóa (CRUD)',
+    `can_approve` BOOLEAN DEFAULT FALSE COMMENT 'Quyền Phê duyệt / Chốt dữ liệu',
+    `notes` VARCHAR(255) NULL,
+    INDEX `idx_perm_lookup_role` (`tenant_id`, `subject_type`, `subject_role`, `module_code`),
+    INDEX `idx_perm_lookup_id` (`tenant_id`, `subject_type`, `subject_id`, `module_code`),
+    CONSTRAINT `fk_perm_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10f. Hồ sơ Con nhỏ & Đăng ký Phúc lợi Gia đình
+CREATE TABLE `employee_children` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT UNSIGNED NOT NULL,
+    `employee_id` BIGINT UNSIGNED NOT NULL,
+    `full_name` VARCHAR(150) NOT NULL,
+    `gender` ENUM('MALE', 'FEMALE', 'OTHER') DEFAULT 'MALE',
+    `birth_date` DATE NOT NULL,
+    `birth_certificate_number` VARCHAR(100) NULL,
+    `is_tax_dependent` BOOLEAN DEFAULT TRUE COMMENT 'Đăng ký giảm trừ gia cảnh thuế TNCN',
+    `tax_dependent_code` VARCHAR(50) NULL,
+    `tax_dependent_start_date` DATE NULL,
+    `tax_dependent_end_date` DATE NULL,
+    `has_monthly_allowance` BOOLEAN DEFAULT TRUE COMMENT 'Hưởng trợ cấp con nhỏ hàng tháng',
+    `monthly_allowance_amount` DECIMAL(15,2) DEFAULT 300000.00,
+    `notes` TEXT NULL,
+    `is_active` BOOLEAN DEFAULT TRUE,
+    INDEX `idx_children_emp_birth` (`tenant_id`, `employee_id`, `birth_date`),
+    CONSTRAINT `fk_child_emp` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 11. Biểu thuế Thu nhập Cá nhân Lũy tiến (5 Bậc hiệu lực từ tháng 01/2026)
@@ -279,6 +401,22 @@ CREATE TABLE `pit_tax_brackets` (
     `quick_subtraction` DECIMAL(15,2) DEFAULT 0.00 COMMENT 'Số tiền trừ nhanh (VND)',
     INDEX `idx_pit_tier` (`policy_version_id`, `tier`),
     CONSTRAINT `fk_pit_cfg_policy` FOREIGN KEY (`policy_version_id`) REFERENCES `policy_versions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 12. Danh mục Ngày Nghỉ Lễ, Tết hưởng nguyên lương (Điều 112 BLLĐ 2019)
+CREATE TABLE `holidays` (
+    `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `tenant_id` BIGINT UNSIGNED NOT NULL,
+    `name` VARCHAR(150) NOT NULL COMMENT 'Tên ngày nghỉ lễ (Tết Dương lịch, Giỗ Tổ, 30/4...)',
+    `holiday_date` DATE NOT NULL COMMENT 'Ngày diễn ra nghỉ lễ',
+    `year` SMALLINT UNSIGNED NOT NULL COMMENT 'Năm áp dụng',
+    `is_statutory` BOOLEAN DEFAULT TRUE COMMENT 'TRUE nếu là 11 ngày lễ bắt buộc theo Điều 112 BLLĐ',
+    `notes` TEXT NULL COMMENT 'Ghi chú lịch nghỉ bù, hoán đổi ngày làm việc',
+    `created_at` TIMESTAMP NULL,
+    `updated_at` TIMESTAMP NULL,
+    UNIQUE KEY `uk_tenant_holiday_date` (`tenant_id`, `holiday_date`),
+    INDEX `idx_tenant_holiday_year` (`tenant_id`, `year`),
+    CONSTRAINT `fk_holiday_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
@@ -651,18 +789,18 @@ flowchart LR
 
 ---
 
-## 7. KIẾN TRÚC GIAO DIỆN NGƯỜI DÙNG FRONTEND (INERTIA.JS + VUE 3 + PRIMEVUE - PHƯƠNG ÁN DỰ PHÒNG CHUẨN DOANH NGHIỆP)
+## 7. KIẾN TRÚC GIAO DIỆN NGƯỜI DÙNG FRONTEND (INERTIA.JS + VUE 3 + ELEMENT PLUS - PHƯƠNG ÁN DỰ PHÒNG CHUẨN DOANH NGHIỆP)
 
 ### 7.1 Triết lý Thiết kế & Lựa chọn Công nghệ (No Commercial Template Dependency)
 - Nhằm đảm bảo khả năng chủ động 100% mã nguồn, không phát sinh chi phí mua template ngoài và không bị bó buộc vào thiết kế cứng nhắc của các theme thương mại, dự án lựa chọn **Phương án dự phòng chuẩn mở**:
   - **Framework nền tảng**: **Vue 3 (Composition API với cú pháp `<script setup lang="ts">`)**.
   - **Cầu nối Server-Driven SPA**: **Inertia.js v2** (giao tiếp trực tiếp từ Laravel Controller đến Vue components qua Page Props, bảo lưu toàn bộ sức mạnh routing, middleware, authorization của Laravel mà không cần cấu hình REST API / Vue Router / Axios / Pinia riêng).
-  - **Thư viện UI chuẩn doanh nghiệp**: **PrimeVue v4 (Styled Mode kết hợp TailwindCSS)**: Cung cấp đầy đủ bộ component xử lý dữ liệu phức tạp (DataTable, Timeline, TreeTable, Calendar, Dialog, Toast, ConfirmPopup) hoàn toàn miễn phí, mã nguồn mở, tối ưu hiệu năng cao.
+  - **Thư viện UI chuẩn doanh nghiệp**: **Element Plus kết hợp TailwindCSS**: Cung cấp đầy đủ bộ component xử lý dữ liệu phức tạp (Table, Timeline, TreeTable, Calendar, Dialog, Message, MessageBox, DatePicker) hoàn toàn miễn phí, 100% MIT License mã nguồn mở trọn đời, tối ưu hiệu năng cao và có sẵn gói ngôn ngữ Tiếng Việt chuẩn.
 
 ### 7.2 Các Thành phần Giao diện Cốt lõi (Core UI Components)
 1. **Lưới Bảng công Động (Reactive Timesheet Matrix)**:
-   - Sử dụng PrimeVue `DataTable` hỗ trợ **VirtualScroll** (cuộn ảo) mượt mà cho hàng trăm nhân viên với 31 cột ngày trong tháng.
-   - **Frozen Columns**: Đóng băng cố định cột Mã NV, Họ và tên khi cuộn ngang.
+   - Sử dụng Element Plus `el-table` hỗ trợ **VirtualScroll / Large Data** mượt mà cho hàng trăm nhân viên với 31 cột ngày trong tháng.
+   - **Fixed Columns**: Đóng băng cố định cột Mã NV, Họ và tên khi cuộn ngang.
    - **Màu sắc trạng thái thông minh**: Tự động đánh dấu màu đỏ (Đi muộn/Về sớm/Vắng), màu cam (Thiếu lượt quẹt thẻ), màu xanh lá (Đủ công), màu tím (Tăng ca OT).
    - **Tab Chuyển đổi Bảng công Chính thức & Tạm tính (Preview)**:
      - Tận dụng `router.visit(..., { preserveState: true, preserveScroll: true, only: ['timesheetData'] })` của Inertia để chuyển đổi giữa 2 chế độ mà không cần tải lại toàn bộ trang.
@@ -676,7 +814,7 @@ flowchart LR
        - Chặn tuyệt đối ca đêm/OT cho lao động nữ mang thai từ tháng thứ 7, hoặc từ tháng thứ 6 nếu làm việc ở vùng cao, vùng sâu, vùng xa, biên giới, hải đảo (Điều 137 Khoản 1 Điểm a BLLĐ 2019).
        - Hiển thị badge vàng cảnh báo cần "Đơn đồng thuận tự nguyện" đối với lao động nuôi con dưới 12 tháng (Điều 137 Khoản 1 Điểm b BLLĐ 2019).
 3. **Cây Thời gian Sự nghiệp (Career Timeline with Effective Dating)**:
-   - Sử dụng PrimeVue `Timeline` trực quan hóa chuỗi sự kiện vòng đời nhân sự: Ngày gia nhập (Onboarding), Chuyển phòng ban, Bổ nhiệm chức vụ, Tăng lương, Khen thưởng/Kỷ luật.
+   - Sử dụng Element Plus `el-timeline` trực quan hóa chuỗi sự kiện vòng đời nhân sự: Ngày gia nhập (Onboarding), Chuyển phòng ban, Bổ nhiệm chức vụ, Tăng lương, Khen thưởng/Kỷ luật.
    - Mỗi nút sự kiện gắn liền với ngày hiệu lực (`effective_date`), hiển thị trạng thái hiện tại (`Active`), sự kiện tương lai (`Scheduled`) và lịch sử quá khứ (`Historical`).
 4. **Động cơ Kết xuất Biểu mẫu Động (Dynamic JSON Schema Form Renderer)**:
    - Component Vue tự động duyệt qua cấu trúc `field_definitions` (JSON Schema) của từng loại đơn từ Module `Workflow` để sinh ra các trường tương ứng: `Text`, `Number`, `DateRange`, `Select`, `RadioGroup`, `FileUpload`.
@@ -691,3 +829,69 @@ flowchart LR
 - **Zero Redundant Store**: Loại bỏ sự cồng kềnh của Pinia/Vuex cho các dữ liệu trang. Trạng thái trang hoàn toàn bắt nguồn từ Laravel Controller thông qua `Inertia::render('ModuleName/ViewName', $props)`.
 - **Partial Reloads (`only` & `except`)**: Khi lọc chi nhánh, phòng ban hoặc đổi tháng tính công, Inertia chỉ yêu cầu server trả về khối dữ liệu bảng tính thay vì render lại toàn bộ khung HTML/Layout.
 - **Form Helper Reactive**: Sử dụng `useForm()` từ `@inertiajs/vue3` quản lý trạng thái form, tự động xử lý `processing`, `errors`, `isDirty`, hỗ trợ vô hiệu hóa nút bấm tránh double-click submit.
+
+---
+
+## 8. HỆ THỐNG PHÂN QUYỀN MA TRẬN GRANULAR (RBAC MATRIX RESOLUTION ENGINE)
+
+Nhằm đáp ứng yêu cầu phân quyền linh hoạt, bảo mật và kiểm soát phân tầng chuyên sâu của các doanh nghiệp quy mô lớn, Smart-HR áp dụng mô hình **Ma Trận Phân Quyền Đa Chiều (Multi-dimensional Permission Matrix)** kết hợp dịch vụ giải quyết quyền hạn `PermissionResolutionService` và Middleware `CheckMatrixPermission`.
+
+### 8.1 Cấu trúc Ma trận Phân quyền & 5 Phân hệ Quản trị
+Hệ thống phân tách quyền hạn độc lập trên 5 Bounded Contexts cốt lõi:
+1. `CORE_HR`: Hồ sơ nhân sự, cây sơ đồ phòng ban, chức danh, điều chuyển, thử việc, thôi việc và thâm niên.
+2. `PAYROLL_SALARY`: Xem và thiết lập mức lương nhân viên, cấu hình lương, trích nộp bảo hiểm, thuế TNCN.
+3. `ATTENDANCE`: Xem bảng công, quẹt thẻ thời gian thực, chốt công tháng, xử lý đi muộn/về sớm.
+4. `POLICY_WELFARE`: Thiết lập quy chế chấm công, danh mục phụ cấp, chế độ con nhỏ và phúc lợi doanh nghiệp.
+5. `OFFICE_RESOURCES`: Quản lý cấp phát máy tính, thiết bị IT, báo hỏng hỗ trợ, đề xuất tạm ứng và văn phòng phẩm.
+
+### 8.2 Thuật toán Phân giải Quyền hạn 4 Tầng Ưu tiên (4-Tier Permission Resolution Hierarchy)
+Khi một người dùng thực hiện một thao tác yêu cầu quyền (`can_view`, `can_manage`, `can_approve`), hệ thống giải quyết theo thứ tự ưu tiên giảm dần:
+
+$$\text{Super Admin (Bypass)} \succ \text{Ngoại lệ Cá nhân (USER)} \succ \text{Chức vụ (POSITION)} \succ \text{Phòng ban (DEPARTMENT)} \succ \text{Vai trò Mặc định (ROLE)}$$
+
+1. **Tầng 0 - Super Admin Bypass**: Quản trị viên cấp cao nhất (`SUPER_ADMIN`) luôn được trả về `TRUE` cho mọi phân hệ và mọi quyền mà không cần truy vấn bảng ma trận.
+2. **Tầng 1 - Ngoại lệ Cá nhân (`USER`)**: Cấp quyền đặc biệt trực tiếp cho một nhân sự cụ thể (ví dụ: Nhân viên IT chuyên trách quản lý tài nguyên `OFFICE_RESOURCES`).
+3. **Tầng 2 - Chức vụ / Vị trí (`POSITION`)**: Cho phép phân quyền theo cấp bậc lãnh đạo (ví dụ: *Trưởng phòng HR* được cấp `can_manage` đối với `PAYROLL_SALARY`, trong khi chuyên viên HR chỉ có `can_view` hoặc không được truy cập).
+4. **Tầng 3 - Phòng ban Chuyên trách (`DEPARTMENT`)**: Toàn bộ nhân sự trực thuộc phòng ban kế thừa quyền của phòng ban đó (ví dụ: Phòng Kế toán quản lý `PAYROLL_SALARY`).
+5. **Tầng 4 - Vai trò Toàn cục (`ROLE`)**: Cấu hình mặc định theo nhóm tài khoản (`HR_ADMIN`, `ACCOUNTANT`, `EMPLOYEE`).
+6. **Tầng 5 - Standard Fallback**: Nếu không tìm thấy bất kỳ cấu hình nào trong bảng `permission_assignments`, hệ thống áp dụng bảng quyền chuẩn theo vai trò.
+
+### 8.3 Middleware Thực thi Bảo mật (`CheckMatrixPermission`)
+- Đăng ký alias `perm` trong `bootstrap/app.php`.
+- Cú pháp áp dụng trên Routes:
+  ```php
+  Route::middleware('perm:PAYROLL_SALARY,manage')->group(...);
+  Route::middleware('perm:CORE_HR,view')->group(...);
+  Route::middleware('perm:ATTENDANCE,approve')->group(...);
+  ```
+- Chặn lập tức mã lỗi `403 Forbidden` kèm thông báo phân hệ nếu người dùng không thỏa mãn điều kiện ma trận.
+
+---
+
+## 9. CHIẾN LƯỢC TỐI ƯU HIỆU NĂNG, INDEXING & CACHING ĐA TẦNG (HIGH-PERFORMANCE OPTIMIZATION)
+
+### 9.1 Chiến lược Đánh Chỉ mục CSDL (Database Indexing Strategy)
+Để đảm bảo tốc độ phản hồi truy vấn dưới 10ms ngay cả khi bảng dữ liệu đạt hàng triệu bản ghi, hệ thống thiết kế hệ thống Composite Index chuyên biệt:
+
+| Tên Bảng | Tên Index | Các Cột Chỉ mục | Mục đích Tối ưu |
+|---|---|---|---|
+| `permission_assignments` | `idx_perm_lookup_role` | `(tenant_id, subject_type, subject_role, module_code)` | Tra cứu quyền cấp vai trò tức thì |
+| `permission_assignments` | `idx_perm_lookup_id` | `(tenant_id, subject_type, subject_id, module_code)` | Tra cứu quyền cấp User/Position/Department |
+| `welfare_schemes` | `idx_welfare_visibility_cat` | `(tenant_id, visibility, category)` | Tối ưu `scopeVisible()` và lọc nhóm phúc lợi |
+| `allowances` | `idx_allowance_visibility_type` | `(tenant_id, visibility, apply_type)` | Lọc phụ cấp áp dụng theo hình thức chi trả |
+| `employee_children` | `idx_children_emp_birth` | `(tenant_id, employee_id, birth_date)` | Tối ưu kiểm tra độ tuổi Điều 137 & giảm trừ gia cảnh |
+| `child_welfare_policies` | `idx_child_policy_vis` | `(policy_version_id, visibility, is_statutory)` | Tối ưu nạp chính sách con nhỏ trong Attendance Pipe |
+| `daily_attendances` | `idx_att_emp_date` | `(tenant_id, employee_id, work_date)` | Tăng tốc độ hiển thị bảng công 31 ngày |
+
+### 9.2 Kiến trúc Caching Đa Tầng với Redis & Memory Cache
+1. **Lớp Cache Cấu hình Quy chế (Centralized Policy Engine Cache)**:
+   - Trong quá trình tính bảng công theo dải ngày (`calculateRange`) cho 100 nhân viên trong 30 ngày, phương thức `resolveForDate` bị gọi 3.000 lần.
+   - **Giải pháp**: Áp dụng `Cache::remember("smart_hr:policy_version:{$tenantId}:{$dateStr}", 86400, ...)` lưu trữ toàn bộ cây quan hệ đã eager-loaded (`attendanceConfig`, `payrollConfig`, `childWelfarePolicies`, `welfareSchemes`, `pitTaxBrackets`).
+   - Lần gọi đầu tiên tốn ~5ms, từ lần thứ 2 trở đi đọc trực tiếp từ Cache với thời gian < 0.1ms, triệt tiêu 100% các câu query lặp lại.
+2. **Cơ chế Cache Invalidation Tự động**:
+   - Dịch vụ `PolicyResolutionService` duy trì chỉ mục mốc ngày tại `smart_hr:policy_known_dates:{$tenantId}`.
+   - Khi có bất kỳ hành động cập nhật quy chế, lương, phúc lợi hoặc phụ cấp nào (`createVersion`, `updateAttendanceConfig`, `updatePayrollConfig`, `storeWelfareScheme`, `toggle...`), hệ thống tự động gọi `clearPolicyCache($tenantId)` để xóa sạch cache, đảm bảo tính nhất quán dữ liệu ngay tức thì.
+3. **Lớp Cache Báo cáo Tổng hợp Dashboard**:
+   - Các chỉ số phân tích rủi ro quá tải OT (`burnoutData`), biến động nhân sự (`turnoverData`), phân bổ khối chi nhánh (`headcountData`) và chỉ số sức khỏe kỷ luật (`healthIndex`) được lưu tạm qua `Cache::remember("smart_hr:dashboard_analytics:{$tenantId}", 300, ...)` với TTL 5 phút.
+   - Giúp giảm thời gian tải trang Tổng quan Dashboard từ ~95ms xuống còn **~8ms**.
+

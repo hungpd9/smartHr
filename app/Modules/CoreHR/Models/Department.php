@@ -19,7 +19,14 @@ class Department extends Model
         'branch_id',
         'code',
         'parent_id',
+        'level',
+        'order',
         'status',
+    ];
+
+    protected $casts = [
+        'level' => 'integer',
+        'order' => 'integer',
     ];
 
     public function tenant(): BelongsTo
@@ -39,7 +46,12 @@ class Department extends Model
 
     public function children(): HasMany
     {
-        return $this->hasMany(Department::class, 'parent_id');
+        return $this->hasMany(Department::class, 'parent_id')->orderBy('order')->orderBy('id');
+    }
+
+    public function positions(): HasMany
+    {
+        return $this->hasMany(Position::class);
     }
 
     public function versions(): HasMany

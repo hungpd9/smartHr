@@ -14,7 +14,7 @@ Hệ thống được cấu thành từ các thành phần cốt lõi:
    - Caching & Asynchronous Queue: **Redis** (Laravel Horizon, xử lý hàng đợi tính công và đồng bộ thiết bị).
 2. **Frontend UI Layer (Inertia.js + Vue 3 Composition API)**:
    - Giao diện người dùng hiện đại xây dựng trên **Vue 3 (Composition API)** kết hợp **Inertia.js** (kết nối trực tiếp Controller Laravel mà không cần tách rời REST API).
-   - Thư viện Component chuẩn doanh nghiệp: **PrimeVue** kết hợp **TailwindCSS** (hỗ trợ DataTable phân trang/lọc đa cột, Timeline nghề nghiệp, Calendar ca kíp, Drag & Drop phân ca).
+   - Thư viện Component chuẩn doanh nghiệp: **Element Plus** kết hợp **TailwindCSS** (100% MIT License, hỗ trợ Table phân trang/lọc đa cột/fixed columns, Timeline nghề nghiệp, Calendar ca kíp, Drag & Drop phân ca).
 3. **Edge Collector Daemon (Golang Go 1.26+)**:
    - Chạy trên máy tính thu ngân, server nội bộ hoặc Raspberry Pi tại từng chi nhánh/nhà kho trong mạng LAN.
    - Kết nối trực tiếp máy chấm công qua Socket UDP/TCP port `4370` (ZKTeco protocol) hoặc HTTP (Hikvision ISAPI / ADMS push).
@@ -94,14 +94,20 @@ Agent **TUYỆT ĐỐI KHÔNG** hardcode các tham số nghiệp vụ, tỷ lệ
   - Bắt buộc kiểm soát eager loading (`with()`) để triệt tiêu lỗi N+1 Query.
   - Đối với bảng log thô và bảng công lớn, sử dụng Query Builder, Chunking hoặc Lazy Loading (`lazyById()`, `cursor()`).
 
-### 5.2 Frontend Layer (Vue 3 / Inertia.js / PrimeVue - Phương án Dự phòng Không phụ thuộc Theme ngoài)
+### 5.2 Frontend Layer (Vue 3 / Inertia.js / Element Plus - Tiêu chuẩn Doanh nghiệp Chuẩn mực)
 - **Kiến trúc Server-Driven SPA**: Sử dụng **Inertia.js v2** kết nối trực tiếp Controller Laravel với Vue 3 mà không cần duy trì REST API và Pinia state trùng lặp.
 - **Quy chuẩn Vue 3**: Bắt buộc sử dụng **Composition API** với cú pháp `<script setup lang="ts">` hoặc `<script setup>`.
-- **Thư viện UI mã nguồn mở**: Sử dụng **PrimeVue v4** kết hợp **TailwindCSS** (chế độ styled / Tailwind preset). Tuyệt đối không phụ thuộc theme thương mại mua ngoài. Tự chuẩn hóa các component dùng chung:
-  - `AppDataTable`: Kế thừa PrimeVue DataTable hỗ trợ VirtualScroll, Frozen Columns, bộ lọc đa cột cho Bảng công và Bảng lương.
-  - `AppTimeline`: Kế thừa PrimeVue Timeline cho Cây sự kiện vòng đời nhân sự (Career Timeline - Effective Dating).
-  - `DynamicFormRenderer`: Render tự động các input từ JSON Schema của Module Workflow.
-  - `ConsentModal`: Modal xác nhận tự nguyện ca đêm/OT cho lao động nuôi con dưới 12 tháng (Điều 137 BLLĐ 2019).
+- **Thư viện UI mã nguồn mở**: Sử dụng **Element Plus (100% MIT License)** kết hợp **TailwindCSS**. Tuyệt đối không phụ thuộc theme thương mại mua ngoài hay thư viện có kiểm tra license trả phí.
+- **Hỗ trợ Đồng bộ Chế độ Sáng / Tối (Dark & Light Mode)**:
+  - Bắt buộc import `element-plus/theme-chalk/dark/css-vars.css` để mọi component (Table, Dialog, Card, Input, Tag) tự động đổi màu tương thích hoàn toàn khi chuyển đổi dark mode.
+  - Trạng thái theme phải được lưu vết trong `localStorage` và duy trì xuyên suốt các phiên làm việc.
+- **Khung Đa ngôn ngữ (i18n Readiness)**:
+  - Khởi tạo sẵn khung đa ngôn ngữ (Tiếng Việt `vi` / Tiếng Anh `en`) thông qua `ElConfigProvider` và composable `useThemeAndLocale`. Mọi nhãn hệ thống dùng chung cần hỗ trợ chuyển đổi mượt mà.
+- **Khung Thông báo In-App (Notifications)**:
+  - Nút chuông thông báo trên Header tích hợp popover hiển thị trạng thái và danh sách thông báo hệ thống (đồng bộ thiết bị, cảnh báo BLLĐ, đơn từ mới), có nút "Đánh dấu đã đọc" và empty state tinh tế.
+- **Tiêu chuẩn Thẩm mỹ & Thân thiện Người dùng (UX & Enterprise Cleanliness)**:
+  - **TUYỆT ĐỐI KHÔNG** hiển thị tên thư viện UI hay framework kỹ thuật (ví dụ: "Element Plus UI", "PrimeVue", "Vue 3", "Laravel Core") lên các banner hay tiêu đề giao diện người dùng cuối. Thay vào đó dùng các thông điệp nghiệp vụ chuyên nghiệp (ví dụ: *"Smart-HR Enterprise • Quản trị Nhân sự & Phân ca Thông minh"*).
+  - Trạng thái bản quyền ở góc dưới thanh điều hướng (Sidebar Footer) phải hiển thị thân thiện, trang trọng với người dùng doanh nghiệp (biểu tượng bảo mật xanh lá, *"Bản quyền Doanh nghiệp"*, *"Bảo mật & Toàn vẹn CSDL"*), tránh dùng các chuỗi mã kỹ thuật thô ráp như *"Ed25519 Verified"*.
 - **Tối ưu trải nghiệm**: Sử dụng `preserveScroll: true` và `preserveState: true` khi lọc dữ liệu hoặc đổi tab Bảng công chính thức / Tạm tính (Preview).
 
 ### 5.3 IoT Edge Collector (Golang)

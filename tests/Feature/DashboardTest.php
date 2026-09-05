@@ -19,6 +19,9 @@ class DashboardTest extends TestCase
     {
         parent::setUp();
         $this->seed();
+
+        $user = \App\Models\User::where('role', \App\Enums\UserRole::HR_ADMIN)->first();
+        $this->actingAs($user);
     }
 
     public function test_dashboard_renders_successfully_with_inertia(): void
@@ -35,6 +38,10 @@ class DashboardTest extends TestCase
             ->has('todayAttendances')
             ->has('careerEvents')
             ->has('policyVersion')
+            ->has('analytics.burnoutData')
+            ->has('analytics.turnoverData')
+            ->has('analytics.headcountData')
+            ->has('analytics.healthIndex')
         );
     }
 
