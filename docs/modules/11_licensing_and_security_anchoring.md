@@ -2,7 +2,7 @@
 
 > **Tên phân hệ:** `Licensing`  
 > **Namespace Backend:** `App\Modules\Licensing` & `cmd/collector/license` (Golang)  
-> **Trách nhiệm chính:** Bảo vệ bản quyền thương mại của phần mềm khi mã nguồn công khai trên GitHub thông qua cơ chế **Cặp bài trùng Đối xứng (Symmetric Coupled Pair) giữa Golang Edge Daemon và Laravel Web Core**, dùng chung **01 tệp bản quyền duy nhất (`smart-hr.lic`)** do tác giả cấp, kết hợp **Móc neo Mật mã CSDL (Cryptographic Data Anchoring)**, vận hành hoàn toàn ngoại tuyến (**Offline-First Verification**) mà không đòi hỏi tác giả phải duy trì máy chủ cấp phép 24/7.
+> **Trách nhiệm chính:** Bảo vệ bản quyền thương mại của phần mềm khi mã nguồn công khai trên GitHub thông qua cơ chế **Cặp bài trùng Đối xứng (Symmetric Coupled Pair) giữa Golang Edge Daemon và Laravel Web Core**, dùng chung **01 tệp bản quyền duy nhất (`smart-hr.lic`)** do tác giả cấp, kết hợp **Móc neo Mật mã CSDL (Cryptographic Data Anchoring)** mã hóa trường CCCD và Lương, vận hành hoàn toàn ngoại tuyến (**Offline-First Verification**), đồng thời hiển thị trạng thái bản quyền thân thiện doanh nghiệp trên giao diện người dùng.
 
 ---
 
@@ -19,8 +19,11 @@ Module `Licensing` giải quyết triệt để vấn đề này bằng triết 
    - Cả Go Daemon (tại máy tính chi nhánh) và Laravel Web (trên máy chủ cloud) đều dùng chung file `smart-hr.lic` này.
    - Go và Laravel chỉ có thể nói chuyện và trao đổi log quẹt thẻ khi cả hai có **cùng một license hợp lệ và cùng một domain đã được cấp phép**.
 4. **Móc neo Khóa Mật mã CSDL (Cryptographic Data Anchoring)**:
-   - Dữ liệu lương và CCCD nhân viên được mã hóa trong CSDL bằng thuật toán `AES-256-GCM`.
-   - Khóa giải mã được dẫn xuất toán học từ chính file `smart-hr.lic` kết hợp với `Domain`. Nếu xóa code kiểm tra bản quyền, CSDL sẽ không thể giải mã, trả về lỗi hoặc dữ liệu rác.
+   - Dữ liệu lương (`base_salary`) và CCCD nhân viên (`citizen_id`) được mã hóa trong CSDL bằng thuật toán `AES-256-GCM`.
+   - Khóa giải mã được dẫn xuất toán học bằng hàm HKDF từ chính chữ ký số trong file `smart-hr.lic` kết hợp với `Domain`. Nếu xóa code kiểm tra bản quyền, CSDL sẽ không thể giải mã, trả về lỗi hoặc dữ liệu rác.
+5. **Tiêu chuẩn Hiển thị Thân thiện Doanh nghiệp (Enterprise UI Presentation)**:
+   - Ở góc dưới thanh điều hướng (Sidebar Footer), hệ thống hiển thị biểu tượng bảo mật màu xanh lá kèm nhãn trang trọng: *"Bản quyền Doanh nghiệp"*, *"Bảo mật & Toàn vẹn CSDL"*.
+   - Tuyệt đối không hiển thị các chuỗi mã kỹ thuật thô ráp như *"Ed25519 Verified"* hay *"Binary Coupled Lock"*, bảo đảm tính chuyên nghiệp cao cấp cho người dùng cuối.
 
 ---
 
@@ -52,156 +55,39 @@ flowchart TD
         LaravelApp["Laravel 13 Core\n(Nhúng sẵn Public Key)"]
         LicCopy2["smart-hr.lic (Đặt trong storage/license/)"]
         LaravelApp --> ReadLic2["Laravel đọc smart-hr.lic & lấy shared_hmac_secret"]
+        LaravelApp --> Decrypt["Dẫn xuất DEK qua HKDF để giải mã Lương & CCCD"]
+        LaravelApp --> UI["Hiển thị Sidebar: Bản quyền Doanh nghiệp (Bảo mật CSDL)"]
     end
 
     LicFile -.->|Copy vào| LicCopy1
     LicFile -.->|Copy vào| LicCopy2
 
     GenConfig -->|Gửi Batch Quẹt thẻ kèm chữ ký:\nSignature = HMAC-SHA256(Payload, shared_hmac_secret)| API["API: POST /api/v1/attendance/sync"]
-    API --> LaravelApp
-    LaravelApp --> Verify{"Đối soát chữ ký HMAC\nvới shared_hmac_secret trong lic"}
-    Verify -- Khớp --> Accept["✅ Chấp nhận log & Đưa vào Pipeline tính công"]
-    Verify -- Không khớp --> Reject["❌ Từ chối gói tin (HTTP 401 Unauthorized)"]
+    API --> VerifySig{"Laravel xác thực:\nHMAC == Signature?"}
+    VerifySig -- Sai --> Reject["403 Forbidden: Giả mạo hoặc sai License"]
+    VerifySig -- Đúng --> Success["200 OK: Tiếp nhận vào raw_attendance_logs"]
 ```
 
 ---
 
-## 3. Cơ chế Chống Sao chép Lậu (Anti-Theft & Anti-Leaking Mechanics)
+## 3. Quy trình Dẫn xuất Khóa Mật mã CSDL (Cryptographic Data Anchoring)
 
-Mô hình này loại bỏ hoàn toàn nguy cơ một bên thứ ba (Công ty B) sao chép phần mềm từ một khách hàng hợp lệ (Công ty A):
-
-| Tình huống Gian lận của Công ty B | Phản ứng của Hệ thống | Kết quả |
-|---|---|---|
-| **1. Công ty B xin/chép trộm file `smart-hr-edge.exe` và file `smart-hr.lic` của Công ty A về dùng cho domain `hrm.company-b.com`** | Khi chạy Go Daemon lần đầu, wizard yêu cầu nhập URL hệ thống (`hrm.company-b.com`). Go dùng Public Key giải mã file `smart-hr.lic` và phát hiện `allowed_domain` là `hrm.company-a.com`. | **Go Daemon dừng ngay lập tức**: Báo lỗi sai tên miền bản quyền, không tạo file cấu hình, không kết nối máy chấm công. |
-| **2. Công ty B cố tình nhập domain `hrm.company-a.com` vào Go Daemon để đánh lừa** | File Go chấp nhận vì khớp tên miền và kết nối với máy chấm công của Công ty B. Tuy nhiên, khi gửi log quẹt thẻ, Go sẽ gửi toàn bộ về máy chủ của... **Công ty A**. | **Vô dụng với Công ty B**: Dữ liệu công của Công ty B chạy sang hệ thống của Công ty A, máy chủ của Công ty B hoàn toàn không có dữ liệu. |
-| **3. Công ty B tự clone Laravel từ GitHub về chạy, nhưng không có file `smart-hr.lic`** | Không có file license hợp lệ được ký bởi Private Key của tác giả, Laravel không thể lấy được `shared_hmac_secret`. | **Giao tiếp thất bại**: Khi Go gửi log lên, Laravel từ chối vì không xác thực được chữ ký HMAC. Đồng thời, CSDL không thể giải mã trường lương. |
-| **4. Công ty B sửa file `smart-hr.lic` bằng Text Editor để đổi tên domain thành `hrm.company-b.com`** | Thuật toán chữ ký số Ed25519 kiểm tra hash toàn vẹn của payload. Chỉ cần thay đổi 1 ký tự trong file, chữ ký sẽ không khớp với Public Key. | **Chữ ký bị hỏng**: Cả Go và Laravel lập tức đánh dấu trạng thái `TAMPERED` và khóa toàn bộ chức năng. |
+Khóa giải mã dữ liệu (`Data Encryption Key - DEK`) được sinh ra tự động:
+$$
+\text{DEK} = \text{HKDF-SHA256}\Big(\text{Salt} = \text{Domain},\; \text{IKM} = \text{Ed25519\_Signature},\; \text{Info} = \text{"SmartHR\_DEK\_v1"}\Big)
+$$
+1. Khi đọc CCCD hoặc mức lương cơ bản: Hệ thống dùng `DEK` giải mã ciphertext từ cột `citizen_id` và `base_salary`.
+2. Nếu mã nguồn PHP bị chỉnh sửa để bypass kiểm tra license: Biến `Ed25519_Signature` bị rỗng $\to$ `DEK` sai $\to$ Không thể giải mã dữ liệu $\to$ Toàn bộ hệ thống tính lương và hồ sơ nhân sự bị vô hiệu hóa.
 
 ---
 
-## 4. Trải nghiệm Khởi chạy Lần đầu của Golang Edge Daemon (First-Run Wizard)
+## 4. Kịch bản Kiểm thử Tích hợp (Test Scenarios)
 
-File `smart-hr-edge.exe` hoạt động cực kỳ trực quan và chuyên nghiệp:
-
-```text
-======================================================================
-               SMART-HR EDGE COLLECTOR - SETUP WIZARD
-======================================================================
-[KIỂM TRA GIẤY PHÉP]
-  ✓ Đã tìm thấy tệp bản quyền: smart-hr.lic
-  ✓ Chữ ký số tác giả: HỢP LỆ (Verified by Ed25519)
-  ✓ Đơn vị sở hữu: Công ty TNHH Bán lẻ May Mặc Thời Trang
-  ✓ Tên miền được phép: hrm.fashion-retail.vn
-  ✓ Thời hạn sử dụng: Đến hết ngày 31/12/2027
-
-----------------------------------------------------------------------
-[CẤU HÌNH KẾT NỐI HỆ THỐNG]
-> Nhập URL máy chủ Smart-HR của bạn: https://hrm.fashion-retail.vn
-  ✓ Tên miền khớp hoàn toàn với giấy phép bản quyền!
-
-> Nhập IP máy chấm công trong mạng LAN (vd: 192.168.1.201): 192.168.1.201
-> Nhập Port kết nối (Mặc định 4370): 4370
-> Loại thiết bị (1: ZKTeco, 2: Hikvision): 1
-
-[KẾT NỐI THIẾT BỊ]
-  ✓ Đang kết nối máy chấm công qua Socket UDP port 4370... THÀNH CÔNG!
-  ✓ Nhận diện thiết bị: ZKTeco SenseFace 7A (Serial: ZK88992211)
-
-----------------------------------------------------------------------
-[HOÀN TẤT KHỞI TẠO]
-  ✓ Đã tạo tệp cấu hình: config.json
-  ✓ Đã ghép đôi thành công với máy chủ Cloud qua mã khóa đối xứng!
-  ✓ Dịch vụ thu thập log đang hoạt động ngầm. Nhấn Ctrl+C để thoát.
-======================================================================
-```
-
----
-
-## 5. Trụ cột Mật mã CSDL (Cryptographic Data Anchoring trong Laravel)
-
-Song song với việc khóa chặt máy chấm công qua Go, Laravel Core sử dụng chính file `smart-hr.lic` để mở khóa dữ liệu nhạy cảm:
-
-### 5.1 Dẫn xuất Khóa Giải mã Dữ liệu (DEK)
-```php
-namespace App\Modules\Licensing\Services;
-
-class LicenseKeyDerivationService
-{
-    /**
-     * Dẫn xuất Data Encryption Key (DEK) từ License Payload và Domain hiện tại
-     */
-    public function deriveDataEncryptionKey(string $licenseFilePath, string $currentDomain): string
-    {
-        // 1. Đọc và xác thực chữ ký số file license bằng Public Key
-        $licensePayload = LicenseVerifier::verifyAndExtract($licenseFilePath);
-
-        // 2. Kiểm tra domain hợp lệ
-        if (!in_array($currentDomain, $licensePayload['allowed_domains'], true)) {
-            throw new InvalidLicenseDomainException("Domain {$currentDomain} is not authorized.");
-        }
-
-        // 3. Dẫn xuất khóa DEK 256 bits bằng thuật toán HKDF (RFC 5869)
-        $salt = config('app.key'); // Application Salt
-        $ikm = $licensePayload['shared_hmac_secret'] . $currentDomain;
-
-        return hash_hkdf('sha256', $ikm, 32, 'SmartHR-Data-Encryption-v1', $salt);
-    }
-}
-```
-
-### 5.2 Mã hóa Trường Dữ liệu Tự động (Eloquent Encrypted Casts)
-Trong Model `EmployeeContract` và `PayrollRecord`:
-```php
-namespace App\Modules\CoreHR\Models;
-
-use Illuminate\Database\Eloquent\Model;
-use App\Modules\Licensing\Casts\LicenseEncryptedDecimal;
-
-class EmployeeContract extends Model
-{
-    protected $casts = [
-        // Tự động mã hóa khi lưu vào DB và giải mã khi đọc ra bằng khóa DEK
-        'base_salary' => LicenseEncryptedDecimal::class,
-        'insurance_salary' => LicenseEncryptedDecimal::class,
-    ];
-}
-```
-> Nếu ai đó xóa bỏ Middleware kiểm tra bản quyền trong Laravel, khóa $\text{DEK}$ sẽ không được khởi tạo $\to$ Mọi câu truy vấn vào `base_salary` sẽ giải mã thất bại và làm gián đoạn toàn bộ tính toán lương.
-
----
-
-## 6. Lệnh CLI Dành Riêng cho Tác giả để Cấp Bản quyền
-
-Tác giả chạy lệnh này trên máy tính cá nhân (không cần mở server public) để sinh file `smart-hr.lic` gửi cho khách hàng:
-
-```bash
-# Tác giả chạy trên máy local cá nhân:
-php artisan license:generate \
-    --customer="Công ty TNHH Bán lẻ May Mặc Thời Trang" \
-    --domain="hrm.fashion-retail.vn" \
-    --employees=200 \
-    --branches=10 \
-    --expires="2027-12-31" \
-    --output="./dist/smart-hr.lic"
-```
-
-Tệp `smart-hr.lic` được tạo ra là một chuỗi Base64 chứa:
-1. Payload thông tin cấp phép (JSON).
-2. Chữ ký số mật mã Ed25519 (64 bytes).
-3. Hạt giống bí mật `shared_hmac_secret` ngẫu nhiên để Go và Laravel bắt tay nhau.
-
----
-
-## 7. Kịch bản Kiểm thử & Xác minh Tính Toàn vẹn (Test Scenarios)
-
-1. **Test `GoWizardDomainMismatchRejection`**:
-   - Chạy `smart-hr-edge.exe` với file `smart-hr.lic` đăng ký cho `hrm.company-a.com`.
-   - Trong wizard, người dùng gõ domain `hrm.company-b.com`.
-   - Kết quả kỳ vọng: Ứng dụng Go từ chối khởi chạy, không tạo `config.json`.
-2. **Test `SymmetricHMACVerificationSuccess`**:
-   - Go Daemon đẩy lô quẹt thẻ lên `/api/v1/attendance/sync` có chữ ký HMAC được sinh từ `shared_hmac_secret`.
-   - Laravel đọc cùng file `smart-hr.lic` và đối soát chữ ký thành công $\to$ Ghi nhận quẹt thẻ vào CSDL.
-3. **Test `DataDecryptionFailureOnLicenseAbsence`**:
-   - Xóa file `smart-hr.lic` khỏi thư mục `storage/license/`.
-   - Truy vấn hợp đồng lao động của nhân viên để tính lương.
-   - Kết quả kỳ vọng: Ném ngoại lệ `MissingLicenseException`, toàn bộ lương không thể đọc được dưới dạng plaintext.
+1. **Test `ValidLicenseDomainDecryption`**:
+   - Nạp file `smart-hr.lic` hợp lệ với domain `smart-hr.test`.
+   - Thực hiện đọc trường `citizen_id` và `base_salary`.
+   - Kết quả kỳ vọng: Dữ liệu CCCD và lương được giải mã hiển thị chính xác.
+2. **Test `SidebarLicenseFriendlyDisplay`**:
+   - Đăng nhập vào giao diện web với tài khoản bất kỳ.
+   - Kiểm tra Sidebar Footer.
+   - Kết quả kỳ vọng: Hiển thị biểu tượng khiên bảo mật xanh lá, dòng chữ *"Bản quyền Doanh nghiệp"*, *"Bảo mật & Toàn vẹn CSDL"*, không chứa từ khóa *"Ed25519"*.

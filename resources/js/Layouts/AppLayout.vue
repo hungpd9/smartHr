@@ -27,12 +27,17 @@ import {
     SwitchButton,
     Avatar,
     Female,
+    QuestionFilled,
+    ArrowLeft,
+    ArrowRight,
 } from '@element-plus/icons-vue';
+import { useBrowserNavigation } from '@/Composables/useNavigationHistory';
 
 const page = usePage();
 const isSidebarCollapsed = ref(false);
 
 const { isDark, toggleTheme, currentLang, currentElLocale, setLanguage, t } = useThemeAndLocale();
+const { goBack, goForward } = useBrowserNavigation();
 
 // Auth User từ Inertia Shared Props
 const authUser = computed(() => page.props.auth?.user);
@@ -71,8 +76,23 @@ const navigationItems: NavigationItem[] = [
     },
     { key: 'attendance', icon: Clock, route: '/attendance' },
     { key: 'access_control', icon: Lock, route: '/access-control' },
-    { key: 'rostering', icon: Calendar, route: '/rostering' },
-    { key: 'leaves', icon: Briefcase, route: '/leaves' },
+    {
+        key: 'rostering',
+        icon: Calendar,
+        children: [
+            { key: 'rostering_matrix', label: 'Ma trận Phân ca Tuần/Tháng', route: '/rosters' },
+            { key: 'rostering_shifts', label: 'Danh mục Ca làm việc', route: '/rosters/shifts' },
+            { key: 'rostering_swaps', label: 'Yêu cầu Đổi ca & Bắt ca thay', route: '/rosters/swaps' },
+        ],
+    },
+    {
+        key: 'leaves',
+        icon: Briefcase,
+        children: [
+            { key: 'leave_balances', label: 'Quỹ Phép & Nghỉ Bù', route: '/leave/balances' },
+            { key: 'leave_ot_caps', label: 'Giám Sát Trần OT (40h/200h)', route: '/leave/ot-accumulations' },
+        ],
+    },
     { key: 'workflow', icon: CircleCheck, route: '/workflow' },
     { key: 'payroll', icon: Wallet, route: '/payroll' },
     { key: 'compliance', icon: Warning, route: '/compliance' },
@@ -83,6 +103,8 @@ const navigationItems: NavigationItem[] = [
 const expandedMenus = ref<Record<string, boolean>>({
     core_hr: true,
     policy: true,
+    rostering: true,
+    leaves: true,
 });
 
 const toggleSubmenu = (key: string) => {
@@ -96,6 +118,42 @@ const isParentActive = (item: NavigationItem): boolean => {
         return item.children.some(child => page.url.split('?')[0] === child.route.split('?')[0]);
     }
     return false;
+};
+
+// Kiểm tra chính xác mục submenu con có đang active hay không (hỗ trợ cả query param như ?tab=welfare_schemes)
+const isSubItemActive = (subRoute: string): boolean => {
+    const currentUrl = page.url;
+
+    // 1. Nếu subRoute có query param (vd: /policies?tab=welfare_schemes)
+    if (subRoute.includes('?')) {
+        const [subBase, subQuery] = subRoute.split('?');
+        const [currentBase, currentQuery] = currentUrl.split('?');
+        if (subBase !== currentBase) return false;
+
+        const subParams = new URLSearchParams(subQuery);
+        const currentParams = new URLSearchParams(currentQuery || '');
+        for (const [key, value] of subParams.entries()) {
+            if (currentParams.get(key) !== value) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 2. Nếu subRoute không chứa query param (vd: /policies)
+    const [subBase] = subRoute.split('?');
+    const [currentBase, currentQuery] = currentUrl.split('?');
+    if (subBase !== currentBase) return false;
+
+    if (currentQuery) {
+        const currentParams = new URLSearchParams(currentQuery);
+        const tab = currentParams.get('tab');
+        if (tab && tab !== 'general' && tab !== 'attendance') {
+            return false;
+        }
+    }
+
+    return true;
 };
 
 // Lọc Menu Sidebar tự động theo Vai trò Người dùng (RBAC)
@@ -248,14 +306,14 @@ const markAllNotificationsAsRead = () => {
                                         :href="sub.route"
                                         class="flex items-center space-x-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
                                         :class="[
-                                            page.url.split('?')[0] === sub.route.split('?')[0]
+                                            isSubItemActive(sub.route)
                                                 ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/40 font-semibold'
                                                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-slate-800/40'
                                         ]"
                                     >
                                         <span
                                             class="w-1.5 h-1.5 rounded-full shrink-0"
-                                            :class="page.url.split('?')[0] === sub.route.split('?')[0] ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-300 dark:bg-slate-700'"
+                                            :class="isSubItemActive(sub.route) ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-300 dark:bg-slate-700'"
                                         ></span>
                                         <span class="truncate">{{ sub.label }}</span>
                                     </Link>
@@ -306,7 +364,29 @@ const markAllNotificationsAsRead = () => {
                 <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
                     <!-- Topbar -->
                     <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-20">
-                        <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-3">
+                            <!-- Cụm nút Điều Hướng Trình Duyệt Back / Forward -->
+                            <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+                                <button
+                                    @click="goBack"
+                                    type="button"
+                                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-xs transition active:scale-95"
+                                    title="Quay lại trang trước (Alt + ←)"
+                                    aria-label="Quay lại trang trước"
+                                >
+                                    <el-icon :size="14"><ArrowLeft /></el-icon>
+                                </button>
+                                <button
+                                    @click="goForward"
+                                    type="button"
+                                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-xs transition active:scale-95"
+                                    title="Tiến tới trang sau (Alt + →)"
+                                    aria-label="Tiến tới trang sau"
+                                >
+                                    <el-icon :size="14"><ArrowRight /></el-icon>
+                                </button>
+                            </div>
+
                             <div class="flex items-center space-x-2 text-xs bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-full border border-indigo-200/50 dark:border-indigo-800/50">
                                 <el-icon :size="14"><OfficeBuilding /></el-icon>
                                 <span class="font-medium">{{ t('headquarters') }}</span>
@@ -383,6 +463,15 @@ const markAllNotificationsAsRead = () => {
                                     <component :is="isDark ? Sunny : Moon" />
                                 </el-icon>
                             </button>
+
+                            <!-- Help Guide Link -->
+                            <Link
+                                href="/help"
+                                class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:text-slate-400 dark:hover:text-indigo-400 dark:hover:bg-slate-800 transition flex items-center justify-center"
+                                title="Hướng dẫn sử dụng & Trung tâm trợ giúp"
+                            >
+                                <el-icon :size="18"><QuestionFilled /></el-icon>
+                            </Link>
 
                             <!-- In-app Notification Popover -->
                             <el-popover placement="bottom-end" :width="360" trigger="click">
@@ -486,7 +575,7 @@ const markAllNotificationsAsRead = () => {
                     </header>
 
                     <!-- Page Content Body -->
-                    <main class="flex-1 overflow-y-auto p-6 bg-slate-50/60 dark:bg-slate-950/60 text-slate-800 dark:text-slate-100">
+                    <main scroll-region class="flex-1 overflow-y-auto p-6 bg-slate-50/60 dark:bg-slate-950/60 text-slate-800 dark:text-slate-100">
                         <slot />
                     </main>
                 </div>

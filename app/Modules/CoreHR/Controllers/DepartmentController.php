@@ -34,6 +34,34 @@ class DepartmentController extends Controller
         return redirect()->back()->with('success', 'Thành lập phòng ban mới thành công!');
     }
 
+    public function update(int $id, Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'branch_id' => ['required', 'exists:branches,id'],
+            'code' => ['required', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:255'],
+            'mission_function' => ['nullable', 'string'],
+            'parent_id' => ['nullable', 'exists:departments,id'],
+            'manager_id' => ['nullable', 'exists:employees,id'],
+            'level' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'order' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'string', 'in:ACTIVE,INACTIVE'],
+        ]);
+
+        $department = Department::findOrFail($id);
+        $this->departmentService->updateDepartment($department, $validated);
+
+        return redirect()->back()->with('success', 'Cập nhật thông tin phòng ban thành công!');
+    }
+
+    public function destroy(int $id): RedirectResponse
+    {
+        $department = Department::findOrFail($id);
+        $this->departmentService->deleteDepartment($department);
+
+        return redirect()->back()->with('success', 'Đã giải thể / xóa phòng ban thành công!');
+    }
+
     public function updateVersion(int $id, UpdateDepartmentVersionRequest $request): RedirectResponse
     {
         $department = Department::findOrFail($id);

@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         GenerateKeypairCommand::class,
         GenerateLicenseCommand::class,
+        \App\Modules\Attendance\Commands\AutoSubmitTimesheetsCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [

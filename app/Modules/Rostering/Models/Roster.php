@@ -24,7 +24,7 @@ class Roster extends Model
     ];
 
     protected $casts = [
-        'roster_date' => 'date',
+        'roster_date' => 'date:Y-m-d',
         'is_published' => 'boolean',
         'violation_flags' => 'array',
     ];

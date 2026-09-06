@@ -64,6 +64,16 @@ class Employee extends Model
         return $this->hasMany(EmployeeCareerTimeline::class);
     }
 
+    public function timelines(): HasMany
+    {
+        return $this->careerTimelines();
+    }
+
+    public function rosters(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Rostering\Models\Roster::class);
+    }
+
     public function contracts(): HasMany
     {
         return $this->hasMany(EmployeeContract::class);
@@ -77,6 +87,16 @@ class Employee extends Model
     public function certificates(): HasMany
     {
         return $this->hasMany(EmployeeCertificate::class);
+    }
+
+    public function leaveBalances(): HasMany
+    {
+        return $this->hasMany(\App\Modules\LeavePolicy\Models\LeaveBalance::class);
+    }
+
+    public function overtimeAccumulations(): HasMany
+    {
+        return $this->hasMany(\App\Modules\LeavePolicy\Models\OvertimeAccumulation::class);
     }
 
     /**
@@ -199,6 +219,26 @@ class Employee extends Model
         }
 
         return $months > 0 ? "{$years} năm {$months} tháng" : "{$years} năm";
+    }
+
+    /**
+     * Tính số năm thâm niên làm việc đủ tại một mốc thời gian (dùng cho Điều 114 BLLĐ)
+     */
+    public function getSeniorityYearsAt(Carbon $targetDate): int
+    {
+        if (!$this->join_date) {
+            return 0;
+        }
+
+        $endDate = $this->resigned_date && $this->resigned_date->lt($targetDate) 
+            ? $this->resigned_date 
+            : $targetDate;
+
+        if ($this->join_date->gt($endDate)) {
+            return 0;
+        }
+
+        return (int) $this->join_date->diffInYears($endDate);
     }
 
     /**

@@ -21,6 +21,15 @@ class MonthlyAttendance extends Model
         'total_ot_hours',
         'total_late_minutes',
         'total_penalty_amount',
+        'is_approved',
+        'approved_by',
+        'approved_at',
+        'submission_status',
+        'submission_type',
+        'submitted_at',
+        'rejection_reason',
+        'rejected_by',
+        'rejected_at',
         'is_locked',
         'locked_by',
         'locked_at',
@@ -31,6 +40,10 @@ class MonthlyAttendance extends Model
         'total_ot_hours' => 'decimal:2',
         'total_late_minutes' => 'integer',
         'total_penalty_amount' => 'decimal:2',
+        'is_approved' => 'boolean',
+        'approved_at' => 'datetime',
+        'submitted_at' => 'datetime',
+        'rejected_at' => 'datetime',
         'is_locked' => 'boolean',
         'locked_at' => 'datetime',
     ];
@@ -48,5 +61,15 @@ class MonthlyAttendance extends Model
     public function lockedBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'locked_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'rejected_by');
     }
 }

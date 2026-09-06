@@ -7,11 +7,18 @@ namespace App\Modules\Attendance\Pipelines\Pipes;
 use App\Modules\Attendance\Pipelines\AttendanceCalculationContext;
 use App\Modules\Rostering\Models\Roster;
 use App\Modules\Rostering\Models\Shift;
+use App\Modules\Rostering\Services\RosterService;
 use Carbon\Carbon;
 use Closure;
 
 class ShiftMatchingPipe
 {
+    public function __construct(
+        protected ?RosterService $rosterService = null
+    ) {
+        $this->rosterService = $this->rosterService ?? app(RosterService::class);
+    }
+
     public function handle(AttendanceCalculationContext $context, Closure $next)
     {
         $dateStr = $context->workDate->format('Y-m-d');
@@ -36,7 +43,20 @@ class ShiftMatchingPipe
             return $next($context);
         }
 
-        // 3. Nếu ngày thường không có lịch xếp ca, tự động đối khớp ca tối ưu nhất từ danh mục Shifts
+        // 3. Nếu ngày thường không có lịch xếp ca riêng, áp dụng ca tiêu chuẩn mặc định
+        $defaultShift = $this->rosterService->resolveDefaultShift(
+            $context->tenantId,
+            $context->employeeId,
+            $context->workDate
+        );
+
+        if ($defaultShift) {
+            $context->shift = $defaultShift;
+            $context->addNote("Áp dụng ca chuẩn mặc định: {$defaultShift->name}");
+            return $next($context);
+        }
+
+        // 4. Fallback nếu hệ thống chưa cấu hình ca mặc định: đối khớp ca theo giờ vào
         $shifts = Shift::where('tenant_id', $context->tenantId)
             ->where('is_active', true)
             ->get();
@@ -47,8 +67,6 @@ class ShiftMatchingPipe
         }
 
         if ($context->actualIn) {
-            $inTime = $context->actualIn->format('H:i:s');
-            // Tìm ca có giờ bắt đầu gần với actualIn nhất
             $bestShift = null;
             $minDiff = PHP_INT_MAX;
 
@@ -64,9 +82,7 @@ class ShiftMatchingPipe
             $context->shift = $bestShift;
             $context->addNote("Tự động khớp ca dựa vào giờ vào: {$bestShift->name}");
         } else {
-            // Mặc định ca hành chính HC_STANDARD hoặc ca đầu tiên
-            $defaultShift = $shifts->firstWhere('code', 'HC_STANDARD') ?? $shifts->first();
-            $context->shift = $defaultShift;
+            $context->shift = $shifts->first();
         }
 
         return $next($context);

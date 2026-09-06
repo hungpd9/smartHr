@@ -89,6 +89,36 @@ type AttendancePunch struct {
 
 Toàn bộ hệ thống áp dụng nguyên tắc **Multi-Tenant** (`tenant_id`), kết hợp mô hình dữ liệu **Effective Dating** và **Immutable Audit Trail**.
 
+### 3.0 Sơ đồ Thực thể Quan hệ Tổng thể (Global ERD Overview)
+
+```mermaid
+erDiagram
+    tenants ||--o{ branches : "has"
+    tenants ||--o{ policy_versions : "configures"
+    tenants ||--o{ welfare_schemes : "defines"
+    tenants ||--o{ allowances : "maintains"
+    tenants ||--o{ permission_assignments : "governs RBAC"
+    branches ||--o{ departments : "contains"
+    branches ||--o{ devices : "deploys"
+    branches ||--o{ rosters : "schedules"
+    departments ||--o{ department_versions : "lineage versions"
+    departments ||--o{ employee_career_timelines : "assigned in"
+    employees ||--o{ employee_career_timelines : "career events"
+    employees ||--o{ employee_children : "has children"
+    employees ||--o{ employee_contracts : "signs"
+    employees ||--o{ raw_attendance_logs : "punches"
+    employees ||--o{ daily_attendances : "work records"
+    employees ||--o{ monthly_attendances : "monthly summaries"
+    employees ||--o{ requests : "submits"
+    employees ||--o{ payroll_records : "receives pay"
+    policy_versions ||--|| attendance_policy_configs : "attendance rules"
+    policy_versions ||--|| payroll_policy_configs : "payroll rules"
+    policy_versions ||--o{ child_welfare_policies : "statutory child policies"
+    policy_versions ||--o{ pit_tax_brackets : "PIT tiers"
+    monthly_attendances ||--|| payroll_records : "calculates"
+    payroll_records ||--o{ payroll_allowances : "itemizes"
+```
+
 ### 3.1 Phân hệ Tổ chức & Cây Timeline Nhân sự (Org Chart & Career Timeline)
 
 ```sql

@@ -2,7 +2,8 @@
 import { ref, computed } from 'vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import AuditHistoryDrawer from '@/Components/AuditHistoryDrawer.vue';
 import {
     User,
     OfficeBuilding,
@@ -21,6 +22,9 @@ import {
     Money,
     InfoFilled,
     Collection,
+    Delete,
+    Suitcase,
+    Clock,
 } from '@element-plus/icons-vue';
 
 interface OrgTreeNode {
@@ -93,7 +97,12 @@ const props = defineProps<{
         name: string;
         level?: number;
         parent_id?: number | null;
+        branch_id?: number;
         branch_name: string;
+        status?: string;
+        manager?: { id: number; full_name: string; user_code: string } | null;
+        mission_function?: string | null;
+        order?: number;
     }>;
     orgTree?: OrgTreeNode[];
     positions: Array<{
@@ -113,6 +122,11 @@ const props = defineProps<{
         address: string | null;
         is_remote_or_island: boolean;
     }>;
+    allEmployeesShort?: Array<{
+        id: number;
+        full_name: string;
+        user_code: string;
+    }>;
     filters: {
         search: string | null;
         department_id: string | null;
@@ -120,7 +134,211 @@ const props = defineProps<{
     };
 }>();
 
-const activeTab = ref<'employees' | 'org_tree' | 'departments' | 'branches'>('employees');
+import { useSyncedTab } from '@/Composables/useNavigationHistory';
+
+const activeTab = useSyncedTab('employees', 'tab') as any;
+
+// State Audit History Drawer
+const isAuditDrawerOpen = ref(false);
+const auditType = ref('');
+const auditId = ref<number | null>(null);
+const auditTitle = ref('');
+
+const openAuditDrawer = (type: string, id: number | null, title: string) => {
+    auditType.value = type;
+    auditId.value = id;
+    auditTitle.value = title;
+    isAuditDrawerOpen.value = true;
+};
+
+// CRUD Phòng ban (Departments)
+const isCreateDeptModalOpen = ref(false);
+const createDeptForm = useForm({
+    code: '',
+    name: '',
+    branch_id: props.branches[0]?.id || 1,
+    parent_id: null as number | null,
+    level: 2,
+    manager_id: null as number | null,
+    mission_function: '',
+    order: 0,
+});
+
+const openCreateDepartmentModal = () => {
+    createDeptForm.reset();
+    createDeptForm.branch_id = props.branches[0]?.id || 1;
+    createDeptForm.level = 2;
+    createDeptForm.order = props.departments.length + 1;
+    isCreateDeptModalOpen.value = true;
+};
+
+const submitCreateDepartment = () => {
+    createDeptForm.post('/core-hr/departments', {
+        onSuccess: () => {
+            isCreateDeptModalOpen.value = false;
+            createDeptForm.reset();
+            ElMessage.success('Thêm phòng ban mới thành công!');
+        },
+        onError: () => {
+            ElMessage.error('Vui lòng kiểm tra lại thông tin phòng ban!');
+        },
+    });
+};
+
+const isEditDeptModalOpen = ref(false);
+const editingDeptId = ref<number | null>(null);
+const editDeptForm = useForm({
+    code: '',
+    name: '',
+    branch_id: 1,
+    parent_id: null as number | null,
+    level: 2,
+    manager_id: null as number | null,
+    mission_function: '',
+    status: 'ACTIVE',
+    order: 0,
+});
+
+const openEditDepartmentModal = (dept: any) => {
+    editingDeptId.value = dept.id;
+    editDeptForm.code = dept.code;
+    editDeptForm.name = dept.name;
+    editDeptForm.branch_id = dept.branch_id || props.branches[0]?.id || 1;
+    editDeptForm.parent_id = dept.parent_id || null;
+    editDeptForm.level = dept.level || 2;
+    editDeptForm.manager_id = dept.manager?.id || null;
+    editDeptForm.mission_function = dept.mission_function || '';
+    editDeptForm.status = dept.status || 'ACTIVE';
+    editDeptForm.order = dept.order || 0;
+    isEditDeptModalOpen.value = true;
+};
+
+const submitEditDepartment = () => {
+    if (!editingDeptId.value) return;
+    editDeptForm.put(`/core-hr/departments/${editingDeptId.value}`, {
+        onSuccess: () => {
+            isEditDeptModalOpen.value = false;
+            ElMessage.success('Cập nhật thông tin phòng ban thành công!');
+        },
+        onError: () => {
+            ElMessage.error('Không thể cập nhật phòng ban!');
+        },
+    });
+};
+
+const deleteDepartment = (dept: any) => {
+    ElMessageBox.confirm(
+        `Bạn có chắc chắn muốn xóa phòng ban "${dept.name}" (${dept.code})? Hành động này sẽ được ghi vào nhật ký kiểm toán và chỉ thành công nếu phòng ban không có nhân sự hoặc đơn vị trực thuộc.`,
+        'Xác nhận xóa phòng ban',
+        {
+            confirmButtonText: 'Xóa phòng ban',
+            cancelButtonText: 'Hủy bỏ',
+            type: 'warning',
+            confirmButtonClass: 'el-button--danger',
+        }
+    ).then(() => {
+        router.delete(`/core-hr/departments/${dept.id}`, {
+            onSuccess: () => {
+                ElMessage.success('Xóa phòng ban thành công!');
+            },
+            onError: (errors: any) => {
+                ElMessage.error(errors.message || 'Không thể xóa phòng ban đang có nhân viên hoặc phòng ban con.');
+            },
+        });
+    }).catch(() => {});
+};
+
+// CRUD Chức vụ (Positions)
+const isCreatePosModalOpen = ref(false);
+const createPosForm = useForm({
+    code: '',
+    name: '',
+    level: 1,
+    department_id: null as number | null,
+    allowance_amount: 0,
+    bonus_one_time: 0,
+    description: '',
+});
+
+const openCreatePositionModal = () => {
+    createPosForm.reset();
+    createPosForm.level = 1;
+    createPosForm.allowance_amount = 0;
+    createPosForm.bonus_one_time = 0;
+    isCreatePosModalOpen.value = true;
+};
+
+const submitCreatePosition = () => {
+    createPosForm.post('/core-hr/positions', {
+        onSuccess: () => {
+            isCreatePosModalOpen.value = false;
+            createPosForm.reset();
+            ElMessage.success('Thêm chức danh mới thành công!');
+        },
+        onError: () => {
+            ElMessage.error('Vui lòng kiểm tra lại thông tin chức danh!');
+        },
+    });
+};
+
+const isEditPosModalOpen = ref(false);
+const editingPosId = ref<number | null>(null);
+const editPosForm = useForm({
+    code: '',
+    name: '',
+    level: 1,
+    department_id: null as number | null,
+    allowance_amount: 0,
+    bonus_one_time: 0,
+    description: '',
+});
+
+const openEditPositionModal = (pos: any) => {
+    editingPosId.value = pos.id;
+    editPosForm.code = pos.code;
+    editPosForm.name = pos.name;
+    editPosForm.level = pos.level;
+    editPosForm.department_id = pos.department_id || null;
+    editPosForm.allowance_amount = pos.allowance_amount || 0;
+    editPosForm.bonus_one_time = pos.bonus_one_time || 0;
+    editPosForm.description = pos.description || '';
+    isEditPosModalOpen.value = true;
+};
+
+const submitEditPosition = () => {
+    if (!editingPosId.value) return;
+    editPosForm.put(`/core-hr/positions/${editingPosId.value}`, {
+        onSuccess: () => {
+            isEditPosModalOpen.value = false;
+            ElMessage.success('Cập nhật chức vụ thành công!');
+        },
+        onError: () => {
+            ElMessage.error('Không thể cập nhật chức vụ!');
+        },
+    });
+};
+
+const deletePosition = (pos: any) => {
+    ElMessageBox.confirm(
+        `Bạn có chắc chắn muốn xóa chức danh "${pos.name}" (${pos.code})? Hành động này sẽ được ghi vào nhật ký kiểm toán và chỉ thành công nếu chức danh không có nhân sự đang đảm nhiệm.`,
+        'Xác nhận xóa chức danh',
+        {
+            confirmButtonText: 'Xóa chức danh',
+            cancelButtonText: 'Hủy bỏ',
+            type: 'warning',
+            confirmButtonClass: 'el-button--danger',
+        }
+    ).then(() => {
+        router.delete(`/core-hr/positions/${pos.id}`, {
+            onSuccess: () => {
+                ElMessage.success('Xóa chức danh thành công!');
+            },
+            onError: (errors: any) => {
+                ElMessage.error(errors.message || 'Không thể xóa chức danh đang có nhân sự công tác.');
+            },
+        });
+    }).catch(() => {});
+};
 
 // Bộ lọc
 const search = ref(props.filters.search || '');
@@ -367,7 +585,15 @@ const submitBranch = () => {
                         :class="activeTab === 'departments' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><OfficeBuilding /></el-icon>
-                        <span>Phòng ban</span>
+                        <span>Phòng ban ({{ departments.length }})</span>
+                    </button>
+                    <button
+                        @click="activeTab = 'positions'"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5"
+                        :class="activeTab === 'positions' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
+                    >
+                        <el-icon :size="14"><Suitcase /></el-icon>
+                        <span>Chức danh ({{ positions.length }})</span>
                     </button>
                     <button
                         @click="activeTab = 'branches'"
@@ -375,7 +601,7 @@ const submitBranch = () => {
                         :class="activeTab === 'branches' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><OfficeBuilding /></el-icon>
-                        <span>Chi nhánh</span>
+                        <span>Chi nhánh ({{ branches.length }})</span>
                     </button>
                 </div>
             </div>
@@ -747,8 +973,32 @@ const submitBranch = () => {
                 </div>
             </div>
 
-            <!-- TAB 3: DANH SÁCH PHÒNG BAN DẠNG BẢNG -->
+            <!-- TAB 3: DANH SÁCH PHÒNG BAN DẠNG BẢNG & CRUD -->
             <div v-else-if="activeTab === 'departments'" class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-base">Danh mục Đơn vị & Phòng ban</h3>
+                        <p class="text-xs text-slate-400">Quản lý cơ cấu phòng ban, gán trưởng đơn vị và bảo toàn lịch sử Effective Dating.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <el-button
+                            size="default"
+                            :icon="Clock"
+                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Department', null, 'Nhật ký Kiểm toán Toàn bộ Phòng ban')"
+                        >
+                            Lịch sử Kiểm toán
+                        </el-button>
+                        <el-button
+                            type="primary"
+                            :icon="Plus"
+                            @click="openCreateDepartmentModal"
+                            class="!rounded-xl shadow-xs"
+                        >
+                            Thêm Phòng ban
+                        </el-button>
+                    </div>
+                </div>
+
                 <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -756,27 +1006,163 @@ const submitBranch = () => {
                                 <th class="py-3 px-4">Mã đơn vị</th>
                                 <th class="py-3 px-4">Tên đơn vị</th>
                                 <th class="py-3 px-4">Cấp bậc</th>
+                                <th class="py-3 px-4">Trưởng đơn vị</th>
                                 <th class="py-3 px-4">Chi nhánh</th>
+                                <th class="py-3 px-4">Trạng thái</th>
                                 <th class="py-3 px-4 text-center">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                             <tr v-for="dept in departments" :key="dept.id" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                                <td class="py-3.5 px-4 font-mono font-semibold">{{ dept.code }}</td>
-                                <td class="py-3.5 px-4 font-medium">{{ dept.name }}</td>
+                                <td class="py-3.5 px-4 font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ dept.code }}</td>
+                                <td class="py-3.5 px-4">
+                                    <div class="font-medium text-slate-800 dark:text-white">{{ dept.name }}</div>
+                                    <div v-if="dept.mission_function" class="text-[11px] text-slate-400 truncate max-w-xs mt-0.5">{{ dept.mission_function }}</div>
+                                </td>
                                 <td class="py-3.5 px-4">
                                     <el-tag :type="dept.level === 1 ? 'primary' : dept.level === 2 ? 'success' : 'warning'" size="small">
                                         {{ dept.level === 1 ? 'Khối (L1)' : dept.level === 2 ? 'Phòng ban (L2)' : 'Team (L3)' }}
                                     </el-tag>
                                 </td>
-                                <td class="py-3.5 px-4 text-slate-400">{{ dept.branch_name }}</td>
-                                <td class="py-3.5 px-4 text-center">
-                                    <button
-                                        @click="openDepartmentVersionModal(dept)"
-                                        class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 rounded-lg text-xs font-semibold transition"
-                                    >
-                                        Đổi tên & Chức năng (Effective Dating)
-                                    </button>
+                                <td class="py-3.5 px-4">
+                                    <span v-if="dept.manager" class="font-medium text-slate-700 dark:text-slate-300">
+                                        {{ dept.manager.full_name }}
+                                        <span class="text-slate-400 font-mono text-[11px]">({{ dept.manager.user_code }})</span>
+                                    </span>
+                                    <span v-else class="text-slate-400 italic">Chưa bổ nhiệm</span>
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-500">{{ dept.branch_name }}</td>
+                                <td class="py-3.5 px-4">
+                                    <el-tag :type="dept.status === 'ACTIVE' ? 'success' : 'info'" size="small">
+                                        {{ dept.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm dừng' }}
+                                    </el-tag>
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <el-button
+                                            size="small"
+                                            :icon="Edit"
+                                            circle
+                                            @click="openEditDepartmentModal(dept)"
+                                            title="Sửa thông tin"
+                                        />
+                                        <el-button
+                                            size="small"
+                                            type="primary"
+                                            plain
+                                            @click="openDepartmentVersionModal(dept)"
+                                            title="Ban hành phiên bản Effective Dating"
+                                            class="!text-[11px]"
+                                        >
+                                            Phiên bản mới
+                                        </el-button>
+                                        <el-button
+                                            size="small"
+                                            :icon="Clock"
+                                            circle
+                                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Department', dept.id, 'Lịch sử kiểm toán: ' + dept.name)"
+                                            title="Lịch sử kiểm toán"
+                                        />
+                                        <el-button
+                                            size="small"
+                                            type="danger"
+                                            :icon="Delete"
+                                            circle
+                                            @click="deleteDepartment(dept)"
+                                            title="Xóa phòng ban"
+                                        />
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3.5: DANH MỤC CHỨC DANH & VỊ TRÍ (POSITIONS CRUD) -->
+            <div v-else-if="activeTab === 'positions'" class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+                    <div>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-base">Danh mục Vị trí & Chức danh Công việc</h3>
+                        <p class="text-xs text-slate-400">Cấu hình cấp bậc chức danh, mức phụ cấp trách nhiệm và đãi ngộ bổ nhiệm.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <el-button
+                            size="default"
+                            :icon="Clock"
+                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Position', null, 'Nhật ký Kiểm toán Toàn bộ Chức danh')"
+                        >
+                            Lịch sử Kiểm toán
+                        </el-button>
+                        <el-button
+                            type="primary"
+                            :icon="Plus"
+                            @click="openCreatePositionModal"
+                            class="!rounded-xl shadow-xs"
+                        >
+                            Thêm Chức danh
+                        </el-button>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                <th class="py-3 px-4">Mã vị trí</th>
+                                <th class="py-3 px-4">Tên chức danh</th>
+                                <th class="py-3 px-4">Cấp bậc</th>
+                                <th class="py-3 px-4">Phòng ban</th>
+                                <th class="py-3 px-4 text-right">Phụ cấp chức vụ</th>
+                                <th class="py-3 px-4 text-right">Thưởng bổ nhiệm</th>
+                                <th class="py-3 px-4">Mô tả công việc</th>
+                                <th class="py-3 px-4 text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                            <tr v-for="pos in positions" :key="pos.id" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                                <td class="py-3.5 px-4 font-mono font-semibold text-indigo-600 dark:text-indigo-400">{{ pos.code }}</td>
+                                <td class="py-3.5 px-4 font-bold text-slate-800 dark:text-white">{{ pos.name }}</td>
+                                <td class="py-3.5 px-4">
+                                    <el-tag size="small" type="info" effect="plain" class="font-mono font-semibold">
+                                        Level {{ pos.level }}
+                                    </el-tag>
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-600 dark:text-slate-300">
+                                    {{ departments.find(d => d.id === pos.department_id)?.name ?? 'Áp dụng toàn công ty' }}
+                                </td>
+                                <td class="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                    {{ Number(pos.allowance_amount || 0).toLocaleString('vi-VN') }} đ
+                                </td>
+                                <td class="py-3.5 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
+                                    {{ Number(pos.bonus_one_time || 0).toLocaleString('vi-VN') }} đ
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-400 truncate max-w-xs">{{ pos.description || '—' }}</td>
+                                <td class="py-3.5 px-4">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <el-button
+                                            size="small"
+                                            :icon="Edit"
+                                            circle
+                                            @click="openEditPositionModal(pos)"
+                                            title="Chỉnh sửa chức danh"
+                                        />
+                                        <el-button
+                                            size="small"
+                                            :icon="Clock"
+                                            circle
+                                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Position', pos.id, 'Lịch sử chức danh: ' + pos.name)"
+                                            title="Lịch sử kiểm toán"
+                                        />
+                                        <el-button
+                                            size="small"
+                                            type="danger"
+                                            :icon="Delete"
+                                            circle
+                                            @click="deletePosition(pos)"
+                                            title="Xóa chức danh"
+                                        />
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1198,5 +1584,311 @@ const submitBranch = () => {
                 </div>
             </form>
         </el-dialog>
+
+        <!-- MODAL 6: Thêm Phòng ban mới -->
+        <el-dialog
+            v-model="isCreateDeptModalOpen"
+            title="Khởi tạo Phòng ban / Đơn vị mới"
+            width="580px"
+            class="!rounded-2xl"
+        >
+            <form @submit.prevent="submitCreateDepartment" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã đơn vị *</label>
+                        <el-input v-model="createDeptForm.code" placeholder="VD: TECH, MKT, HR..." required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên phòng ban *</label>
+                        <el-input v-model="createDeptForm.name" placeholder="VD: Phòng Công nghệ Thông tin" required />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc đơn vị *</label>
+                        <el-select v-model="createDeptForm.level" class="w-full">
+                            <el-option :value="1" label="Khối / Khối chức năng (Cấp 1)" />
+                            <el-option :value="2" label="Phòng ban (Cấp 2)" />
+                            <el-option :value="3" label="Đội nhóm / Team (Cấp 3)" />
+                        </el-select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chi nhánh *</label>
+                        <el-select v-model="createDeptForm.branch_id" class="w-full">
+                            <el-option
+                                v-for="branch in branches"
+                                :key="branch.id"
+                                :value="branch.id"
+                                :label="branch.name"
+                            />
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Đơn vị cấp trên (Parent)</label>
+                        <el-select v-model="createDeptForm.parent_id" clearable placeholder="Không có (Là khối gốc)" class="w-full">
+                            <el-option
+                                v-for="d in departments"
+                                :key="d.id"
+                                :value="d.id"
+                                :label="d.name + ' (' + d.code + ')'"
+                            />
+                        </el-select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trưởng đơn vị</label>
+                        <el-select v-model="createDeptForm.manager_id" clearable filterable placeholder="Chọn nhân sự quản lý" class="w-full">
+                            <el-option
+                                v-for="emp in allEmployeesShort"
+                                :key="emp.id"
+                                :value="emp.id"
+                                :label="emp.full_name + ' (' + emp.user_code + ')'"
+                            />
+                        </el-select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chức năng & Nhiệm vụ</label>
+                    <el-input v-model="createDeptForm.mission_function" type="textarea" :rows="2" placeholder="Mô tả chức năng nhiệm vụ chính của phòng ban..." />
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <el-button @click="isCreateDeptModalOpen = false">Hủy bỏ</el-button>
+                    <el-button type="primary" native-type="submit" :loading="createDeptForm.processing">
+                        Tạo Phòng ban
+                    </el-button>
+                </div>
+            </form>
+        </el-dialog>
+
+        <!-- MODAL 7: Sửa thông tin Phòng ban -->
+        <el-dialog
+            v-model="isEditDeptModalOpen"
+            title="Chỉnh sửa Thông tin Phòng ban"
+            width="580px"
+            class="!rounded-2xl"
+        >
+            <form @submit.prevent="submitEditDepartment" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã đơn vị *</label>
+                        <el-input v-model="editDeptForm.code" required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên phòng ban *</label>
+                        <el-input v-model="editDeptForm.name" required />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc đơn vị *</label>
+                        <el-select v-model="editDeptForm.level" class="w-full">
+                            <el-option :value="1" label="Khối / Khối chức năng (Cấp 1)" />
+                            <el-option :value="2" label="Phòng ban (Cấp 2)" />
+                            <el-option :value="3" label="Đội nhóm / Team (Cấp 3)" />
+                        </el-select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chi nhánh *</label>
+                        <el-select v-model="editDeptForm.branch_id" class="w-full">
+                            <el-option
+                                v-for="branch in branches"
+                                :key="branch.id"
+                                :value="branch.id"
+                                :label="branch.name"
+                            />
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Đơn vị cấp trên</label>
+                        <el-select v-model="editDeptForm.parent_id" clearable placeholder="Không có (Gốc)" class="w-full">
+                            <el-option
+                                v-for="d in departments.filter(d => d.id !== editingDeptId)"
+                                :key="d.id"
+                                :value="d.id"
+                                :label="d.name + ' (' + d.code + ')'"
+                            />
+                        </el-select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trưởng đơn vị</label>
+                        <el-select v-model="editDeptForm.manager_id" clearable filterable placeholder="Chọn nhân sự quản lý" class="w-full">
+                            <el-option
+                                v-for="emp in allEmployeesShort"
+                                :key="emp.id"
+                                :value="emp.id"
+                                :label="emp.full_name + ' (' + emp.user_code + ')'"
+                            />
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trạng thái hoạt động</label>
+                        <el-select v-model="editDeptForm.status" class="w-full">
+                            <el-option value="ACTIVE" label="Hoạt động bình thường" />
+                            <el-option value="INACTIVE" label="Tạm ngừng / Đang giải thể" />
+                        </el-select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thứ tự hiển thị</label>
+                        <el-input-number v-model="editDeptForm.order" :min="0" class="!w-full" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chức năng & Nhiệm vụ</label>
+                    <el-input v-model="editDeptForm.mission_function" type="textarea" :rows="2" />
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <el-button @click="isEditDeptModalOpen = false">Hủy bỏ</el-button>
+                    <el-button type="primary" native-type="submit" :loading="editDeptForm.processing">
+                        Lưu Thay Đổi
+                    </el-button>
+                </div>
+            </form>
+        </el-dialog>
+
+        <!-- MODAL 8: Thêm Chức danh mới -->
+        <el-dialog
+            v-model="isCreatePosModalOpen"
+            title="Khởi tạo Vị trí / Chức danh mới"
+            width="540px"
+            class="!rounded-2xl"
+        >
+            <form @submit.prevent="submitCreatePosition" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã chức danh *</label>
+                        <el-input v-model="createPosForm.code" placeholder="VD: DEV_LEAD, HR_MGR..." required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên chức danh *</label>
+                        <el-input v-model="createPosForm.name" placeholder="VD: Trưởng nhóm Lập trình" required />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc (Level 1..10) *</label>
+                        <el-input-number v-model="createPosForm.level" :min="1" :max="10" class="!w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phòng ban áp dụng</label>
+                        <el-select v-model="createPosForm.department_id" clearable placeholder="Áp dụng toàn công ty" class="w-full">
+                            <el-option
+                                v-for="d in departments"
+                                :key="d.id"
+                                :value="d.id"
+                                :label="d.name"
+                            />
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phụ cấp chức vụ (VNĐ/tháng)</label>
+                        <el-input-number v-model="createPosForm.allowance_amount" :min="0" :step="100000" class="!w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thưởng bổ nhiệm 1 lần (VNĐ)</label>
+                        <el-input-number v-model="createPosForm.bonus_one_time" :min="0" :step="500000" class="!w-full" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mô tả vị trí & Tiêu chuẩn tuyển dụng</label>
+                    <el-input v-model="createPosForm.description" type="textarea" :rows="2" placeholder="Yêu cầu kỹ năng, trách nhiệm chính..." />
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <el-button @click="isCreatePosModalOpen = false">Hủy bỏ</el-button>
+                    <el-button type="primary" native-type="submit" :loading="createPosForm.processing">
+                        Tạo Chức danh
+                    </el-button>
+                </div>
+            </form>
+        </el-dialog>
+
+        <!-- MODAL 9: Sửa Chức danh -->
+        <el-dialog
+            v-model="isEditPosModalOpen"
+            title="Chỉnh sửa Thông tin Chức danh"
+            width="540px"
+            class="!rounded-2xl"
+        >
+            <form @submit.prevent="submitEditPosition" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã chức danh *</label>
+                        <el-input v-model="editPosForm.code" required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên chức danh *</label>
+                        <el-input v-model="editPosForm.name" required />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc (Level 1..10) *</label>
+                        <el-input-number v-model="editPosForm.level" :min="1" :max="10" class="!w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phòng ban áp dụng</label>
+                        <el-select v-model="editPosForm.department_id" clearable placeholder="Áp dụng toàn công ty" class="w-full">
+                            <el-option
+                                v-for="d in departments"
+                                :key="d.id"
+                                :value="d.id"
+                                :label="d.name"
+                            />
+                        </el-select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phụ cấp chức vụ (VNĐ/tháng)</label>
+                        <el-input-number v-model="editPosForm.allowance_amount" :min="0" :step="100000" class="!w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thưởng bổ nhiệm 1 lần (VNĐ)</label>
+                        <el-input-number v-model="editPosForm.bonus_one_time" :min="0" :step="500000" class="!w-full" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mô tả công việc</label>
+                    <el-input v-model="editPosForm.description" type="textarea" :rows="2" />
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <el-button @click="isEditPosModalOpen = false">Hủy bỏ</el-button>
+                    <el-button type="primary" native-type="submit" :loading="editPosForm.processing">
+                        Lưu Thay Đổi
+                    </el-button>
+                </div>
+            </form>
+        </el-dialog>
+
+        <!-- COMPONENT: Lịch sử Kiểm toán & Biến động Dữ liệu -->
+        <AuditHistoryDrawer
+            v-model="isAuditDrawerOpen"
+            :auditable-type="auditType"
+            :auditable-id="auditId"
+            :title="auditTitle"
+        />
     </AppLayout>
 </template>

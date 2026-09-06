@@ -2,14 +2,14 @@
 
 > **Tên phân hệ:** `PolicyEngine`  
 > **Namespace Backend:** `App\Modules\PolicyEngine`  
-> **Trách nhiệm chính:** Quản trị tập trung toàn bộ cấu hình quy chế chấm công, phân ca, làm thêm giờ, chính sách phúc lợi con nhỏ/gia đình và biểu thuế TNCN lũy tiến 5 bậc theo các phiên bản hiệu lực thời gian (`policy_versions`), bảo đảm chính sách **Zero-Hardcode** cho toàn hệ thống.
+> **Trách nhiệm chính:** Quản trị tập trung toàn bộ cấu hình quy chế chấm công, phân ca, làm thêm giờ, cấu hình tiền lương & thuế TNCN, danh mục phụ cấp chuẩn hóa (`allowances`), khung phúc lợi doanh nghiệp đa năng (`welfare_schemes`), chính sách bảo vệ thai sản & con nhỏ, và biểu thuế TNCN lũy tiến 5 bậc theo các phiên bản hiệu lực thời gian (`policy_versions`), bảo đảm triết lý **Zero-Hardcode** và cơ chế **Caching Đa Tầng** cho toàn hệ thống.
 
 ---
 
 ## 1. Ranh giới Nghiệp vụ & Trách nhiệm (Domain Boundaries)
 
-Module `PolicyEngine` đóng vai trò là "Cơ quan Lập pháp" trong hệ thống Smart-HR:
-1. **Quản lý Phiên bản Quy chế (`policy_versions`)**: Cho phép doanh nghiệp tạo mới, sửa đổi hoặc nhân bản các bộ quy chế áp dụng theo từng mốc thời gian `[effective_from, effective_to]`.
+Module `PolicyEngine` đóng vai trò là "Cơ quan Lập pháp" trong hệ thống Smart-HR, cung cấp các bộ tham số quy chuẩn cho toàn bộ 10 module còn lại:
+1. **Quản lý Phiên bản Quy chế (`policy_versions`)**: Cho phép doanh nghiệp tạo mới, sửa đổi hoặc nhân bản các bộ quy chế áp dụng theo từng mốc thời gian `[effective_from, effective_to]`. Mọi thay đổi nội quy hoặc thay đổi luật không làm ảnh hưởng đến dữ liệu công và lương của quá khứ.
 2. **Quy chuẩn Chấm công & Phân ca (`attendance_policy_configs`)**:
    - Thời gian miễn trừ đi muộn/về sớm (Grace period).
    - Đơn vị tính làm tròn nghỉ phép (`leave_unit`) và làm tròn muộn/sớm (`early_leave_unit`).
@@ -17,10 +17,29 @@ Module `PolicyEngine` đóng vai trò là "Cơ quan Lập pháp" trong hệ th�
    - Biểu nấc phạt vi phạm theo số phút (JSON động) và biểu nhân hệ số theo tần suất tái phạm trong tháng (JSON động).
    - Hệ số làm thêm giờ: Ngày thường (1.5x), cuối tuần (2.0x), ngày lễ (3.0x), phụ cấp ca đêm (30%).
    - Tỷ lệ chuyển đổi giờ OT sang ngày nghỉ bù (`compensation_rate`).
-3. **Ma trận Phúc lợi Con nhỏ & Gia đình Linh hoạt (`child_welfare_policies`)**:
-   - *Quy định luật định bắt buộc (Statutory)*: Chế độ con dưới 12 tháng (miễn trừ 60 phút có hưởng lương/ngày, cấm ca đêm và làm thêm giờ theo Điều 137 BLLĐ).
-   - *Quy chế mở rộng của Doanh nghiệp (Enterprise Custom)*: Cho phép doanh nghiệp tự định nghĩa thêm các nấc phúc lợi (VD: Con 1-11 tuổi miễn 60 phút không hưởng lương; Con 1-6 tuổi về sớm 30 phút có lương...).
-4. **Biểu thuế TNCN Lũy tiến Động 5 Bậc (`pit_tax_brackets`)**: Quản lý các ngưỡng thu nhập tính thuế, thuế suất và số trừ nhanh theo luật thuế TNCN mới có hiệu lực từ tháng 01/2026.
+3. **Cấu hình Tiền lương, Thuế & Bảo hiểm Xã hội (`payroll_policy_configs`)**:
+   - Chế độ ngày công chuẩn: Cố định (`FIXED`, ví dụ: 24 hoặc 26 ngày) hoặc Theo lịch thực tế (`CALENDAR_BASED`).
+   - Giờ làm việc tiêu chuẩn mỗi ngày (mặc định 8.00 giờ).
+   - Ngày chi trả lương trong tháng (`payment_day`) và tùy chọn chi trả sớm nếu trùng ngày nghỉ/lễ.
+   - Các mức giảm trừ gia cảnh thuế TNCN: Bản thân (mặc định 11.000.000 đ hoặc 15.400.000 đ theo chính sách mới) và Người phụ thuộc (mặc định 4.400.000 đ hoặc 6.160.000 đ/tháng).
+   - Mức lương cơ sở nhà nước (2.340.000 đ) và các mức trần đóng BHXH/BHYT (20 lần lương cơ sở: 46.800.000 đ), BHTN (20 lần lương tối thiểu vùng: 99.200.000 đ).
+   - Tỷ lệ trích nộp bảo hiểm của Người lao động (10.5%) và Người sử dụng lao động (21.5%).
+   - Tỷ lệ lương thử việc tối thiểu (85%), mức khấu trừ thuế TNCN thử việc/vãng lai (10% với ngưỡng từ 2.000.000 đ).
+   - Hệ số OT 6 bậc (Ngày thường ngày 1.5x, đêm 2.0x; Cuối tuần ngày 2.0x, đêm 2.7x; Ngày lễ ngày 3.0x, đêm 3.9x).
+   - Kiểm soát 3 tầng trần OT miễn thuế: Ngày 50% ca, Tháng 40h, Năm 200h/300h theo Nghị định 145/2020/NĐ-CP.
+4. **Khung Phúc lợi Doanh nghiệp Đa năng (`welfare_schemes`)**:
+   - Trao quyền cho Quản trị viên/HR tự do định nghĩa mọi loại chế độ hỗ trợ: Trợ cấp tiền mặt hàng tháng, thưởng một lần (kết hôn, sinh con), miễn giảm giờ làm việc mỗi ngày, cộng thêm ngày nghỉ phép năm.
+   - Điều kiện áp dụng linh hoạt: Theo giới tính (`FEMALE`, `MALE`, `ALL`), theo độ tuổi con nhỏ (từ tháng đến tháng), theo thâm niên làm việc tối thiểu, theo tính chất công việc.
+   - Cờ bắt buộc luật định (`is_statutory`) hoặc doanh nghiệp mở rộng.
+5. **Danh mục Phụ cấp Lương Chuẩn hóa (`allowances`)**:
+   - Kế thừa và chuẩn hóa từ hệ thống thực chiến `timekeeper2`: Ăn trưa, điện thoại, xăng xe, nhà ở, độc hại, chuyên cần.
+   - Phân định rõ ràng: Hình thức chi trả (`COMPANY_FIXED`, `INDIVIDUAL_FIXED`, `IRREGULAR`), có tính đóng BHXH không, có chịu thuế TNCN không, có tính vào đơn giá giờ OT không, và mức trần miễn thuế TNCN tối đa.
+6. **Chuẩn hóa Trạng thái Hiện / Ẩn (`visibility: VISIBLE / HIDDEN`)**:
+   - Thay thế toàn bộ các cờ bật/tắt cứng nhắc bằng trạng thái Hiện/Ẩn, cho phép doanh nghiệp chủ động hiển thị các chế độ áp dụng trên giao diện Portal hoặc tạm ẩn mà không làm gián đoạn CSDL.
+7. **Biểu thuế TNCN Lũy tiến Động 5 Bậc (`pit_tax_brackets`)**: Quản lý các ngưỡng thu nhập tính thuế, thuế suất và số trừ nhanh theo luật thuế TNCN mới.
+8. **Kiến trúc Caching Đa Tầng Hiệu năng cao**:
+   - Sử dụng kết hợp Memory Caching (Static Array trong vòng đời Request) và Redis Caching với khóa định danh phân tầng `tenant_{id}:policy_for_date:{date}`.
+   - Cơ chế tự động dọn sạch cache (`clearPolicyCache`) ngay khi có bất kỳ thay đổi nào trong cấu hình.
 
 ---
 
@@ -30,10 +49,13 @@ Module `PolicyEngine` đóng vai trò là "Cơ quan Lập pháp" trong hệ th�
 
 ```mermaid
 erDiagram
-    tenants ||--o{ policy_versions : "configures"
-    policy_versions ||--|| attendance_policy_configs : "has attendance rules"
-    policy_versions ||--o{ child_welfare_policies : "has child perks"
-    policy_versions ||--o{ pit_tax_brackets : "has PIT tiers"
+    tenants ||--o{ policy_versions : "owns"
+    policy_versions ||--|| attendance_policy_configs : "attendance rules"
+    policy_versions ||--|| payroll_policy_configs : "payroll & tax rules"
+    policy_versions ||--o{ child_welfare_policies : "child statutory policies"
+    policy_versions ||--o{ pit_tax_brackets : "PIT tax brackets"
+    tenants ||--o{ welfare_schemes : "custom welfare schemes"
+    tenants ||--o{ allowances : "standard allowances"
 ```
 
 ### 2.2 Đặc tả Chi tiết các Bảng Dữ liệu
@@ -47,8 +69,8 @@ erDiagram
 - `effective_to` (DATE, Nullable) — Ngày kết thúc (NULL nếu đang là chính sách hiện hành)
 - `is_active` (BOOLEAN, Default: TRUE)
 - `created_at`, `updated_at` (TIMESTAMP)
-- Unique index: `(tenant_id, code)`
-- Composite index: `(tenant_id, effective_from, effective_to)`
+- Unique Index: `(tenant_id, code)`
+- Composite Index: `(tenant_id, effective_from, effective_to)`
 
 #### Bảng `attendance_policy_configs`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
@@ -64,130 +86,208 @@ erDiagram
 - `ot_rate_weekend` (DECIMAL(4,2), Default: 2.00)
 - `ot_rate_holiday` (DECIMAL(4,2), Default: 3.00)
 - `night_shift_bonus_rate` (DECIMAL(4,2), Default: 0.30) — Phụ cấp làm ca đêm
-- `ot_night_extra_rate` (DECIMAL(4,2), Default: 0.20) — Phụ cấp thêm 20% khi làm thêm giờ vào ban đêm
-- `ot_to_rostered_rate` (DECIMAL(4,2), Default: 1.00) — Hệ số quy đổi OT sang giờ công chuẩn
 - `compensation_rate` (DECIMAL(4,2), Default: 8.00) — Số giờ OT quy đổi 1 ngày nghỉ bù
-- `penalty_tiers_json` (JSON) — Cấu trúc nấc phạt phút vi phạm:
-  ```json
-  [
-    {"min_minutes": 1, "max_minutes": 15, "fine_amount": 50000, "action": "FINE"},
-    {"min_minutes": 16, "max_minutes": 30, "fine_amount": 100000, "action": "FINE"},
-    {"min_minutes": 31, "max_minutes": 60, "fine_amount": 200000, "action": "FINE"},
-    {"min_minutes": 61, "max_minutes": 999, "fine_amount": 0, "action": "HALF_DAY_DEDUCTION"}
-  ]
-  ```
-- `frequency_penalty_json` (JSON) — Cấu trúc nhân hệ số theo tần suất tháng:
-  ```json
-  [
-    {"min_count": 1, "max_count": 3, "multiplier": 1.0, "note": "Nhắc nhở"},
-    {"min_count": 4, "max_count": 5, "multiplier": 2.0, "note": "Nhân đôi tiền phạt"},
-    {"min_count": 6, "max_count": 999, "multiplier": 3.0, "note": "Nhân ba tiền phạt + Cắt chuyên cần"}
-  ]
-  ```
+- `penalty_tiers_json` (JSON) — Cấu trúc nấc phạt phút vi phạm
+- `frequency_penalty_json` (JSON) — Cấu trúc nhân hệ số theo tần suất tháng
 
-#### Bảng `child_welfare_policies` (Ma trận phúc lợi con nhỏ)
+#### Bảng `payroll_policy_configs` (Cấu hình Lương, Thuế & BHXH)
+- `id` (BIGINT UNSIGNED, PK, Auto Increment)
+- `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`, Unique)
+- `standard_working_days_mode` (ENUM: `FIXED`, `CALENDAR_BASED`, Default: `FIXED`)
+- `fixed_standard_working_days` (DECIMAL(4,2), Default: 26.00) — Ngày công chuẩn cố định
+- `standard_working_hours_per_day` (DECIMAL(4,2), Default: 8.00) — Giờ chuẩn ngày
+- `payment_day` (INT, Default: 10) — Ngày chi trả lương hàng tháng
+- `pay_early_on_holiday_weekend` (BOOLEAN, Default: TRUE) — Chi trả sớm nếu trùng ngày nghỉ/lễ
+- `personal_deduction` (DECIMAL(15,2), Default: 11000000.00) — Giảm trừ bản thân (VND/tháng)
+- `dependent_deduction` (DECIMAL(15,2), Default: 4400000.00) — Giảm trừ người phụ thuộc (VND/tháng)
+- `default_child_allowance` (DECIMAL(15,2), Default: 300000.00) — Trợ cấp con nhỏ mặc định
+- `base_salary` (DECIMAL(15,2), Default: 2340000.00) — Mức lương cơ sở làm căn cứ trần bảo hiểm
+- `max_salary_bhxh` (DECIMAL(15,2), Default: 46800000.00) — Trần đóng BHXH/BHYT (20 lần lương cơ sở)
+- `max_salary_bhtn` (DECIMAL(15,2), Default: 99200000.00) — Trần đóng BHTN (20 lần lương tối thiểu vùng)
+- `company_bhxh_rate` (DECIMAL(5,2), Default: 17.50)
+- `company_bhyt_rate` (DECIMAL(5,2), Default: 3.00)
+- `company_bhtn_rate` (DECIMAL(5,2), Default: 1.00)
+- `employee_bhxh_rate` (DECIMAL(5,2), Default: 8.00)
+- `employee_bhyt_rate` (DECIMAL(5,2), Default: 1.50)
+- `employee_bhtn_rate` (DECIMAL(5,2), Default: 1.00)
+- `probation_salary_percentage` (DECIMAL(5,2), Default: 85.00)
+- `probation_pit_rate` (DECIMAL(5,2), Default: 10.00)
+- `probation_pit_threshold` (DECIMAL(15,2), Default: 2000000.00)
+- `ot_weekday_day_rate` (DECIMAL(4,2), Default: 1.50)
+- `ot_weekday_night_rate` (DECIMAL(4,2), Default: 2.00)
+- `ot_weekend_day_rate` (DECIMAL(4,2), Default: 2.00)
+- `ot_weekend_night_rate` (DECIMAL(4,2), Default: 2.70)
+- `ot_holiday_day_rate` (DECIMAL(4,2), Default: 3.00)
+- `ot_holiday_night_rate` (DECIMAL(4,2), Default: 3.90)
+- `ot_tax_exempt_daily_limit_percent` (INT, Default: 50) — Trần OT miễn thuế ngày (50%)
+- `ot_tax_exempt_monthly_limit_hours` (INT, Default: 40) — Trần OT miễn thuế tháng (40h)
+- `ot_tax_exempt_yearly_limit_hours` (INT, Default: 200) — Trần OT miễn thuế năm (200h/300h)
+
+#### Bảng `welfare_schemes` (Khung Phúc lợi Doanh nghiệp Đa năng)
+- `id` (BIGINT UNSIGNED, PK, Auto Increment)
+- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `policy_version_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `policy_versions.id`)
+- `code` (VARCHAR(50)) — Mã phúc lợi (VD: `CON_NHO_HO_TRO`, `PHU_NU_THAI_SAN`, `NGUOI_CAO_TUOI`)
+- `name` (VARCHAR(200)) — Tên chế độ phúc lợi
+- `category` (ENUM: `CHILD_CARE`, `MATERNITY_FEMALE`, `HEALTH_WELLNESS`, `WORKING_COND`, `FINANCIAL_SUPPORT`, `SPECIAL_ALLOWANCE`)
+- `visibility` (ENUM: `VISIBLE`, `HIDDEN`, Default: `VISIBLE`) — Trạng thái Hiện / Ẩn
+- `is_statutory` (BOOLEAN, Default: FALSE) — Bắt buộc luật định hay doanh nghiệp tự mở rộng
+- `daily_exemption_minutes` (INT, Default: 0) — Số phút miễn trừ giờ làm việc mỗi ngày
+- `pay_type` (ENUM: `PAID`, `UNPAID`, `PARTIAL`, Default: `PAID`)
+- `prohibit_night_shift` (BOOLEAN, Default: FALSE)
+- `prohibit_overtime` (BOOLEAN, Default: FALSE)
+- `additional_leave_days_per_year` (DECIMAL(4,2), Default: 0.00) — Ngày phép cộng thêm hàng năm
+- `monthly_allowance_amount` (DECIMAL(15,2), Default: 0.00) — Tiền trợ cấp hàng tháng
+- `one_time_bonus_amount` (DECIMAL(15,2), Default: 0.00) — Tiền thưởng một lần
+- `is_tax_exempt` (BOOLEAN, Default: FALSE) — Có miễn thuế TNCN không
+- `applicable_gender` (ENUM: `ALL`, `FEMALE`, `MALE`, Default: `ALL`)
+- `child_min_age_months` (INT, Nullable)
+- `child_max_age_months` (INT, Nullable)
+- `min_seniority_months` (INT, Nullable)
+- `description` (TEXT, Nullable)
+- Composite Index: `(tenant_id, visibility, category)`
+
+#### Bảng `allowances` (Danh mục Phụ cấp Lương Doanh nghiệp)
+- `id` (BIGINT UNSIGNED, PK, Auto Increment)
+- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `code` (VARCHAR(50)) — Mã phụ cấp (VD: `PC_AN_TRUA`, `PC_DIEN_THOAI`, `PC_XANG_XE`, `PC_CHUYEN_CAN`)
+- `name` (VARCHAR(200)) — Tên phụ cấp
+- `apply_type` (ENUM: `COMPANY_FIXED`, `INDIVIDUAL_FIXED`, `IRREGULAR`)
+- `is_insurance_taxable` (BOOLEAN, Default: FALSE) — Có tính đóng BHXH bắt buộc không
+- `is_pit_taxable` (BOOLEAN, Default: TRUE) — Có chịu thuế TNCN không
+- `is_included_in_ot_wage` (BOOLEAN, Default: FALSE) — Có tính vào đơn giá giờ làm thêm OT không
+- `tax_exemption_limit` (DECIMAL(15,2), Nullable) — Trần miễn thuế TNCN tối đa
+- `default_amount` (DECIMAL(15,2), Default: 0.00)
+- `visibility` (ENUM: `VISIBLE`, `HIDDEN`, Default: `VISIBLE`) — Trạng thái Hiện / Ẩn
+- `notes` (TEXT, Nullable)
+- Composite Index: `(tenant_id, visibility, apply_type)`
+
+#### Bảng `child_welfare_policies` (Ma trận phúc lợi con nhỏ luật định)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`)
-- `name` (VARCHAR(150)) — Tên chính sách
-- `min_age_months` (INT) — Tuổi bắt đầu (tháng)
-- `max_age_months` (INT) — Tuổi kết thúc (tháng)
-- `daily_exemption_minutes` (INT) — Số phút miễn trừ mỗi ngày làm việc
+- `name` (VARCHAR(150))
+- `min_age_months` (INT)
+- `max_age_months` (INT)
+- `daily_exemption_minutes` (INT)
 - `pay_type` (ENUM: `PAID`, `UNPAID`, `PARTIAL`)
-- `prohibit_night_shift` (BOOLEAN, Default: FALSE) — Cấm ca đêm theo mặc định
-- `prohibit_overtime` (BOOLEAN, Default: FALSE) — Cấm làm thêm giờ theo mặc định
-- `allow_night_and_ot_with_consent` (BOOLEAN, Default: TRUE) — Cho phép ca đêm/OT nếu có đơn thỏa thuận/đồng thuận tự nguyện (Điều 137 Khoản 1 Điểm b BLLĐ 2019)
-- `is_statutory` (BOOLEAN, Default: FALSE) — TRUE nếu là quy định bắt buộc theo luật
+- `prohibit_night_shift` (BOOLEAN, Default: FALSE)
+- `prohibit_overtime` (BOOLEAN, Default: FALSE)
+- `is_statutory` (BOOLEAN, Default: FALSE)
+- `visibility` (ENUM: `VISIBLE`, `HIDDEN`, Default: `VISIBLE`)
 - `is_active` (BOOLEAN, Default: TRUE)
 
-#### Bảng `pit_tax_brackets` (Biểu thuế TNCN 5 bậc mới)
+#### Bảng `pit_tax_brackets` (Biểu thuế TNCN 5 bậc)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`)
-- `tier` (INT) — Bậc (1, 2, 3, 4, 5)
-- `min_income` (DECIMAL(15,2)) — Thu nhập tính thuế từ (VND)
-- `max_income` (DECIMAL(15,2), Nullable) — Thu nhập tính thuế đến (VND, NULL nếu là vô cùng)
-- `tax_rate` (DECIMAL(5,2)) — Thuế suất (%) (5, 10, 20, 30, 35)
-- `quick_subtraction` (DECIMAL(15,2)) — Số trừ nhanh (VND)
+- `tier` (INT) — Bậc 1 đến 5
+- `min_income` (DECIMAL(15,2))
+- `max_income` (DECIMAL(15,2), Nullable)
+- `tax_rate` (DECIMAL(5,2)) — 5%, 10%, 20%, 30%, 35%
+- `quick_subtraction` (DECIMAL(15,2))
 
 ---
 
-## 3. Kiến trúc Dịch vụ & Thuật toán Cốt lõi (Services & Logic)
+## 3. Kiến trúc Caching Đa Tầng & Dịch vụ Phân giải (Caching & Resolvers)
 
-### 3.1 Dịch vụ Phân giải Chính sách theo Thời điểm (`PolicyResolverService`)
-Mọi nghiệp vụ tính toán (chấm công ngày, tổng kết tháng, tính lương) **tuyệt đối không đọc hardcode**, mà phải triệu gọi `PolicyResolverService`:
+### 3.1 Dịch vụ Phân giải Quy chế Tối ưu Caching (`PolicyResolutionService`)
 
 ```php
 namespace App\Modules\PolicyEngine\Services;
 
-class PolicyResolverService
+class PolicyResolutionService
 {
-    /**
-     * Lấy cấu hình quy chế áp dụng tại một ngày cụ thể (Point-in-time Resolution)
-     */
+    /** @var array<string, ResolvedPolicyDTO> In-memory static cache */
+    protected static array $memoryCache = [];
+
     public function resolveForDate(int $tenantId, CarbonInterface $targetDate): ResolvedPolicyDTO
     {
-        $cacheKey = "tenant_{$tenantId}:policy_for_date:{$targetDate->toDateString()}";
+        $dateStr = $targetDate->toDateString();
+        $cacheKey = "tenant_{$tenantId}:policy_for_date:{$dateStr}";
 
-        return Cache::remember($cacheKey, 3600, function () use ($tenantId, $targetDate) {
+        // Tầng 1: Memory Cache (0ms)
+        if (isset(self::$memoryCache[$cacheKey])) {
+            return self::$memoryCache[$cacheKey];
+        }
+
+        // Tầng 2: Redis Cache (TTL: 3600s)
+        $dto = Cache::remember($cacheKey, 3600, function () use ($tenantId, $dateStr) {
             $version = PolicyVersion::where('tenant_id', $tenantId)
-                ->where('effective_from', '<=', $targetDate->toDateString())
-                ->where(function ($query) use ($targetDate) {
-                    $query->whereNull('effective_to')
-                          ->orWhere('effective_to', '>=', $targetDate->toDateString());
+                ->where('effective_from', '<=', $dateStr)
+                ->where(function ($query) use ($dateStr) {
+                    $query->whereNull('effective_to')->orWhere('effective_to', '>=', $dateStr);
                 })
                 ->where('is_active', true)
-                ->with(['attendanceConfig', 'childWelfarePolicies', 'pitTaxBrackets'])
+                ->with([
+                    'attendanceConfig',
+                    'payrollConfig',
+                    'childWelfarePolicies' => fn($q) => $q->where('visibility', 'VISIBLE'),
+                    'pitTaxBrackets'
+                ])
                 ->orderByDesc('effective_from')
                 ->firstOrFail();
 
             return ResolvedPolicyDTO::fromModel($version);
         });
+
+        self::$memoryCache[$cacheKey] = $dto;
+        return $dto;
+    }
+
+    /**
+     * Dọn sạch toàn bộ cache quy chế khi có thay đổi cấu hình (Cache Invalidation)
+     */
+    public function clearPolicyCache(int $tenantId): void
+    {
+        self::$memoryCache = [];
+        Cache::tags(["tenant_{$tenantId}_policies"])->flush();
     }
 }
 ```
 
-### 3.2 Giải thuật Phân giải Phúc lợi Con nhỏ theo Ngày
-Tại mỗi ngày làm việc $D$, đối với nhân viên có con sinh ngày $D_{\text{birth}}$:
-1. Tính số tháng tuổi chính xác: $M = \text{diffInMonths}(D_{\text{birth}}, D)$.
-2. Quét danh sách `childWelfarePolicies` đang kích hoạt trong `ResolvedPolicyDTO`:
-   - Tìm policy thỏa mãn: $M_{\text{min}} \le M \le M_{\text{max}}$.
-   - Trả về đối tượng `ActiveChildPerk`:
-     - `daily_exemption_minutes`
-     - `pay_type` (`PAID` hay `UNPAID`)
-     - `prohibit_night_shift` (nếu TRUE $\to$ chặn xếp ca đêm $22:00 - 06:00$)
-     - `prohibit_overtime` (nếu TRUE $\to$ chặn xếp OT)
-3. Nếu con đã bước sang tháng thứ 12 vào ngày 15 trong tháng:
-   - Từ ngày 01 đến 14: Áp dụng chế độ con dưới 12 tháng (hưởng 60 phút có lương, cấm ca đêm/OT).
-   - Từ ngày 15 trở đi: Tự động chuyển sang chế độ tiếp theo (nếu công ty có cấu hình con 1-11 tuổi) hoặc về trạng thái bình thường.
+---
+
+## 4. Giao diện Trung tâm Cấu hình (Vue 3 / Inertia.js / Element Plus)
+
+Giao diện tại `resources/js/Pages/Policies/Index.vue` được chia thành 7 tab chuyên sâu:
+1. **Tab 1 - Quy chuẩn Chấm công (`Attendance`)**: Nấc phạt vi phạm, giờ làm tròn, giờ nghỉ giữa ca.
+2. **Tab 2 - Phúc lợi Con nhỏ (`Child Welfare`)**: Thiết lập chế độ con dưới 12 tháng, con 1-11 tuổi.
+3. **Tab 3 - Cấu hình Lương & BHXH (`Payroll Config`)**: Ngày công chuẩn, trần bảo hiểm, ngày trả lương, 3 tầng trần OT miễn thuế.
+4. **Tab 4 - Chế độ Phúc lợi Đa năng (`Welfare Schemes`)**: Bảng quản lý mọi chính sách phúc lợi doanh nghiệp, modal tạo/sửa với trạng thái Hiện/Ẩn.
+5. **Tab 5 - Danh mục Phụ cấp (`Allowances`)**: Danh sách phụ cấp lương, cờ bảo hiểm, cờ thuế, cờ tính vào OT.
+6. **Tab 6 - Biểu thuế TNCN 5 Bậc (`PIT Tax`)**: Điều chỉnh 5 bậc thu nhập và thuế suất.
+7. **Tab 7 - Sandbox Thử nghiệm Thời gian thực (`Sandbox`)**: Mô phỏng tính toán nấc phạt, thử nghiệm biểu thuế TNCN 5 bậc và phúc lợi con nhỏ.
 
 ---
 
-## 4. Danh mục RESTful API Endpoints
+## 5. Danh mục RESTful / Inertia Endpoints
 
 | Method | URI | Quyền hạn | Mô tả |
 |---|---|---|---|
-| `GET` | `/api/v1/policies` | `policy.view` | Danh sách tất cả các phiên bản quy chế của công ty |
-| `POST` | `/api/v1/policies` | `policy.manage` | Khởi tạo phiên bản quy chế mới |
-| `GET` | `/api/v1/policies/{id}` | `policy.view` | Chi tiết một phiên bản (gồm cấu hình chấm công, con nhỏ, thuế TNCN) |
-| `PUT` | `/api/v1/policies/{id}/attendance` | `policy.manage` | Cập nhật cấu hình chấm công & nấc phạt của phiên bản |
-| `POST` | `/api/v1/policies/{id}/child-welfare` | `policy.manage` | Thêm mới một chế độ phúc lợi con nhỏ vào phiên bản |
-| `PUT` | `/api/v1/policies/{id}/child-welfare/{childId}` | `policy.manage` | Sửa/Bật/Tắt chế độ phúc lợi con nhỏ |
-| `PUT` | `/api/v1/policies/{id}/pit-brackets` | `policy.manage` | Điều chỉnh các bậc thuế TNCN 5 bậc của phiên bản |
-| `POST` | `/api/v1/policies/{id}/clone` | `policy.manage` | Nhân bản một phiên bản quy chế cũ để chuẩn bị cho kỳ hiệu lực mới |
+| `GET` | `/policies` | `perm:POLICY_WELFARE.view` | Xem trung tâm cấu hình quy chế |
+| `POST` | `/policies/versions` | `perm:POLICY_WELFARE.manage` | Tạo phiên bản quy chế mới |
+| `POST` | `/policies/attendance` | `perm:POLICY_WELFARE.manage` | Cập nhật cấu hình chấm công & nấc phạt |
+| `POST` | `/policies/payroll` | `perm:POLICY_WELFARE.manage` | Cập nhật cấu hình lương, BHXH & trần OT |
+| `POST` | `/policies/welfare-schemes` | `perm:POLICY_WELFARE.manage` | Thêm mới chế độ phúc lợi doanh nghiệp |
+| `POST` | `/policies/welfare-schemes/{id}/toggle-visibility` | `perm:POLICY_WELFARE.manage` | Chuyển đổi trạng thái Hiện / Ẩn phúc lợi |
+| `POST` | `/policies/allowances` | `perm:POLICY_WELFARE.manage` | Thêm mới / cập nhật danh mục phụ cấp lương |
+| `POST` | `/policies/allowances/{id}/toggle-visibility` | `perm:POLICY_WELFARE.manage` | Chuyển đổi trạng thái Hiện / Ẩn phụ cấp |
+| `POST` | `/policies/sandbox/penalty` | `perm:POLICY_WELFARE.view` | Sandbox thử nghiệm tính phạt muộn/sớm |
+| `POST` | `/policies/sandbox/pit-tax` | `perm:POLICY_WELFARE.view` | Sandbox thử nghiệm tính thuế TNCN 5 bậc |
 
 ---
 
-## 5. Kịch bản Kiểm thử Tích hợp (Test Scenarios)
+## 6. Kịch bản Kiểm thử Tích hợp (Test Scenarios)
 
-1. **Test `PointInTimePolicySwitch`**:
-   - Phiên bản 1 (`POL_2025`): Áp dụng từ `2025-01-01` đến `2025-12-31` với hệ số phạt muộn nấc 1 là 30.000 đ.
-   - Phiên bản 2 (`POL_2026`): Áp dụng từ `2026-01-01` với hệ số phạt muộn nấc 1 là 50.000 đ.
-   - Chạy tính công ngày `2025-12-30` $\to$ Phạt 30.000 đ.
-   - Chạy tính công ngày `2026-01-02` $\to$ Phạt 50.000 đ.
-2. **Test `ChildPolicyDynamicAgeBoundary`**:
-   - Con nhân viên sinh ngày `2025-09-15`.
-   - Ngày tính công `2026-09-14` (chưa tròn 12 tháng) $\to$ Được miễn trừ 60 phút có lương, kiểm tra phân ca đêm trả về vi phạm.
-   - Ngày tính công `2026-09-16` (đã tròn 12 tháng) $\to$ Chế độ con dưới 12 tháng tự động kết thúc.
-3. **Test `PITBracketFiveTiersCalculation`**:
-   - Thu nhập tính thuế 25.000.000 đ.
-   - Bậc 2: Thuế suất 10%, Số trừ nhanh 500.000 đ.
-   - Tiền thuế TNCN tính được: $25.000.000 \times 10\% - 500.000 = 2.000.000\text{ đ}$.
+1. **Test `MultiTierPolicyCacheInvalidation`**:
+   - Gọi `resolveForDate` lần 1: Ghi nhận truy vấn CSDL và nạp vào Redis/Memory cache.
+   - Gọi `resolveForDate` lần 2: Trả về kết quả từ cache mà không tốn truy vấn CSDL.
+   - Cập nhật cấu hình nấc phạt và kích hoạt `clearPolicyCache($tenantId)`.
+   - Gọi `resolveForDate` lần 3: Truy vấn lại CSDL với cấu hình nấc phạt mới nhất.
+2. **Test `WelfareSchemeVisibilityFilter`**:
+   - Thiết lập một phúc lợi có `visibility = HIDDEN`.
+   - Pipeline tính công chạy quét phúc lợi áp dụng.
+   - Kết quả kỳ vọng: Phúc lợi ở trạng thái `HIDDEN` bị bỏ qua, không được miễn trừ giờ công.
+3. **Test `PayrollPolicyZeroHardcodeFallback`**:
+   - Thay đổi mức giảm trừ gia cảnh người phụ thuộc từ 4.400.000 đ thành 6.160.000 đ trong `payroll_policy_configs`.
+   - Chạy tính thuế TNCN cho nhân viên có 1 người phụ thuộc.
+   - Kết quả kỳ vọng: Hệ thống tự động trừ đúng 6.160.000 đ mà không cần sửa mã nguồn PHP.

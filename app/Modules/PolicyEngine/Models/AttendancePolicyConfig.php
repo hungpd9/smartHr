@@ -24,6 +24,13 @@ class AttendancePolicyConfig extends Model
         'compensation_rate',
         'penalty_tiers_json',
         'frequency_penalty_json',
+        'enable_auto_submit_timesheet',
+        'emp_review_deadline_day',
+        'auto_submit_day',
+        'manager_approval_deadline_day',
+        'higher_manager_deadline_day',
+        'hr_lock_deadline_day',
+        'payroll_payment_day',
     ];
 
     protected $casts = [
@@ -38,6 +45,13 @@ class AttendancePolicyConfig extends Model
         'compensation_rate' => 'decimal:2',
         'penalty_tiers_json' => 'array',
         'frequency_penalty_json' => 'array',
+        'enable_auto_submit_timesheet' => 'boolean',
+        'emp_review_deadline_day' => 'integer',
+        'auto_submit_day' => 'integer',
+        'manager_approval_deadline_day' => 'integer',
+        'higher_manager_deadline_day' => 'integer',
+        'hr_lock_deadline_day' => 'integer',
+        'payroll_payment_day' => 'integer',
     ];
 
     public function policyVersion(): BelongsTo

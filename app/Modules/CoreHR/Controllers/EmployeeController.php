@@ -28,6 +28,7 @@ class EmployeeController extends Controller
 
     public function index(Request $request): Response
     {
+        $tenantId = (int) ($request->user()?->tenant_id ?? 1);
         $search = $request->query('search');
         $departmentId = $request->query('department_id');
         $status = $request->query('status');
@@ -107,8 +108,7 @@ class EmployeeController extends Controller
             ];
         });
 
-        $departments = Department::with('currentVersion', 'branch')
-            ->where('status', 'ACTIVE')
+        $departments = Department::with(['currentVersion.manager', 'branch'])
             ->orderBy('level')
             ->orderBy('order')
             ->get()
@@ -116,16 +116,28 @@ class EmployeeController extends Controller
                 'id' => $d->id,
                 'code' => $d->code,
                 'name' => $d->currentVersion?->name ?? $d->code,
+                'mission_function' => $d->currentVersion?->mission_function ?? '',
+                'manager_id' => $d->currentVersion?->manager_id,
+                'manager_name' => $d->currentVersion?->manager?->full_name,
                 'level' => $d->level,
+                'order' => $d->order,
                 'parent_id' => $d->parent_id,
+                'branch_id' => $d->branch_id,
                 'branch_name' => $d->branch?->name ?? '',
+                'status' => $d->status,
             ]);
 
         // Xây dựng sơ đồ cây phân cấp Org Chart (Tree Structure)
         $orgTree = $this->buildOrgTree();
 
-        $positions = Position::where('is_active', true)->get(['id', 'code', 'name', 'level', 'department_id', 'allowance_amount', 'bonus_one_time', 'description']);
+        $positions = Position::orderBy('level')->get(['id', 'code', 'name', 'level', 'department_id', 'allowance_amount', 'bonus_one_time', 'description', 'is_active']);
         $branches = Branch::where('is_active', true)->get();
+
+        $allEmployeesShort = Employee::where('tenant_id', $tenantId)
+            ->where('status', '!=', 'TERMINATED')
+            ->select(['id', 'user_code', 'full_name'])
+            ->orderBy('full_name')
+            ->get();
 
         return Inertia::render('CoreHR/Index', [
             'employees' => $employees,
@@ -133,6 +145,7 @@ class EmployeeController extends Controller
             'orgTree' => $orgTree,
             'positions' => $positions,
             'branches' => $branches,
+            'allEmployeesShort' => $allEmployeesShort,
             'filters' => [
                 'search' => $search,
                 'department_id' => $departmentId,

@@ -32,4 +32,14 @@ class Tenant extends Model
     {
         return $this->hasMany(Employee::class);
     }
+
+    public function leaveBalances(): HasMany
+    {
+        return $this->hasMany(\App\Modules\LeavePolicy\Models\LeaveBalance::class);
+    }
+
+    public function overtimeAccumulations(): HasMany
+    {
+        return $this->hasMany(\App\Modules\LeavePolicy\Models\OvertimeAccumulation::class);
+    }
 }

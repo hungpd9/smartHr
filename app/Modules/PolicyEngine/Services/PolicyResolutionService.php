@@ -6,7 +6,9 @@ namespace App\Modules\PolicyEngine\Services;
 
 use App\Modules\PolicyEngine\Models\PolicyVersion;
 use App\Modules\PolicyEngine\Models\AttendancePolicyConfig;
+use App\Modules\PolicyEngine\Models\PayrollPolicyConfig;
 use App\Modules\PolicyEngine\Models\ChildWelfarePolicy;
+use App\Modules\PolicyEngine\Models\WelfareScheme;
 use App\Modules\PolicyEngine\Models\PitTaxBracket;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -16,33 +18,57 @@ class PolicyResolutionService
 {
     /**
      * Tìm phiên bản quy chế áp dụng tại một mốc thời gian cụ thể (Effective Dating)
-     * Tích hợp Caching đa tầng (Redis / Memory Cache) tránh query lặp lại trong chu trình tính công
+     * Tích hợp Caching đa tầng với cơ chế Self-Healing bảo đảm an toàn khi unserialize
      */
     public function resolveForDate(int $tenantId, Carbon $targetDate): ?PolicyVersion
     {
+        // 1. Nạp trước các Model vào PHP runtime để bảo đảm unserialize an toàn
+        class_exists(PolicyVersion::class);
+        class_exists(AttendancePolicyConfig::class);
+        class_exists(PayrollPolicyConfig::class);
+        class_exists(ChildWelfarePolicy::class);
+        class_exists(WelfareScheme::class);
+        class_exists(PitTaxBracket::class);
+
         $dateStr = $targetDate->format('Y-m-d');
         $cacheKey = "smart_hr:policy_version:{$tenantId}:{$dateStr}";
         $knownDatesKey = "smart_hr:policy_known_dates:{$tenantId}";
 
-        return Cache::remember($cacheKey, 86400, function () use ($tenantId, $dateStr, $knownDatesKey) {
-            // Ghi nhận mốc ngày vào index để phục vụ invalidation
-            $dates = Cache::get($knownDatesKey, []);
-            if (!in_array($dateStr, $dates, true)) {
-                $dates[] = $dateStr;
-                Cache::put($knownDatesKey, $dates, 86400 * 7);
-            }
+        // 2. Kiểm tra Cache hiện hành và tự động dọn sạch nếu dữ liệu bị lỗi __PHP_Incomplete_Class
+        $cached = Cache::get($cacheKey);
+        if ($cached instanceof \__PHP_Incomplete_Class || ($cached !== null && !($cached instanceof PolicyVersion))) {
+            Cache::forget($cacheKey);
+            $cached = null;
+        }
 
-            return PolicyVersion::where('tenant_id', $tenantId)
-                ->where('is_active', true)
-                ->where('effective_from', '<=', $dateStr)
-                ->where(function ($query) use ($dateStr) {
-                    $query->whereNull('effective_to')
-                          ->orWhere('effective_to', '>=', $dateStr);
-                })
-                ->with(['attendanceConfig', 'payrollConfig', 'childWelfarePolicies', 'welfareSchemes', 'pitTaxBrackets'])
-                ->latest('effective_from')
-                ->first();
-        });
+        if ($cached instanceof PolicyVersion) {
+            return $cached;
+        }
+
+        // 3. Ghi nhận mốc ngày vào index để phục vụ cache invalidation
+        $dates = Cache::get($knownDatesKey, []);
+        if (!in_array($dateStr, $dates, true)) {
+            $dates[] = $dateStr;
+            Cache::put($knownDatesKey, $dates, 86400 * 7);
+        }
+
+        // 4. Truy vấn CSDL và nạp đầy đủ các cấu hình quan hệ
+        $version = PolicyVersion::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->where('effective_from', '<=', $dateStr)
+            ->where(function ($query) use ($dateStr) {
+                $query->whereNull('effective_to')
+                      ->orWhere('effective_to', '>=', $dateStr);
+            })
+            ->with(['attendanceConfig', 'payrollConfig', 'childWelfarePolicies', 'welfareSchemes', 'pitTaxBrackets'])
+            ->latest('effective_from')
+            ->first();
+
+        if ($version) {
+            Cache::put($cacheKey, $version, 86400);
+        }
+
+        return $version;
     }
 
     /**

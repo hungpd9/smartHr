@@ -4,6 +4,7 @@ import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import AuditHistoryDrawer from '@/Components/AuditHistoryDrawer.vue';
 import {
     Operation,
     Calendar,
@@ -25,6 +26,8 @@ import {
     Edit,
     View,
     Hide,
+    Lock,
+    RefreshRight,
 } from '@element-plus/icons-vue';
 
 interface PenaltyTier {
@@ -52,6 +55,13 @@ interface AttendanceConfig {
     compensation_rate: string | number;
     penalty_tiers_json: PenaltyTier[];
     frequency_penalty_json: FrequencyRule[];
+    enable_auto_submit_timesheet?: boolean;
+    emp_review_deadline_day?: number;
+    auto_submit_day?: number;
+    manager_approval_deadline_day?: number;
+    higher_manager_deadline_day?: number;
+    hr_lock_deadline_day?: number;
+    payroll_payment_day?: number;
 }
 
 interface PayrollConfig {
@@ -185,15 +195,17 @@ const props = defineProps<{
     holidays: Holiday[];
     allowances: AllowanceItem[];
     allWelfareSchemes: WelfareScheme[];
+    isLocked?: boolean;
     canEdit: boolean;
     canEditPayroll: boolean;
     canTest: boolean;
     currentDate: string;
 }>();
 
-// Tự động nhận tab từ URL query nếu có
-const urlParams = new URLSearchParams(window.location.search);
-const activeTab = ref(urlParams.get('tab') || 'attendance');
+import { useSyncedTab } from '@/Composables/useNavigationHistory';
+
+// Tự động nhận và đồng bộ tab với URL query và Browser History (Back/Forward)
+const activeTab = useSyncedTab('attendance', 'tab');
 
 // Form Tạo phiên bản mới
 const isCreateVersionDialogVisible = ref(false);
@@ -212,6 +224,35 @@ const handleCreateVersion = () => {
             versionForm.reset();
             ElMessage.success('Khởi tạo phiên bản quy chế mới thành công!');
         },
+    });
+};
+
+// Form Cập nhật Cấu hình Chấm công & Chu trình đóng công (Zero-Hardcode)
+const aConf = props.activeVersion?.attendance_config;
+const attendanceConfigForm = useForm({
+    enable_auto_submit_timesheet: aConf?.enable_auto_submit_timesheet ?? true,
+    emp_review_deadline_day: aConf?.emp_review_deadline_day ?? 3,
+    auto_submit_day: aConf?.auto_submit_day ?? 4,
+    manager_approval_deadline_day: aConf?.manager_approval_deadline_day ?? 5,
+    higher_manager_deadline_day: aConf?.higher_manager_deadline_day ?? 6,
+    hr_lock_deadline_day: aConf?.hr_lock_deadline_day ?? 7,
+    payroll_payment_day: aConf?.payroll_payment_day ?? 10,
+    grace_period_late_minutes: aConf?.grace_period_late_minutes ?? 5,
+    grace_period_early_minutes: aConf?.grace_period_early_minutes ?? 0,
+    leave_unit_hours: aConf?.leave_unit_hours ?? 4.0,
+    early_leave_unit_hours: aConf?.early_leave_unit_hours ?? 4.0,
+    min_rest_hours_between_shifts: aConf?.min_rest_hours_between_shifts ?? 12,
+    min_weekly_rest_hours: aConf?.min_weekly_rest_hours ?? 24,
+    max_weekly_standard_hours: aConf?.max_weekly_standard_hours ?? 48,
+    ot_to_rostered_rate: aConf?.ot_to_rostered_rate ?? 1.5,
+    compensation_rate: aConf?.compensation_rate ?? 1.0,
+});
+
+const handleSaveAttendanceConfig = () => {
+    if (!props.activeVersion?.id) return;
+    attendanceConfigForm.put(`/policies/attendance-config/${props.activeVersion.id}`, {
+        preserveScroll: true,
+        onSuccess: () => ElMessage.success('Đã lưu cấu hình chu trình đóng công và quy chế kỷ luật thành công!'),
     });
 };
 
@@ -288,9 +329,169 @@ const handleToggleChildPolicyVisibility = (id: number) => {
     });
 };
 
+// Sửa & Xóa Phúc lợi con nhỏ
+const isEditChildPolicyDialogVisible = ref(false);
+const editingChildPolicyId = ref<number | null>(null);
+const editChildPolicyForm = useForm({
+    name: '',
+    min_age_months: 13,
+    max_age_months: 132,
+    daily_exemption_minutes: 30,
+    pay_type: 'PAID',
+    prohibit_night_shift: false,
+    prohibit_overtime: false,
+    is_statutory: false,
+    visibility: 'VISIBLE',
+});
+
+const openEditChildPolicy = (policy: any) => {
+    editingChildPolicyId.value = policy.id;
+    editChildPolicyForm.name = policy.name;
+    editChildPolicyForm.min_age_months = policy.min_age_months;
+    editChildPolicyForm.max_age_months = policy.max_age_months;
+    editChildPolicyForm.daily_exemption_minutes = policy.daily_exemption_minutes;
+    editChildPolicyForm.pay_type = policy.pay_type;
+    editChildPolicyForm.prohibit_night_shift = !!policy.prohibit_night_shift;
+    editChildPolicyForm.prohibit_overtime = !!policy.prohibit_overtime;
+    editChildPolicyForm.is_statutory = !!policy.is_statutory;
+    editChildPolicyForm.visibility = policy.visibility || 'VISIBLE';
+    isEditChildPolicyDialogVisible.value = true;
+};
+
+const handleUpdateChildPolicy = () => {
+    if (!editingChildPolicyId.value) return;
+    editChildPolicyForm.put(`/policies/child-welfare/${editingChildPolicyId.value}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            isEditChildPolicyDialogVisible.value = false;
+            ElMessage.success('Cập nhật chính sách con nhỏ thành công!');
+        },
+        onError: () => ElMessage.error('Không thể cập nhật chính sách con nhỏ!'),
+    });
+};
+
+const handleDeleteChildPolicy = (id: number, name: string) => {
+    ElMessageBox.confirm(`Bạn có chắc chắn muốn xóa chính sách "${name}"?`, 'Xác nhận xóa', {
+        type: 'warning',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        confirmButtonClass: 'el-button--danger',
+    }).then(() => {
+        router.delete(`/policies/child-welfare/${id}`, {
+            preserveScroll: true,
+            onSuccess: () => ElMessage.success('Đã xóa chính sách con nhỏ.'),
+            onError: () => ElMessage.error('Không thể xóa chính sách này.'),
+        });
+    }).catch(() => {});
+};
+
+// CRUD Biểu thuế TNCN (PIT Tax Brackets)
+const isPitBracketDialogVisible = ref(false);
+const isEditingPitBracket = ref(false);
+const editingPitBracketId = ref<number | null>(null);
+const pitBracketForm = useForm({
+    tier: 1,
+    min_income: 0,
+    max_income: null as number | null,
+    tax_rate: 5,
+    quick_subtraction: 0,
+});
+
+const openCreatePitBracket = () => {
+    isEditingPitBracket.value = false;
+    editingPitBracketId.value = null;
+    const nextTier = (props.activeVersion?.pit_tax_brackets?.length || 0) + 1;
+    pitBracketForm.reset();
+    pitBracketForm.tier = nextTier;
+    isPitBracketDialogVisible.value = true;
+};
+
+const openEditPitBracket = (bracket: any) => {
+    isEditingPitBracket.value = true;
+    editingPitBracketId.value = bracket.id;
+    pitBracketForm.tier = bracket.tier;
+    pitBracketForm.min_income = Number(bracket.min_income);
+    pitBracketForm.max_income = bracket.max_income !== null ? Number(bracket.max_income) : null;
+    pitBracketForm.tax_rate = Number(bracket.tax_rate);
+    pitBracketForm.quick_subtraction = Number(bracket.quick_subtraction || 0);
+    isPitBracketDialogVisible.value = true;
+};
+
+const handleSavePitBracket = () => {
+    if (isEditingPitBracket.value && editingPitBracketId.value) {
+        pitBracketForm.put(`/policies/pit-tax-brackets/${editingPitBracketId.value}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                isPitBracketDialogVisible.value = false;
+                ElMessage.success('Cập nhật bậc thuế thành công!');
+            },
+            onError: () => ElMessage.error('Không thể cập nhật bậc thuế!'),
+        });
+    } else {
+        pitBracketForm.post(`/policies/pit-tax-brackets/${props.activeVersion.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                isPitBracketDialogVisible.value = false;
+                ElMessage.success('Thêm bậc thuế mới thành công!');
+            },
+            onError: () => ElMessage.error('Không thể thêm bậc thuế!'),
+        });
+    }
+};
+
+const handleDeletePitBracket = (id: number, tier: number) => {
+    ElMessageBox.confirm(`Bạn có chắc chắn muốn xóa Bậc ${tier}?`, 'Xác nhận xóa bậc thuế', {
+        type: 'warning',
+        confirmButtonText: 'Xóa bậc',
+        cancelButtonText: 'Hủy',
+        confirmButtonClass: 'el-button--danger',
+    }).then(() => {
+        router.delete(`/policies/pit-tax-brackets/${id}`, {
+            preserveScroll: true,
+            onSuccess: () => ElMessage.success('Đã xóa bậc thuế.'),
+            onError: () => ElMessage.error('Không thể xóa bậc thuế.'),
+        });
+    }).catch(() => {});
+};
+
+const handleResetPitBrackets = () => {
+    ElMessageBox.confirm('Hệ thống sẽ thiết lập lại Biểu thuế TNCN 5 bậc chuẩn luật định 2026 cho phiên bản này. Bạn có muốn tiếp tục?', 'Khôi phục 5 bậc chuẩn 2026', {
+        type: 'info',
+        confirmButtonText: 'Khôi phục',
+        cancelButtonText: 'Hủy',
+    }).then(() => {
+        router.post(`/policies/pit-tax-brackets/${props.activeVersion.id}/reset-defaults`, {}, {
+            preserveScroll: true,
+            onSuccess: () => ElMessage.success('Đã thiết lập lại Biểu thuế TNCN 5 bậc chuẩn năm 2026.'),
+        });
+    }).catch(() => {});
+};
+
 // Form Thêm Chế độ Phúc lợi Doanh nghiệp Đa năng
 const isWelfareDialogVisible = ref(false);
+const isEditWelfareDialogVisible = ref(false);
+const editingWelfareId = ref<number | null>(null);
 const welfareForm = useForm({
+    code: '',
+    name: '',
+    category: 'CHILD_CARE',
+    visibility: 'VISIBLE',
+    is_statutory: false,
+    daily_exemption_minutes: 0,
+    pay_type: 'PAID',
+    prohibit_night_shift: false,
+    prohibit_overtime: false,
+    additional_leave_days_per_year: 0.0,
+    monthly_allowance_amount: 0,
+    one_time_bonus_amount: 0,
+    is_tax_exempt: false,
+    applicable_gender: 'ALL',
+    child_min_age_months: null as number | null,
+    child_max_age_months: null as number | null,
+    min_seniority_months: 0,
+    description: '',
+});
+const editWelfareForm = useForm({
     code: '',
     name: '',
     category: 'CHILD_CARE',
@@ -321,6 +522,41 @@ const handleAddWelfareScheme = () => {
     });
 };
 
+const openEditWelfare = (scheme: any) => {
+    editingWelfareId.value = scheme.id;
+    editWelfareForm.code = scheme.code;
+    editWelfareForm.name = scheme.name;
+    editWelfareForm.category = scheme.category;
+    editWelfareForm.visibility = scheme.visibility;
+    editWelfareForm.is_statutory = !!scheme.is_statutory;
+    editWelfareForm.daily_exemption_minutes = scheme.daily_exemption_minutes || 0;
+    editWelfareForm.pay_type = scheme.pay_type || 'PAID';
+    editWelfareForm.prohibit_night_shift = !!scheme.prohibit_night_shift;
+    editWelfareForm.prohibit_overtime = !!scheme.prohibit_overtime;
+    editWelfareForm.additional_leave_days_per_year = scheme.additional_leave_days_per_year || 0;
+    editWelfareForm.monthly_allowance_amount = scheme.monthly_allowance_amount || 0;
+    editWelfareForm.one_time_bonus_amount = scheme.one_time_bonus_amount || 0;
+    editWelfareForm.is_tax_exempt = !!scheme.is_tax_exempt;
+    editWelfareForm.applicable_gender = scheme.applicable_gender || 'ALL';
+    editWelfareForm.child_min_age_months = scheme.child_min_age_months;
+    editWelfareForm.child_max_age_months = scheme.child_max_age_months;
+    editWelfareForm.min_seniority_months = scheme.min_seniority_months || 0;
+    editWelfareForm.description = scheme.description || '';
+    isEditWelfareDialogVisible.value = true;
+};
+
+const handleUpdateWelfareScheme = () => {
+    if (!editingWelfareId.value) return;
+    editWelfareForm.put(`/policies/welfare-schemes/${editingWelfareId.value}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            isEditWelfareDialogVisible.value = false;
+            ElMessage.success('Cập nhật chế độ phúc lợi thành công!');
+        },
+        onError: () => ElMessage.error('Không thể cập nhật chế độ phúc lợi!'),
+    });
+};
+
 const handleToggleWelfareScheme = (id: number) => {
     router.patch(`/policies/welfare-schemes/${id}/toggle`, {}, {
         preserveScroll: true,
@@ -343,7 +579,21 @@ const handleDeleteWelfareScheme = (id: number, name: string) => {
 
 // Form Thêm Danh mục Phụ cấp Doanh nghiệp
 const isAllowanceDialogVisible = ref(false);
+const isEditAllowanceDialogVisible = ref(false);
+const editingAllowanceId = ref<number | null>(null);
 const allowanceForm = useForm({
+    code: '',
+    name: '',
+    apply_type: 'COMPANY_FIXED',
+    is_insurance_taxable: false,
+    is_pit_taxable: true,
+    is_included_in_ot_wage: false,
+    tax_exemption_limit: 0,
+    default_amount: 500000,
+    visibility: 'VISIBLE',
+    notes: '',
+});
+const editAllowanceForm = useForm({
     code: '',
     name: '',
     apply_type: 'COMPANY_FIXED',
@@ -366,6 +616,33 @@ const handleAddAllowance = () => {
     });
 };
 
+const openEditAllowance = (allowance: any) => {
+    editingAllowanceId.value = allowance.id;
+    editAllowanceForm.code = allowance.code;
+    editAllowanceForm.name = allowance.name;
+    editAllowanceForm.apply_type = allowance.apply_type;
+    editAllowanceForm.is_insurance_taxable = !!allowance.is_insurance_taxable;
+    editAllowanceForm.is_pit_taxable = !!allowance.is_pit_taxable;
+    editAllowanceForm.is_included_in_ot_wage = !!allowance.is_included_in_ot_wage;
+    editAllowanceForm.tax_exemption_limit = allowance.tax_exemption_limit || 0;
+    editAllowanceForm.default_amount = allowance.default_amount || 0;
+    editAllowanceForm.visibility = allowance.visibility || 'VISIBLE';
+    editAllowanceForm.notes = allowance.notes || '';
+    isEditAllowanceDialogVisible.value = true;
+};
+
+const handleUpdateAllowance = () => {
+    if (!editingAllowanceId.value) return;
+    editAllowanceForm.put(`/policies/allowances/${editingAllowanceId.value}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            isEditAllowanceDialogVisible.value = false;
+            ElMessage.success('Cập nhật khoản phụ cấp thành công!');
+        },
+        onError: () => ElMessage.error('Không thể cập nhật phụ cấp!'),
+    });
+};
+
 const handleToggleAllowance = (id: number) => {
     router.patch(`/policies/allowances/${id}/toggle`, {}, {
         preserveScroll: true,
@@ -384,6 +661,19 @@ const handleDeleteAllowance = (id: number, name: string) => {
             onSuccess: () => ElMessage.success('Đã xóa khoản phụ cấp.'),
         });
     }).catch(() => {});
+};
+
+// State Audit History Drawer
+const isAuditDrawerOpen = ref(false);
+const auditType = ref('');
+const auditId = ref<number | null>(null);
+const auditTitle = ref('');
+
+const openAuditDrawer = (type: string, id: number | null, title: string) => {
+    auditType.value = type;
+    auditId.value = id;
+    auditTitle.value = title;
+    isAuditDrawerOpen.value = true;
 };
 
 // Chuyển đổi xem phiên bản quy chế khác
@@ -468,6 +758,10 @@ const formatDate = (dateStr: string | null) => {
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 Đang có hiệu lực
                             </span>
+                            <span v-if="isLocked" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                <el-icon><Lock /></el-icon>
+                                Đã khóa Bất biến Lịch sử
+                            </span>
                         </div>
                         <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
                             {{ activeVersion?.name || 'Quy chế Quản trị Hệ thống' }}
@@ -495,7 +789,14 @@ const formatDate = (dateStr: string | null) => {
                         </el-select>
 
                         <el-button
-                            v-if="canEdit"
+                            size="default"
+                            :icon="Clock"
+                            @click="openAuditDrawer('App\\Modules\\PolicyEngine\\Models\\PolicyVersion', activeVersion?.id, 'Nhật ký Kiểm toán Quy chế: ' + (activeVersion?.name || ''))"
+                        >
+                            Lịch sử Kiểm toán
+                        </el-button>
+
+                        <el-button
                             type="primary"
                             :icon="Plus"
                             @click="isCreateVersionDialogVisible = true"
@@ -503,6 +804,15 @@ const formatDate = (dateStr: string | null) => {
                         >
                             Tạo phiên bản mới
                         </el-button>
+                    </div>
+                </div>
+
+                <!-- Alert Khóa Bất biến Lịch sử -->
+                <div v-if="isLocked" class="mt-4 p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+                    <el-icon class="text-amber-600 text-base mt-0.5 shrink-0"><Lock /></el-icon>
+                    <div>
+                        <span class="font-bold">Bảo vệ Toàn vẹn Dữ liệu Quá khứ:</span>
+                        Phiên bản quy chế này đã áp dụng cho các kỳ bảng công hoặc kỳ chi trả lương đã chốt. Để đảm bảo dữ liệu quá khứ không bị sai lệch, hệ thống đã khóa chỉnh sửa trực tiếp. Để áp dụng chính sách mới, vui lòng nhấn <strong>"Tạo phiên bản mới (Effective Dating)"</strong> với ngày hiệu lực kế tiếp.
                     </div>
                 </div>
             </div>
@@ -616,6 +926,173 @@ const formatDate = (dateStr: string | null) => {
                                     </el-table>
                                 </div>
                             </div>
+
+                            <!-- Chu Trình Đóng Công & Tự Động Gửi Bảng Công Hàng Tháng (Zero-Hardcode Lifecycle) -->
+                            <div class="border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 bg-white dark:bg-slate-900/60 shadow-xs space-y-6">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                                                <Calendar class="w-5 h-5" />
+                                            </span>
+                                            <h3 class="text-base font-bold text-slate-800 dark:text-white">
+                                                Chu Trình Đóng Công & Tự Động Gửi Bảng Công (Monthly Lifecycle)
+                                            </h3>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                            Cấu hình các mốc ngày trong chu trình chốt công, gửi duyệt và chi trả lương hàng tháng (Quy tắc Không Hardcode).
+                                        </p>
+                                    </div>
+
+                                    <el-button
+                                        v-if="canEdit && !isLocked"
+                                        type="primary"
+                                        :loading="attendanceConfigForm.processing"
+                                        @click="handleSaveAttendanceConfig"
+                                    >
+                                        <el-icon class="mr-1.5"><Check /></el-icon>
+                                        Lưu cấu hình chu trình
+                                    </el-button>
+                                </div>
+
+                                <!-- Visual Timeline Step Indicator -->
+                                <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                    <div class="p-3 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-sky-50/50 dark:bg-sky-950/30">
+                                        <div class="flex items-center justify-between text-xs font-semibold text-sky-700 dark:text-sky-300">
+                                            <span>Mốc 1: Rà soát</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900 text-[10px]">Ngày 1 - {{ attendanceConfigForm.emp_review_deadline_day }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                                            Nhân viên kiểm tra công, nộp bổ sung đơn nghỉ, OT, sinh lý...
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/30">
+                                        <div class="flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                                            <span>Mốc 2: Tự động gửi</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-[10px]">Ngày {{ attendanceConfigForm.auto_submit_day }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                                            Hệ thống tự động chốt & gửi bảng công lên Quản lý nếu chưa nộp.
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30">
+                                        <div class="flex items-center justify-between text-xs font-semibold text-amber-700 dark:text-amber-300">
+                                            <span>Mốc 3: Quản lý duyệt</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-[10px]">Đến ngày {{ attendanceConfigForm.manager_approval_deadline_day }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                                            Quản lý trực tiếp duyệt công, duyệt đơn hoặc từ chối giải trình.
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl border border-purple-200/80 dark:border-purple-900/60 bg-purple-50/50 dark:bg-purple-950/30">
+                                        <div class="flex items-center justify-between text-xs font-semibold text-purple-700 dark:text-purple-300">
+                                            <span>Mốc 4: Khối rà soát</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-[10px]">Đến ngày {{ attendanceConfigForm.higher_manager_deadline_day }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                                            Lãnh đạo khối / Quản lý cấp cao thẩm định toàn bộ bộ phận.
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30">
+                                        <div class="flex items-center justify-between text-xs font-semibold text-rose-700 dark:text-rose-300">
+                                            <span>Mốc 5: HR Khóa công</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900 text-[10px]">Ngày {{ attendanceConfigForm.hr_lock_deadline_day }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                                            Trưởng phòng HR / Giám đốc chốt công và khóa bất biến kỳ công.
+                                        </p>
+                                    </div>
+
+                                    <div class="p-3 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/30">
+                                        <div class="flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                            <span>Mốc 6: Trả lương</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-[10px]">Ngày {{ attendanceConfigForm.payroll_payment_day }}</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
+                                            Kế toán quyết toán lương và giải ngân chi trả cho người lao động.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Form Inputs -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                                    <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60">
+                                        <div>
+                                            <div class="text-xs font-semibold text-slate-800 dark:text-white">Tự động gửi bảng công tháng</div>
+                                            <div class="text-[11px] text-slate-400 mt-0.5">Tự động nộp công nếu nhân viên quên gửi</div>
+                                        </div>
+                                        <el-switch
+                                            v-model="attendanceConfigForm.enable_auto_submit_timesheet"
+                                            :disabled="!canEdit || isLocked"
+                                            active-color="#4f46e5"
+                                        />
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót nhân viên rà soát & nộp đơn (Ngày):</label>
+                                        <el-input-number
+                                            v-model="attendanceConfigForm.emp_review_deadline_day"
+                                            :min="1"
+                                            :max="15"
+                                            class="w-full"
+                                            :disabled="!canEdit || isLocked"
+                                        />
+                                        <div class="text-[11px] text-slate-400">Khoảng thời gian cho phép nhân viên nộp bổ sung đơn từ (Mặc định: Ngày 3)</div>
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Ngày hệ thống tự động gửi bảng công:</label>
+                                        <el-input-number
+                                            v-model="attendanceConfigForm.auto_submit_day"
+                                            :min="2"
+                                            :max="20"
+                                            class="w-full"
+                                            :disabled="!canEdit || isLocked"
+                                        />
+                                        <div class="text-[11px] text-slate-400">Đến ngày này, các bảng công chưa nộp sẽ tự động submit (Mặc định: Ngày 4)</div>
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót Quản lý trực tiếp duyệt (Ngày):</label>
+                                        <el-input-number
+                                            v-model="attendanceConfigForm.manager_approval_deadline_day"
+                                            :min="2"
+                                            :max="25"
+                                            class="w-full"
+                                            :disabled="!canEdit || isLocked"
+                                        />
+                                        <div class="text-[11px] text-slate-400">Quản lý trực tiếp duyệt hoặc reject yêu cầu giải trình (Mặc định: Ngày 5)</div>
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót Quản lý cấp cao / Khối rà soát (Ngày):</label>
+                                        <el-input-number
+                                            v-model="attendanceConfigForm.higher_manager_deadline_day"
+                                            :min="3"
+                                            :max="28"
+                                            class="w-full"
+                                            :disabled="!canEdit || isLocked"
+                                        />
+                                        <div class="text-[11px] text-slate-400">Lãnh đạo bộ phận/khối rà soát công (Mặc định: Ngày 6)</div>
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót HR chốt & Khóa bảng công (Ngày):</label>
+                                        <el-input-number
+                                            v-model="attendanceConfigForm.hr_lock_deadline_day"
+                                            :min="4"
+                                            :max="31"
+                                            class="w-full"
+                                            :disabled="!canEdit || isLocked"
+                                        />
+                                        <div class="text-[11px] text-slate-400">Trưởng phòng HR chốt công và khóa bất biến (Mặc định: Ngày 7)</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </el-tab-pane>
 
@@ -681,10 +1158,10 @@ const formatDate = (dateStr: string | null) => {
                                     </div>
                                 </div>
 
-                                <!-- Nhóm 2: Giảm trừ gia cảnh & Mức trần BHXH -->
+                                <!-- Nhóm 2: Giảm trừ gia cảnh & Lương cơ sở -->
                                 <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                        <Money class="w-4 h-4" /> Giảm trừ Thuế & Trần Bảo hiểm
+                                        <Money class="w-4 h-4" /> Giảm trừ Thuế & Lương Cơ sở
                                     </h4>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giảm trừ gia cảnh bản thân (VNĐ)</label>
@@ -706,7 +1183,38 @@ const formatDate = (dateStr: string | null) => {
                                     </div>
                                 </div>
 
-                                <!-- Nhóm 3: Tỷ lệ Trích nộp Bảo hiểm -->
+                                <!-- Nhóm 3: Thuế Thử việc, Lương Thử việc & Trần Bảo hiểm (Zero-hardcode) -->
+                                <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
+                                    <h4 class="font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                                        <User class="w-4 h-4" /> Thử việc & Trần Bảo hiểm Bắt buộc
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thuế TNCN thử việc (%)</label>
+                                            <el-input-number v-model="payrollForm.probation_pit_rate" :step="1" :min="0" :max="100" class="w-full" :disabled="!canEditPayroll" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngưỡng khấu trừ (VNĐ)</label>
+                                            <el-input-number v-model="payrollForm.probation_pit_threshold" :step="500000" :min="0" class="w-full" :disabled="!canEditPayroll" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tỷ lệ hưởng lương thử việc (% Điều 26 BLLĐ)</label>
+                                        <el-input-number v-model="payrollForm.probation_salary_percentage" :step="1" :min="85" :max="100" class="w-full" :disabled="!canEditPayroll" />
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Trần lương BHXH (VNĐ)</label>
+                                            <el-input-number v-model="payrollForm.max_salary_bhxh" :step="1000000" :min="0" size="small" class="w-full" :disabled="!canEditPayroll" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Trần lương BHTN (VNĐ)</label>
+                                            <el-input-number v-model="payrollForm.max_salary_bhtn" :step="1000000" :min="0" size="small" class="w-full" :disabled="!canEditPayroll" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Nhóm 4: Tỷ lệ Trích nộp Bảo hiểm -->
                                 <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                                         <Document class="w-4 h-4" /> Tỷ lệ Trích nộp Bảo hiểm (%)
@@ -872,6 +1380,29 @@ const formatDate = (dateStr: string | null) => {
                                         </div>
                                     </template>
                                 </el-table-column>
+                                <el-table-column label="Thao tác" width="110" align="center">
+                                    <template #default="{ row }">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <el-button
+                                                v-if="canEdit"
+                                                size="small"
+                                                :icon="Edit"
+                                                circle
+                                                @click="openEditChildPolicy(row)"
+                                                title="Chỉnh sửa chính sách"
+                                            />
+                                            <el-button
+                                                v-if="!row.is_statutory && canEdit"
+                                                size="small"
+                                                type="danger"
+                                                :icon="Delete"
+                                                circle
+                                                @click="handleDeleteChildPolicy(row.id, row.name)"
+                                                title="Xóa chính sách"
+                                            />
+                                        </div>
+                                    </template>
+                                </el-table-column>
                             </el-table>
                         </div>
                     </el-tab-pane>
@@ -948,18 +1479,27 @@ const formatDate = (dateStr: string | null) => {
                                         />
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thao tác" width="90" align="center">
+                                <el-table-column label="Thao tác" width="110" align="center">
                                     <template #default="{ row }">
-                                        <el-button
-                                            v-if="!row.is_statutory && canEdit"
-                                            type="danger"
-                                            size="small"
-                                            link
-                                            :icon="Delete"
-                                            @click="handleDeleteWelfareScheme(row.id, row.name)"
-                                        >
-                                            Xóa
-                                        </el-button>
+                                        <div class="flex items-center justify-center gap-1">
+                                            <el-button
+                                                v-if="canEdit"
+                                                size="small"
+                                                :icon="Edit"
+                                                circle
+                                                @click="openEditWelfare(row)"
+                                                title="Sửa chế độ"
+                                            />
+                                            <el-button
+                                                v-if="!row.is_statutory && canEdit"
+                                                type="danger"
+                                                size="small"
+                                                :icon="Delete"
+                                                circle
+                                                @click="handleDeleteWelfareScheme(row.id, row.name)"
+                                                title="Xóa chế độ"
+                                            />
+                                        </div>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -1035,25 +1575,34 @@ const formatDate = (dateStr: string | null) => {
                                         />
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thao tác" width="90" align="center">
+                                <el-table-column label="Thao tác" width="110" align="center">
                                     <template #default="{ row }">
-                                        <el-button
-                                            v-if="canEditPayroll"
-                                            type="danger"
-                                            size="small"
-                                            link
-                                            :icon="Delete"
-                                            @click="handleDeleteAllowance(row.id, row.name)"
-                                        >
-                                            Xóa
-                                        </el-button>
+                                        <div class="flex items-center justify-center gap-1">
+                                            <el-button
+                                                v-if="canEditPayroll"
+                                                size="small"
+                                                :icon="Edit"
+                                                circle
+                                                @click="openEditAllowance(row)"
+                                                title="Sửa phụ cấp"
+                                            />
+                                            <el-button
+                                                v-if="canEditPayroll"
+                                                type="danger"
+                                                size="small"
+                                                :icon="Delete"
+                                                circle
+                                                @click="handleDeleteAllowance(row.id, row.name)"
+                                                title="Xóa phụ cấp"
+                                            />
+                                        </div>
                                     </template>
                                 </el-table-column>
                             </el-table>
                         </div>
                     </el-tab-pane>
 
-                    <!-- Tab 6: Biểu thuế TNCN 5 Bậc -->
+                    <!-- Tab 6: Biểu thuế TNCN 5 Bậc Động (CRUD) -->
                     <el-tab-pane label="Biểu thuế TNCN 5 Bậc" name="pit">
                         <template #label>
                             <span class="flex items-center gap-1.5">
@@ -1063,8 +1612,30 @@ const formatDate = (dateStr: string | null) => {
                         </template>
 
                         <div class="space-y-4 pt-2">
-                            <div class="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 text-xs text-indigo-800 dark:text-indigo-200">
-                                <strong>Căn cứ Pháp lý:</strong> Biểu thuế thu nhập cá nhân 5 bậc lũy tiến từng phần áp dụng chính thức từ kỳ quyết toán thuế năm 2026.
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
+                                <div class="text-xs text-indigo-800 dark:text-indigo-200">
+                                    <strong>Căn cứ Pháp lý:</strong> Biểu thuế thu nhập cá nhân 5 bậc lũy tiến từng phần áp dụng từ kỳ quyết toán thuế năm 2026. Doanh nghiệp có thể cấu hình linh hoạt nấc và thuế suất theo quy định.
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <el-button
+                                        v-if="canEditPayroll"
+                                        size="small"
+                                        :icon="RefreshRight"
+                                        @click="handleResetPitBrackets"
+                                        title="Khôi phục 5 bậc chuẩn luật định 2026"
+                                    >
+                                        Mặc định 2026
+                                    </el-button>
+                                    <el-button
+                                        v-if="canEditPayroll"
+                                        type="primary"
+                                        size="small"
+                                        :icon="Plus"
+                                        @click="openCreatePitBracket"
+                                    >
+                                        Thêm Bậc Thuế
+                                    </el-button>
+                                </div>
                             </div>
 
                             <el-table :data="activeVersion?.pit_tax_brackets || []" stripe style="width: 100%">
@@ -1087,6 +1658,29 @@ const formatDate = (dateStr: string | null) => {
                                 <el-table-column label="Số trừ nhanh (VNĐ)" prop="quick_subtraction">
                                     <template #default="{ row }">
                                         <span class="font-mono text-slate-600 dark:text-slate-400">{{ formatVND(row.quick_subtraction) }}</span>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="Thao tác" width="110" align="center">
+                                    <template #default="{ row }">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <el-button
+                                                v-if="canEditPayroll"
+                                                size="small"
+                                                :icon="Edit"
+                                                circle
+                                                @click="openEditPitBracket(row)"
+                                                title="Sửa bậc thuế"
+                                            />
+                                            <el-button
+                                                v-if="canEditPayroll"
+                                                type="danger"
+                                                size="small"
+                                                :icon="Delete"
+                                                circle
+                                                @click="handleDeletePitBracket(row.id, row.tier)"
+                                                title="Xóa bậc thuế"
+                                            />
+                                        </div>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -1337,5 +1931,249 @@ const formatDate = (dateStr: string | null) => {
                 </div>
             </template>
         </el-dialog>
+
+        <!-- Dialog 1: Thêm Chính sách Phúc lợi Con nhỏ Mới (Đã bổ sung) -->
+        <el-dialog v-model="isChildPolicyDialogVisible" title="Thêm Chính sách Phúc lợi Con nhỏ Mới" width="560px">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Tên chính sách *</label>
+                    <el-input v-model="childPolicyForm.name" placeholder="VD: Hỗ trợ mẹ nuôi con từ 1 - 3 tuổi" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Độ tuổi từ (tháng)</label>
+                        <el-input-number v-model="childPolicyForm.min_age_months" :min="0" :max="216" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Đến độ tuổi (tháng)</label>
+                        <el-input-number v-model="childPolicyForm.max_age_months" :min="1" :max="216" class="w-full" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Thời gian miễn trừ (phút/ngày)</label>
+                        <el-input-number v-model="childPolicyForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Chế độ hưởng lương</label>
+                        <el-select v-model="childPolicyForm.pay_type" class="w-full">
+                            <el-option label="Có hưởng lương" value="PAID" />
+                            <el-option label="Không hưởng lương" value="UNPAID" />
+                            <el-option label="Hưởng một phần" value="PARTIAL" />
+                        </el-select>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <el-checkbox v-model="childPolicyForm.prohibit_night_shift"><span class="text-xs">Cấm phân ca đêm</span></el-checkbox>
+                    <el-checkbox v-model="childPolicyForm.prohibit_overtime"><span class="text-xs">Cấm làm thêm giờ (OT)</span></el-checkbox>
+                </div>
+            </div>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <el-button @click="isChildPolicyDialogVisible = false">Hủy</el-button>
+                    <el-button type="primary" :loading="childPolicyForm.processing" @click="handleAddChildPolicy">Lưu Chính sách</el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- Dialog 2: Sửa Chính sách Phúc lợi Con nhỏ -->
+        <el-dialog v-model="isEditChildPolicyDialogVisible" title="Chỉnh sửa Chính sách Con nhỏ" width="560px">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Tên chính sách *</label>
+                    <el-input v-model="editChildPolicyForm.name" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Độ tuổi từ (tháng)</label>
+                        <el-input-number v-model="editChildPolicyForm.min_age_months" :min="0" :max="216" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Đến độ tuổi (tháng)</label>
+                        <el-input-number v-model="editChildPolicyForm.max_age_months" :min="1" :max="216" class="w-full" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Thời gian miễn trừ (phút/ngày)</label>
+                        <el-input-number v-model="editChildPolicyForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Chế độ hưởng lương</label>
+                        <el-select v-model="editChildPolicyForm.pay_type" class="w-full">
+                            <el-option label="Có hưởng lương" value="PAID" />
+                            <el-option label="Không hưởng lương" value="UNPAID" />
+                            <el-option label="Hưởng một phần" value="PARTIAL" />
+                        </el-select>
+                    </div>
+                </div>
+                <div class="flex gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                    <el-checkbox v-model="editChildPolicyForm.prohibit_night_shift"><span class="text-xs">Cấm phân ca đêm</span></el-checkbox>
+                    <el-checkbox v-model="editChildPolicyForm.prohibit_overtime"><span class="text-xs">Cấm làm thêm giờ (OT)</span></el-checkbox>
+                </div>
+            </div>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <el-button @click="isEditChildPolicyDialogVisible = false">Hủy</el-button>
+                    <el-button type="primary" :loading="editChildPolicyForm.processing" @click="handleUpdateChildPolicy">Cập nhật Chính sách</el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- Dialog 3: Thêm / Sửa Bậc Thuế TNCN (PIT Brackets) -->
+        <el-dialog v-model="isPitBracketDialogVisible" :title="isEditingPitBracket ? 'Chỉnh sửa Bậc thuế TNCN' : 'Thêm Bậc thuế TNCN Mới'" width="520px">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Bậc thuế (Thứ tự)</label>
+                        <el-input-number v-model="pitBracketForm.tier" :min="1" :max="20" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Thuế suất (%)</label>
+                        <el-input-number v-model="pitBracketForm.tax_rate" :step="1" :min="0" :max="100" class="w-full" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Thu nhập tính thuế Từ (VNĐ)</label>
+                        <el-input-number v-model="pitBracketForm.min_income" :step="1000000" :min="0" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Thu nhập tính thuế Đến (VNĐ, để trống nếu vô cực)</label>
+                        <el-input-number v-model="pitBracketForm.max_income" :step="1000000" :min="0" class="w-full" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Số trừ nhanh (VNĐ)</label>
+                    <el-input-number v-model="pitBracketForm.quick_subtraction" :step="500000" :min="0" class="w-full" />
+                </div>
+            </div>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <el-button @click="isPitBracketDialogVisible = false">Hủy</el-button>
+                    <el-button type="primary" :loading="pitBracketForm.processing" @click="handleSavePitBracket">Lưu Bậc thuế</el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- Dialog 4: Sửa Chế độ Phúc lợi Doanh nghiệp -->
+        <el-dialog v-model="isEditWelfareDialogVisible" title="Chỉnh sửa Chế độ Phúc lợi Doanh nghiệp" width="580px">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Mã chế độ *</label>
+                        <el-input v-model="editWelfareForm.code" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Phân loại danh mục</label>
+                        <el-select v-model="editWelfareForm.category" class="w-full">
+                            <el-option label="Chăm sóc con nhỏ & gia đình" value="CHILD_CARE" />
+                            <el-option label="Thai sản & sức khỏe phụ nữ" value="MATERNITY_FEMALE" />
+                            <el-option label="Sức khỏe & y tế doanh nghiệp" value="HEALTH_WELLNESS" />
+                            <el-option label="Điều kiện làm việc" value="WORKING_COND" />
+                            <el-option label="Hỗ trợ tài chính & hiếu hỉ" value="FINANCIAL_SUPPORT" />
+                            <el-option label="Phụ cấp chuyên biệt" value="SPECIAL_ALLOWANCE" />
+                        </el-select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Tên chế độ phúc lợi *</label>
+                    <el-input v-model="editWelfareForm.name" />
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-3">
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Tác động Chấm công & Phân ca</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Phút miễn trừ/ngày</label>
+                            <el-input-number v-model="editWelfareForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" size="small" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Loại lương</label>
+                            <el-select v-model="editWelfareForm.pay_type" size="small" class="w-full">
+                                <el-option label="Có hưởng lương" value="PAID" />
+                                <el-option label="Không hưởng lương" value="UNPAID" />
+                            </el-select>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <el-checkbox v-model="editWelfareForm.prohibit_night_shift"><span class="text-xs">Cấm ca đêm</span></el-checkbox>
+                        <el-checkbox v-model="editWelfareForm.prohibit_overtime"><span class="text-xs">Cấm OT</span></el-checkbox>
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-3">
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Tác động Tiền lương & Trợ cấp</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Trợ cấp hàng tháng (VNĐ)</label>
+                            <el-input-number v-model="editWelfareForm.monthly_allowance_amount" :step="50000" :min="0" class="w-full" size="small" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Thưởng 1 lần (VNĐ)</label>
+                            <el-input-number v-model="editWelfareForm.one_time_bonus_amount" :step="100000" :min="0" class="w-full" size="small" />
+                        </div>
+                    </div>
+                    <el-checkbox v-model="editWelfareForm.is_tax_exempt"><span class="text-xs">Miễn thuế TNCN khoản này</span></el-checkbox>
+                </div>
+            </div>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <el-button @click="isEditWelfareDialogVisible = false">Hủy</el-button>
+                    <el-button type="primary" :loading="editWelfareForm.processing" @click="handleUpdateWelfareScheme">Lưu Thay Đổi</el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- Dialog 5: Sửa Khoản Phụ cấp -->
+        <el-dialog v-model="isEditAllowanceDialogVisible" title="Chỉnh sửa Khoản Phụ cấp" width="520px">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Mã phụ cấp *</label>
+                        <el-input v-model="editAllowanceForm.code" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Hình thức áp dụng</label>
+                        <el-select v-model="editAllowanceForm.apply_type" class="w-full">
+                            <el-option label="Cố định toàn công ty" value="COMPANY_FIXED" />
+                            <el-option label="Cố định theo cá nhân" value="INDIVIDUAL_FIXED" />
+                            <el-option label="Biến động theo tháng" value="IRREGULAR" />
+                        </el-select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Tên khoản phụ cấp *</label>
+                    <el-input v-model="editAllowanceForm.name" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Mức tiền mặc định (VNĐ)</label>
+                        <el-input-number v-model="editAllowanceForm.default_amount" :step="50000" :min="0" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Trần miễn thuế TNCN (VNĐ)</label>
+                        <el-input-number v-model="editAllowanceForm.tax_exemption_limit" :step="50000" :min="0" class="w-full" />
+                    </div>
+                </div>
+                <div class="flex gap-4 pt-2">
+                    <el-checkbox v-model="editAllowanceForm.is_insurance_taxable"><span class="text-xs">Tính đóng BHXH</span></el-checkbox>
+                    <el-checkbox v-model="editAllowanceForm.is_pit_taxable"><span class="text-xs">Chịu thuế TNCN</span></el-checkbox>
+                    <el-checkbox v-model="editAllowanceForm.is_included_in_ot_wage"><span class="text-xs">Tính vào lương OT</span></el-checkbox>
+                </div>
+            </div>
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <el-button @click="isEditAllowanceDialogVisible = false">Hủy</el-button>
+                    <el-button type="primary" :loading="editAllowanceForm.processing" @click="handleUpdateAllowance">Lưu Thay Đổi</el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- COMPONENT: Lịch sử Kiểm toán Quy chế -->
+        <AuditHistoryDrawer
+            v-model="isAuditDrawerOpen"
+            :auditable-type="auditType"
+            :auditable-id="auditId"
+            :title="auditTitle"
+        />
     </AppLayout>
 </template>

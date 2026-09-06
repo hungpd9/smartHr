@@ -2,7 +2,7 @@
 
 > **Tên phân hệ:** `Attendance`  
 > **Namespace Backend:** `App\Modules\Attendance`  
-> **Trách nhiệm chính:** Thu thập dữ liệu quẹt thẻ từ Edge Daemon (Go), lưu trữ log thô bất biến (Immutable Audit Trail), thực thi Pipeline tính công theo ngày (`WorkDateCalculationPipeline`), cung cấp động cơ xem trước bảng công (`TimesheetPreviewService`), quản lý bảng công tháng và cơ chế khóa tháng (`MonthLockService`).
+> **Trách nhiệm chính:** Thu thập dữ liệu quẹt thẻ từ Edge Daemon (Go), lưu trữ log thô bất biến (Immutable Audit Trail), thực thi Pipeline tính công theo ngày 7 Pipe (`WorkDateCalculationPipeline`), cung cấp động cơ xem trước bảng công (`TimesheetPreviewService`), quản lý bảng công tháng, cơ chế khóa tháng (`MonthLockService`) và giao diện xem trực quan Log thô & Bảng công Tạm tính.
 
 ---
 
@@ -14,6 +14,8 @@ Module `Attendance` là phân hệ xử lý dữ liệu lớn (High-Throughput /
 3. **Động cơ Bảng công Tạm tính (`TimesheetPreviewService`)**: Cho phép xem trước kết quả bảng công tháng khi áp dụng các đơn từ đang chờ duyệt (`PENDING`), giải phóng triệt để việc tắc nghẽn luồng phê duyệt từ hệ thống cũ.
 4. **Bảng công Tổng hợp Tháng (`monthly_attendances`)**: Tính toán tổng ngày công, giờ công chuẩn, tổng OT, tổng phạt muộn/sớm và tổng ngày nghỉ phép có lương/không lương.
 5. **Cơ chế Khóa Tháng (`MonthLockService`)**: Đóng băng dữ liệu công tháng khi đã chốt kỳ kế toán, ngăn chặn can thiệp hồi tố.
+6. **Tích hợp Phúc lợi Con nhỏ Đa nguồn**: Phân giải tự động độ tuổi của từng bé từ `employee_children` (hoặc `child_birth_date`), so khớp với các chế độ phúc lợi đang hiển thị (`visibility = VISIBLE`) trong Module 02.
+7. **Hộp thoại Kiểm toán Log Quẹt thẻ Thô (Raw Logs Dialog)**: Cho phép Quản lý/HR bấm trực tiếp vào bất kỳ ô ngày công nào trên giao diện để mở modal xem toàn bộ lịch sử quẹt thẻ thô nguyên bản của nhân viên đó trong ngày.
 
 ---
 
@@ -29,6 +31,7 @@ erDiagram
     employees ||--o{ daily_attendances : "daily records"
     employees ||--o{ monthly_attendances : "monthly summaries"
     daily_attendances ||--o{ request_timesheet_edits : "targeted by"
+    employees ||--o{ employee_children : "provides child age context"
 ```
 
 ### 2.2 Đặc tả Chi tiết các Bảng Dữ liệu
@@ -123,90 +126,60 @@ flowchart TD
    - Thu thập toàn bộ log quẹt thẻ trong khoảng $[Date\text{ }04:00, (Date+1)\text{ }06:00]$ để bao quát ca đêm.
    - *Khử trùng lặp (Debounce)*: Bỏ qua các lần quẹt thẻ cách nhau $< 60$ giây.
    - Lấy lần quẹt thẻ sớm nhất làm `candidate_in` và muộn nhất làm `candidate_out`.
-   - Nếu chỉ có 1 lần quẹt: Gán cờ `MISSING_CHECK_OUT` hoặc `MISSING_CHECK_IN`.
-
 2. **`ShiftMatchingPipe` (Khớp Ca Làm Việc)**:
-   - Kiểm tra lịch phân ca `rosters` của nhân viên tại ngày đó.
-   - Nếu có ca kế hoạch: Sử dụng `work_shift_id` kế hoạch.
-   - Nếu không có lịch trước (ca linh hoạt / chuỗi cửa hàng): So khớp khoảng thời gian In/Out thực tế với danh mục `work_shifts` để tự động chọn ca có độ bao phủ thời gian tối ưu nhất.
-
-3. **`PolicyResolverPipe` (Nạp Phiên bản Quy chế)**:
-   - Gọi `PolicyResolverService::resolveForDate($tenantId, $date)` để lấy cấu hình quy chế hiệu lực.
-
-4. **`ChildWelfarePipe` (Áp dụng Phúc lợi Con nhỏ)**:
-   - Tính tuổi con tại ngày $D$. Nếu con $< 12$ tháng: Thiết lập `allowed_exemption_minutes = 60`, `pay_type = PAID`.
-   - *Kiểm soát Ca đêm & Làm thêm giờ (Điều 137 Khoản 1 Điểm b BLLĐ 2019)*: Mặc định không bố trí; nếu phát sinh giờ làm đêm ($22:00 - 06:00$) hoặc OT, hệ thống đối soát xem có **Đơn thỏa thuận/đồng thuận tự nguyện** được duyệt hợp lệ hay không:
-     - *Nếu có đơn đồng thuận*: Giờ ca đêm và OT vẫn được ghi nhận và tính lương đầy đủ theo các hệ số chuẩn luật định (1.5x, 2.0x, 3.0x, phụ cấp đêm 30%, OT đêm).
-     - *Nếu không có đơn đồng thuận*: Hệ thống tự động đẩy cảnh báo vi phạm tuân thủ (Compliance Warning) lên Dashboard của HR/Quản lý để kiểm tra và bổ sung văn bản thỏa thuận.
-   - Nếu thuộc chính sách mở rộng khác của công ty (con 1-11 tuổi): Nạp mức miễn trừ tương ứng (`pay_type = UNPAID`).
-
-5. **`LateEarlyCalculationPipe` (Tính Muộn/Sớm & Giờ Chuẩn)**:
-   - Tính số phút muộn thô: $T_{\text{late}} = \max(0, CheckIn - ShiftStart)$. Nếu $T_{\text{late}} \le \text{grace\_period\_late}$ thì $T_{\text{late}} = 0$.
-   - Tính số phút về sớm thô: $T_{\text{early}} = \max(0, ShiftEnd - CheckOut)$. Nếu $T_{\text{early}} \le \text{grace\_period\_early}$ thì $T_{\text{early}} = 0$.
-   - *Cơ chế Hấp thụ (Absorption)*:
-     $$
-     \text{Absorbed} = \min(T_{\text{late}} + T_{\text{early}},\; \text{Allowed Exemption Minutes})
-     $$
-     Giảm trừ vi phạm: $T_{\text{late\_final}} + T_{\text{early\_final}} = (T_{\text{late}} + T_{\text{early}}) - \text{Absorbed}$.
-     Nếu `pay_type = PAID`: `child_policy_paid_hours = Absorbed / 60`.
-     Nếu `pay_type = UNPAID`: `child_policy_unpaid_hours = Absorbed / 60`.
-   - Tính giờ chuẩn:
-     $$
-     \text{Standard Hours} = \text{Shift Standard Hours} - \frac{T_{\text{late\_final}} + T_{\text{early\_final}}}{60}
-     $$
-
+   - Kiểm tra lịch phân ca `rosters` của nhân viên tại ngày đó. Nếu không có lịch trước, tự động so khớp với danh mục `work_shifts` theo khung giờ thực tế tối ưu nhất.
+3. **`PolicyResolverPipe` (Nạp Phiên bản Quy chế qua Caching Đa Tầng)**:
+   - Gọi `PolicyResolutionService::resolveForDate($tenantId, $date)`.
+4. **`ChildWelfarePipe` (Áp dụng Phúc lợi Con nhỏ & Gia đình)**:
+   - Tra cứu hồ sơ con nhỏ từ `employee_children` (hoặc fallback `child_birth_date` trên `employees`).
+   - Tìm chính sách phúc lợi có hiệu lực và trạng thái `visibility = VISIBLE`:
+     - *Con dưới 12 tháng*: Miễn giảm **60 phút có hưởng lương/ngày** (`pay_type = PAID`) theo Điều 137 BLLĐ.
+     - *Con 1-11 tuổi*: Miễn giảm theo cấu hình doanh nghiệp (VD: 30 hoặc 60 phút không hưởng lương hoặc có lương).
+   - Kiểm soát đơn đồng thuận tự nguyện: Nếu có làm ca đêm hoặc OT, kiểm tra xem có đơn thỏa thuận tự nguyện (`CONSENT_NIGHT_OT`) được phê duyệt hay chưa.
+5. **`LateEarlyCalculationPipe` (Tính Muộn/Sớm & Hấp thụ Miễn trừ)**:
+   - Tính số phút muộn và về sớm thô. Trừ số phút miễn trừ (Grace Period).
+   - *Hấp thụ Miễn trừ Phúc lợi (Absorption)*: Lấy tổng phút muộn/sớm trừ đi số phút miễn giảm con nhỏ. Giảm trừ vi phạm trước khi tính phạt.
 6. **`ProgressivePenaltyPipe` (Phạt Muộn/Sớm Lũy tiến)**:
    - Tra cứu số tiền phạt theo nấc phút vi phạm từ `penalty_tiers_json`.
-   - Quét số lần đi muộn/về sớm lũy kế trong tháng tính đến ngày $D$ để nhân hệ số phạt tần suất `frequency_penalty_json`.
-
+   - Nhân hệ số tần suất tái phạm trong tháng từ `frequency_penalty_json`.
 7. **`TieredOvertimePipe` (Tính Làm thêm giờ & Ca đêm)**:
-   - Bóc tách số giờ làm ngoài ca chuẩn.
-   - Nhân hệ số theo ngày thường (1.5x), cuối tuần (2.0x), ngày lễ (3.0x).
-   - Nếu có khung giờ nằm trong khoảng $22:00 - 06:00$: Tính thêm phụ cấp ca đêm 30% và OT đêm.
+   - Bóc tách số giờ làm ngoài ca chuẩn, nhân hệ số theo quy chế (1.5x, 2.0x, 3.0x) và tính phụ cấp đêm 30%.
 
 ---
 
-## 4. Động cơ Bảng công Tạm tính (`TimesheetPreviewService`)
+## 4. Giao diện Người dùng Bảng công & Động cơ Tạm tính
 
-### 4.1 Giải quyết Tắc nghẽn Luồng Phê duyệt
-- **Vấn đề cũ**: Nhân viên gửi đơn sửa bảng công thì bị khóa không cho nộp đơn nghỉ phép/OT khác; hoặc quản lý phải duyệt hết các đơn khác mới duyệt được bảng công.
-- **Giải pháp Smart-HR**:
-  - Không ngăn cấm việc tạo đơn. Bảng công chính thức (`daily_attendances`) chỉ thay đổi khi đơn được duyệt (`APPROVED`).
-  - Cung cấp API `GET /api/v1/attendances/preview`:
-    1. Lấy dữ liệu công chính thức hiện tại của tháng.
-    2. Nạp toàn bộ các đơn đang chờ duyệt (`status = PENDING`) của nhân viên trong tháng.
-    3. Ghi đè giả lập các giá trị đề xuất vào bản sao trong RAM.
-    4. Chạy lại `WorkDateCalculationPipeline` cho các ngày có biến động.
-    5. Trả về cấu trúc bảng công tạm tính song song với bảng công chính thức.
+Giao diện tại `resources/js/Pages/Attendance/Index.vue` cung cấp:
+1. **Chuyển đổi Chế độ Xem Mượt mà**:
+   - **Chế độ Bảng công Chính thức**: Số liệu đã chốt từ các đơn đã duyệt (`APPROVED`).
+   - **Chế độ Bảng công Tạm tính (Preview Mode)**: Mô phỏng kết quả nếu toàn bộ đơn chờ duyệt (`PENDING`) được thông qua.
+   - Sử dụng `preserveScroll: true` và `preserveState: true` của Inertia.js giúp không giật lag màn hình.
+2. **Hộp thoại Tra cứu Log Thô (Raw Logs Dialog)**:
+   - Nhấp trực tiếp vào bất kỳ ô ngày công nào để mở Dialog hiển thị danh sách toàn bộ lượt quẹt thẻ thô kèm phương thức xác thực (Vân tay, FaceID, Thẻ từ) và mã thiết bị.
 
 ---
 
-## 5. Danh mục RESTful API Endpoints
+## 5. Danh mục RESTful / Inertia Endpoints
 
 | Method | URI | Quyền hạn | Mô tả |
 |---|---|---|---|
-| `POST` | `/api/v1/attendance/sync` | `edge.agent` | Endpoint nhận batch quẹt thẻ từ Go Daemon (Xác thực chữ ký HMAC-SHA256) |
-| `GET` | `/api/v1/attendances/daily` | `att.view` | Bảng công chi tiết theo ngày (Lọc theo nhân viên, phòng ban, khoảng ngày) |
-| `GET` | `/api/v1/attendances/monthly` | `att.view` | Bảng công tổng hợp tháng của nhân viên |
-| `GET` | `/api/v1/attendances/preview` | `att.view` | Bảng công tạm tính (mô phỏng áp dụng các đơn PENDING) |
-| `POST` | `/api/v1/attendances/recalculate` | `att.manage`| Kích hoạt tính toán lại công cho nhân viên hoặc toàn bộ chi nhánh |
-| `POST` | `/api/v1/attendances/lock-month` | `att.lock` | Khóa bảng công tháng (ngăn chặn mọi sửa đổi hồi tố) |
-| `POST` | `/api/v1/attendances/unlock-month` | `att.lock` | Mở khóa bảng công tháng (chỉ dành cho SuperAdmin kèm lý do bắt buộc) |
+| `GET` | `/attendance` | `perm:ATTENDANCE.view` | Giao diện bảng công tháng của nhân sự |
+| `POST` | `/attendance/calculate` | `perm:ATTENDANCE.manage` | Kích hoạt tính toán lại công theo khoảng ngày |
+| `POST` | `/attendance/lock` | `perm:ATTENDANCE.approve` | Khóa bảng công tháng ngăn chặn sửa đổi |
+| `POST` | `/attendance/unlock` | `perm:ATTENDANCE.approve` | Mở khóa bảng công tháng kèm lý do |
+| `GET` | `/api/v1/attendance/raw-logs` | `perm:ATTENDANCE.view` | API lấy log quẹt thẻ thô theo nhân viên và ngày |
+| `POST` | `/api/v1/attendance/sync` | `edge.agent` | Endpoint tiếp nhận batch quẹt thẻ từ Go Daemon có HMAC |
 
 ---
 
 ## 6. Kịch bản Kiểm thử Tích hợp (Test Scenarios)
 
-1. **Test `HMACBatchSyncAndDeduplication`**:
-   - Gửi payload quẹt thẻ từ Go Daemon kèm chữ ký HMAC hợp lệ.
-   - Gửi 2 lần quẹt cùng 1 nhân viên cách nhau 15 giây.
-   - Kết quả: Hệ thống ghi nhận thành công, chỉ lưu 1 quẹt thẻ đầu tiên vào tính toán.
-2. **Test `ChildPolicyAbsorption`**:
-   - Ca chuẩn 8h (08:00 - 17:00). Nhân viên có con 6 tháng tuổi.
-   - Giờ đến: 08:45 (muộn 45 phút). Giờ về: 17:00.
-   - Kết quả: 45 phút muộn được hấp thụ hoàn toàn bởi 60 phút miễn giảm. `late_minutes = 0`, `child_policy_paid_hours = 0.75`, `standard_hours = 8.00`, không bị phạt tiền.
-3. **Test `TimesheetPreviewNonBlocking`**:
-   - Bảng công ngày 10/09 hiển thị `ABSENT` (vắng mặt).
-   - Nhân viên tạo đơn sửa công với CheckIn 08:00, CheckOut 17:00 (đang `PENDING`).
-   - Gọi API bảng công chính thức $\to$ Vẫn là `ABSENT`.
-   - Gọi API bảng công Preview $\to$ Hiển thị `NORMAL` với 8.00 giờ chuẩn.
+1. **Test `ChildWelfarePipeMultipleChildren`**:
+   - Nhân viên có 2 con: Bé A (8 tháng tuổi) và Bé B (5 tuổi).
+   - Ngày làm việc nhân viên đi muộn 45 phút.
+   - Kết quả kỳ vọng: Hệ thống ưu tiên áp dụng chế độ con dưới 12 tháng (miễn 60 phút có lương). Số phút muộn thực tế giảm về 0 phút, không bị phạt tiền.
+2. **Test `TimesheetPreviewModeSimulation`**:
+   - Nhân viên bị ghi nhận vắng mặt ngày 10/09.
+   - Nhân viên gửi đơn xin nghỉ phép năm (`PENDING`).
+   - Truy vấn xem ở chế độ Official: Trạng thái ngày 10/09 là `ABSENT`.
+   - Truy vấn xem ở chế độ Preview: Trạng thái ngày 10/09 chuyển thành `LEAVE_PAID`, tổng ngày công tăng thêm 1.0 ngày.

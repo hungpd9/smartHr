@@ -41,7 +41,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/employees/{id}/timeline', [EmployeeController::class, 'addTimelineEvent'])->name('employees.timeline');
 
             Route::post('/departments', [DepartmentController::class, 'store'])->name('departments.store');
+            Route::put('/departments/{id}', [DepartmentController::class, 'update'])->name('departments.update');
+            Route::delete('/departments/{id}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
             Route::post('/departments/{id}/version', [DepartmentController::class, 'updateVersion'])->name('departments.version');
+
+            Route::post('/positions', [\App\Modules\CoreHR\Controllers\PositionController::class, 'store'])->name('positions.store');
+            Route::put('/positions/{id}', [\App\Modules\CoreHR\Controllers\PositionController::class, 'update'])->name('positions.update');
+            Route::delete('/positions/{id}', [\App\Modules\CoreHR\Controllers\PositionController::class, 'destroy'])->name('positions.destroy');
 
             Route::post('/branches', [BranchController::class, 'store'])->name('branches.store');
         });
@@ -69,9 +75,15 @@ Route::middleware('auth')->group(function () {
             ->name('payroll-config.update')
             ->middleware('perm:PAYROLL_SALARY,manage');
 
-        // Quản lý Danh mục Phụ cấp (Bảo vệ bởi PAYROLL_SALARY,manage)
+        // Quản lý Biểu thuế TNCN Động (Bảo vệ bởi PAYROLL_SALARY,manage)
         Route::middleware('perm:PAYROLL_SALARY,manage')->group(function () {
+            Route::post('/pit-tax-brackets/{versionId}', [PolicyController::class, 'storePitTaxBracket'])->name('pit-tax-brackets.store');
+            Route::put('/pit-tax-brackets/{id}', [PolicyController::class, 'updatePitTaxBracket'])->name('pit-tax-brackets.update');
+            Route::delete('/pit-tax-brackets/{id}', [PolicyController::class, 'destroyPitTaxBracket'])->name('pit-tax-brackets.destroy');
+            Route::post('/pit-tax-brackets/{versionId}/reset-default', [PolicyController::class, 'resetDefaultPitTaxBrackets'])->name('pit-tax-brackets.reset-default');
+
             Route::post('/allowances', [PolicyController::class, 'storeAllowance'])->name('allowances.store');
+            Route::put('/allowances/{id}', [PolicyController::class, 'updateAllowance'])->name('allowances.update');
             Route::patch('/allowances/{id}/toggle', [PolicyController::class, 'toggleAllowanceVisibility'])->name('allowances.toggle');
             Route::delete('/allowances/{id}', [PolicyController::class, 'destroyAllowance'])->name('allowances.destroy');
         });
@@ -80,17 +92,25 @@ Route::middleware('auth')->group(function () {
         Route::middleware('perm:POLICY_WELFARE,manage')->group(function () {
             Route::post('/versions', [PolicyController::class, 'storeVersion'])->name('versions.store');
             Route::put('/attendance-config/{versionId}', [PolicyController::class, 'updateAttendanceConfig'])->name('attendance-config.update');
-            Route::post('/child-welfare/{versionId}', [PolicyController::class, 'storeChildWelfarePolicy'])->name('child-welfare.store');
-            Route::patch('/child-welfare/{id}/toggle', [PolicyController::class, 'toggleChildWelfarePolicy'])->name('child-welfare.toggle');
 
-            // Quản lý Chế độ Phúc lợi Doanh nghiệp Đa năng
+            // Quản lý Phúc lợi con nhỏ (CRUD đầy đủ)
+            Route::post('/child-welfare/{versionId}', [PolicyController::class, 'storeChildWelfarePolicy'])->name('child-welfare.store');
+            Route::put('/child-welfare/{id}', [PolicyController::class, 'updateChildWelfarePolicy'])->name('child-welfare.update');
+            Route::patch('/child-welfare/{id}/toggle', [PolicyController::class, 'toggleChildWelfarePolicy'])->name('child-welfare.toggle');
+            Route::delete('/child-welfare/{id}', [PolicyController::class, 'destroyChildWelfarePolicy'])->name('child-welfare.destroy');
+
+            // Quản lý Chế độ Phúc lợi Doanh nghiệp Đa năng (CRUD đầy đủ)
             Route::post('/welfare-schemes', [PolicyController::class, 'storeWelfareScheme'])->name('welfare-schemes.store');
+            Route::put('/welfare-schemes/{id}', [PolicyController::class, 'updateWelfareScheme'])->name('welfare-schemes.update');
             Route::patch('/welfare-schemes/{id}/toggle', [PolicyController::class, 'toggleWelfareSchemeVisibility'])->name('welfare-schemes.toggle');
             Route::delete('/welfare-schemes/{id}', [PolicyController::class, 'destroyWelfareScheme'])->name('welfare-schemes.destroy');
         });
     });
 
-    // 4b. Phân hệ Ma Trận Phân Quyền & Ủy Quyền Hệ Thống (Chỉ dành cho SUPER_ADMIN)
+    // 4b. Tra cứu Nhật ký Kiểm toán Biến động (Audit Trail API)
+    Route::get('/audit-trails', [\App\Modules\Compliance\Controllers\AuditTrailController::class, 'index'])->name('audit-trails.index');
+
+    // 4c. Phân hệ Ma Trận Phân Quyền & Ủy Quyền Hệ Thống (Chỉ dành cho SUPER_ADMIN)
     Route::prefix('access-control')->name('access-control.')->middleware('role:SUPER_ADMIN')->group(function () {
         Route::get('/', [AccessControlController::class, 'index'])->name('index');
         Route::post('/update', [AccessControlController::class, 'update'])->name('update');
@@ -100,6 +120,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('attendance')->name('attendance.')->middleware('perm:ATTENDANCE,view')->group(function () {
         Route::get('/', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'index'])->name('index');
         Route::get('/raw-logs', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'rawLogs'])->name('raw-logs');
+        Route::post('/submit', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'submitTimesheet'])->name('submit');
 
         Route::middleware('perm:ATTENDANCE,manage')->group(function () {
             Route::post('/calculate', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'calculate'])->name('calculate');
@@ -107,7 +128,73 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware('perm:ATTENDANCE,approve')->group(function () {
             Route::post('/lock-month', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'lockMonth'])->name('lock-month');
+            Route::post('/approve/{id}', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'approveTimesheet'])->name('approve');
+            Route::post('/reject/{id}', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'rejectTimesheet'])->name('reject');
+            Route::post('/bulk-approve', [\App\Modules\Attendance\Controllers\AttendanceController::class, 'bulkApprove'])->name('bulk-approve');
         });
+    });
+
+    // 6. Phân hệ 4: Shift Planning & Rostering (Quản lý Ca làm việc, Ma trận Phân ca & Đổi ca)
+    Route::prefix('rosters')->name('rosters.')->middleware('perm:ATTENDANCE,view')->group(function () {
+        // Màn hình Ma trận phân ca
+        Route::get('/', [\App\Modules\Rostering\Controllers\RosterController::class, 'index'])->name('index');
+
+        // Quản lý Ca làm việc (Shifts)
+        Route::get('/shifts', [\App\Modules\Rostering\Controllers\ShiftController::class, 'index'])->name('shifts.index');
+        Route::middleware('perm:ATTENDANCE,manage')->group(function () {
+            Route::post('/shifts', [\App\Modules\Rostering\Controllers\ShiftController::class, 'store'])->name('shifts.store');
+            Route::put('/shifts/{shift}', [\App\Modules\Rostering\Controllers\ShiftController::class, 'update'])->name('shifts.update');
+            Route::post('/shifts/{shift}/set-default', [\App\Modules\Rostering\Controllers\ShiftController::class, 'setDefault'])->name('shifts.set-default');
+            Route::delete('/shifts/{shift}', [\App\Modules\Rostering\Controllers\ShiftController::class, 'destroy'])->name('shifts.destroy');
+
+            Route::post('/assign', [\App\Modules\Rostering\Controllers\RosterController::class, 'assign'])->name('assign');
+            Route::post('/auto-generate', [\App\Modules\Rostering\Controllers\RosterController::class, 'autoGenerate'])->name('auto-generate');
+            Route::post('/simulate-auto-generate', [\App\Modules\Rostering\Controllers\RosterController::class, 'simulateAutoGenerate'])->name('simulate-auto-generate');
+        });
+
+        Route::middleware('perm:ATTENDANCE,approve')->group(function () {
+            Route::post('/publish', [\App\Modules\Rostering\Controllers\RosterController::class, 'publish'])->name('publish');
+        });
+
+        // Yêu cầu Đổi ca (Shift Swap & Cover)
+        Route::prefix('swaps')->name('swaps.')->group(function () {
+            Route::get('/', [\App\Modules\Rostering\Controllers\ShiftSwapController::class, 'index'])->name('index');
+            Route::post('/', [\App\Modules\Rostering\Controllers\ShiftSwapController::class, 'store'])->name('store');
+            Route::middleware('perm:ATTENDANCE,approve')->group(function () {
+                Route::post('/{swapRequest}/approve', [\App\Modules\Rostering\Controllers\ShiftSwapController::class, 'approve'])->name('approve');
+                Route::post('/{swapRequest}/reject', [\App\Modules\Rostering\Controllers\ShiftSwapController::class, 'reject'])->name('reject');
+            });
+        });
+    });
+
+    // 7. Phân hệ 5: Leave & Overtime Policy (Quản trị Nghỉ phép, Làm thêm giờ & Phúc lợi Nghỉ ngơi)
+    Route::prefix('leave')->name('leave.')->middleware('perm:ATTENDANCE,view')->group(function () {
+        Route::get('/balances', [\App\Modules\LeavePolicy\Controllers\LeaveController::class, 'index'])->name('balances');
+        Route::get('/ot-accumulations', [\App\Modules\LeavePolicy\Controllers\LeaveController::class, 'otAccumulations'])->name('ot-accumulations');
+
+        Route::middleware('perm:ATTENDANCE,manage')->group(function () {
+            Route::post('/adjust', [\App\Modules\LeavePolicy\Controllers\LeaveController::class, 'adjust'])->name('adjust');
+            Route::post('/recalculate', [\App\Modules\LeavePolicy\Controllers\LeaveController::class, 'recalculate'])->name('recalculate');
+            Route::post('/convert-ot', [\App\Modules\LeavePolicy\Controllers\LeaveController::class, 'convertOt'])->name('convert-ot');
+            Route::post('/sync-ot', [\App\Modules\LeavePolicy\Controllers\LeaveController::class, 'syncOt'])->name('sync-ot');
+        });
+    });
+
+    // Tiện ích alias route /leaves điều hướng về /leave/balances
+    Route::get('/leaves', fn() => redirect()->route('leave.balances'))->name('leaves');
+
+    // 8. Phân hệ 6: Payroll Engine (Động cơ Tính Lương, Thuế TNCN 5 Bậc & Khóa Sổ Bất Biến)
+    Route::prefix('payroll')->name('payroll.')->group(function () {
+        Route::get('/', [\App\Modules\Payroll\Controllers\PayrollController::class, 'index'])->name('index');
+        Route::post('/calculate', [\App\Modules\Payroll\Controllers\PayrollController::class, 'calculate'])->name('calculate');
+        Route::post('/lock-period', [\App\Modules\Payroll\Controllers\PayrollController::class, 'lockPeriod'])->name('lock-period');
+        Route::post('/approve-timesheet/{employeeId}', [\App\Modules\Payroll\Controllers\PayrollController::class, 'approveTimesheet'])->name('approve-timesheet');
+    });
+
+    // 9. Phân hệ Trung tâm Hướng dẫn Sử dụng Đa tầng (Role-Based Help Center)
+    Route::prefix('help')->name('help.')->group(function () {
+        Route::get('/', [\App\Modules\Compliance\Controllers\HelpGuideController::class, 'index'])->name('index');
+        Route::get('/{role}/{slug}', [\App\Modules\Compliance\Controllers\HelpGuideController::class, 'show'])->name('show');
     });
 });
 

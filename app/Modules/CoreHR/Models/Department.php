@@ -17,6 +17,7 @@ class Department extends Model
     protected $fillable = [
         'tenant_id',
         'branch_id',
+        'default_shift_id',
         'code',
         'parent_id',
         'level',
@@ -29,9 +30,18 @@ class Department extends Model
         'order' => 'integer',
     ];
 
+    protected $appends = [
+        'name',
+    ];
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function defaultShift(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Rostering\Models\Shift::class, 'default_shift_id');
     }
 
     public function branch(): BelongsTo
@@ -71,6 +81,11 @@ class Department extends Model
                       ->orWhere('end_date', '>=', Carbon::today());
             })
             ->latest('effective_date');
+    }
+
+    public function getNameAttribute(): string
+    {
+        return $this->currentVersion?->name ?? $this->code;
     }
 
     /**
