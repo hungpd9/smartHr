@@ -13,6 +13,7 @@ import {
     Wallet,
     Warning,
     Bell,
+    Document,
     Key,
     DArrowRight,
     DArrowLeft,
@@ -104,6 +105,8 @@ const navigationItems: NavigationItem[] = [
     },
     { key: 'payroll', icon: Wallet, route: '/payroll' },
     { key: 'compliance', icon: Warning, route: '/compliance' },
+    { key: 'notifications', icon: Bell, route: '/notifications' },
+    { key: 'reports', icon: Document, route: '/reports' },
     { key: 'licensing', icon: Key, route: '/licensing' },
 ];
 
@@ -200,48 +203,47 @@ const getUserInitials = computed(() => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 });
 
-// In-app Notifications State
+// In-app Notifications State (Connected to Inertia Shared Props)
 interface NotificationItem {
     id: number;
     title: string;
     content: string;
-    time: string;
-    type: 'info' | 'warning' | 'success';
-    read: boolean;
+    created_at?: string;
+    severity?: string;
+    type?: string;
+    is_read: boolean;
+    action_url?: string | null;
 }
 
-const notifications = ref<NotificationItem[]>([
-    {
-        id: 1,
-        title: 'Chế độ Bảo hộ Điều 137',
-        content: 'Nhân viên EMP002 (Trần Thị Mai) đủ điều kiện áp dụng chế độ con dưới 12 tháng tuổi.',
-        time: '10 phút trước',
-        type: 'info',
-        read: false,
-    },
-    {
-        id: 2,
-        title: 'Đồng bộ từ Edge Collector',
-        content: 'Chi nhánh Kho Phú Quốc vừa đồng bộ thành công 14 lượt quẹt thẻ HMAC-SHA256.',
-        time: '35 phút trước',
-        type: 'success',
-        read: false,
-    },
-    {
-        id: 3,
-        title: 'Rà soát Tuân thủ Hợp đồng',
-        content: '01 nhân sự sắp hết hạn hợp đồng xác định thời hạn trong vòng 30 ngày tới.',
-        time: '2 giờ trước',
-        type: 'warning',
-        read: false,
-    },
-]);
+const notifications = computed<NotificationItem[]>(() => {
+    return ((page.props as any).in_app_notifications as NotificationItem[]) || [];
+});
 
-const unreadCount = ref(notifications.value.filter(n => !n.read).length);
+const unreadCount = computed<number>(() => {
+    return ((page.props as any).unread_notifications_count as number) || 0;
+});
+
+const markNotificationAsRead = (item: NotificationItem) => {
+    if (!item.is_read) {
+        router.post(`/notifications/${item.id}/read`, {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                if (item.action_url) {
+                    router.visit(item.action_url);
+                }
+            }
+        });
+    } else if (item.action_url) {
+        router.visit(item.action_url);
+    }
+};
 
 const markAllNotificationsAsRead = () => {
-    notifications.value.forEach(n => { n.read = true; });
-    unreadCount.value = 0;
+    router.post('/notifications/read-all', {}, {
+        preserveScroll: true,
+        preserveState: true,
+    });
 };
 </script>
 
@@ -518,22 +520,24 @@ const markAllNotificationsAsRead = () => {
                                         <div
                                             v-for="item in notifications"
                                             :key="item.id"
-                                            class="py-2.5 px-1 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition"
-                                            :class="item.read ? 'opacity-60' : ''"
+                                            @click="markNotificationAsRead(item)"
+                                            class="py-2.5 px-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition cursor-pointer"
+                                            :class="item.is_read ? 'opacity-60' : 'bg-indigo-50/30 dark:bg-indigo-950/20'"
                                         >
                                             <div class="flex items-start space-x-2.5">
                                                 <span
                                                     class="w-2 h-2 rounded-full mt-1.5 shrink-0"
                                                     :class="{
-                                                        'bg-indigo-500': item.type === 'info',
-                                                        'bg-emerald-500': item.type === 'success',
-                                                        'bg-amber-500': item.type === 'warning',
+                                                        'bg-rose-500': item.severity === 'critical',
+                                                        'bg-amber-500': item.severity === 'warning',
+                                                        'bg-emerald-500': item.severity === 'success',
+                                                        'bg-indigo-500': item.severity === 'info' || !item.severity,
                                                     }"
                                                 ></span>
                                                 <div class="flex-1 min-w-0 text-xs">
                                                     <div class="font-semibold text-slate-800 dark:text-slate-200 truncate">{{ item.title }}</div>
                                                     <div class="text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{{ item.content }}</div>
-                                                    <span class="text-[10px] text-slate-400 mt-1 block">{{ item.time }}</span>
+                                                    <span class="text-[10px] text-slate-400 mt-1 block">{{ item.created_at }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -542,6 +546,12 @@ const markAllNotificationsAsRead = () => {
                                     <div v-else class="text-center py-6 text-slate-400 text-xs">
                                         <el-icon :size="28" class="text-slate-300 mb-1"><ChatDotRound /></el-icon>
                                         <p>{{ t('no_new_notifications') }}</p>
+                                    </div>
+
+                                    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-center">
+                                        <Link href="/notifications" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
+                                            Xem tất cả trong Trung tâm thông báo &rarr;
+                                        </Link>
                                     </div>
                                 </div>
                             </el-popover>

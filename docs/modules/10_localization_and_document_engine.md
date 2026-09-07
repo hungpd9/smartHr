@@ -2,7 +2,7 @@
 
 > **Tên phân hệ:** `PlatformSupport`  
 > **Namespace Backend:** `App\Modules\PlatformSupport`  
-> **Trách nhiệm chính:** Cung cấp hạ tầng dịch vụ dùng chung (Shared Services) cho toàn hệ thống: Hỗ trợ đa ngôn ngữ (Localization / i18n) cho cả giao diện và dữ liệu động, bộ động cơ xuất nhập dữ liệu lớn Excel/CSV bằng kỹ thuật Streaming I/O (RAM $< 64$MB) hỗ trợ xuất hồ sơ con nhỏ, danh mục phụ cấp, và động cơ sinh tài liệu văn bản pháp lý định dạng PDF (Phiếu lương số bảo mật PIN, Hợp đồng lao động, Quyết định thôi việc/chốt thâm niên).
+> **Trách nhiệm chính:** Cung cấp hạ tầng dịch vụ dùng chung (Shared Services) cho toàn hệ thống: Hỗ trợ đa ngôn ngữ (Localization / i18n) cho cả giao diện và dữ liệu động, bộ động cơ xuất nhập dữ liệu lớn Excel/CSV bằng kỹ thuật Streaming I/O (RAM < 64MB) hỗ trợ xuất hồ sơ con nhỏ, danh mục phụ cấp, và động cơ sinh tài liệu văn bản pháp lý định dạng PDF (Phiếu lương số bảo mật PIN, Hợp đồng lao động, Quyết định thôi việc/chốt thâm niên).
 
 ---
 
@@ -110,4 +110,4 @@ class StreamingChildrenExportService
 2. **Test `StreamingExportMemorySafetyUnder64MB`**:
    - Giả lập 20.000 bản ghi con nhỏ và phụ cấp.
    - Xuất file qua `StreamingChildrenExportService`.
-   - Kết quả kỳ vọng: File Excel được tạo đầy đủ dữ liệu, RAM đỉnh tiêu thụ của tiến trình PHP $< 45$MB.
+   - Kết quả kỳ vọng: File Excel được tạo đầy đủ dữ liệu, RAM đỉnh tiêu thụ của tiến trình PHP < 45MB.

@@ -695,20 +695,20 @@ flowchart LR
    - Nạp phiên bản quy chế `policy_versions` có hiệu lực tại ngày công (`effective_from <= date AND (effective_to IS NULL OR effective_to >= date)`). Toàn bộ tham số phạt và giờ làm đều nạp từ đây.
 4. **`ChildWelfarePipe` (Chính sách Con nhỏ Động)**:
    - Tính toán chính xác số tháng tuổi của con nhân viên tại ngày công:
-     $$
-     \text{Age in Months} = \text{diffInMonths}(\text{child\_birth\_date}, \text{date})
-     $$
+     ```text
+     Age in Months = diffInMonths(child_birth_date, date)
+     ```
    - Đối chiếu với bảng `child_welfare_policies`:
-     - Nếu con $< 12$ tháng: Tự động miễn 60 phút có lương (`child_policy_paid_hours = 1.0`). Đối với ca đêm và làm thêm giờ (OT): Mặc định không bố trí, TRỪ TRƯỜNG HỢP có đơn thỏa thuận/đồng thuận tự nguyện được phê duyệt (Điều 137 Khoản 1 Điểm b BLLĐ 2019). Khi có đơn đồng thuận hợp lệ, giờ ca đêm và OT vẫn được tính lương đầy đủ theo hệ số luật định.
+     - Nếu con < 12 tháng: Tự động miễn 60 phút có lương (`child_policy_paid_hours = 1.0`). Đối với ca đêm và làm thêm giờ (OT): Mặc định không bố trí, TRỪ TRƯỜNG HỢP có đơn thỏa thuận/đồng thuận tự nguyện được phê duyệt (Điều 137 Khoản 1 Điểm b BLLĐ 2019). Khi có đơn đồng thuận hợp lệ, giờ ca đêm và OT vẫn được tính lương đầy đủ theo hệ số luật định.
      - Nếu thuộc các nấc tuổi khác do công ty cấu hình (ví dụ: con 1-11 tuổi): Ghi nhận số phút miễn trừ không lương (`child_policy_unpaid_hours`).
 5. **`LateEarlyPipe`**:
-   - Tính toán số phút đi muộn ban đầu: $T_{\text{late}} = \max(0, CheckIn - WorkIn)$.
-   - Tính toán số phút về sớm ban đầu: $T_{\text{early}} = \max(0, WorkOut - CheckOut)$.
+   - Tính toán số phút đi muộn ban đầu: `Phút đi muộn = max(0, CheckIn - WorkIn)`.
+   - Tính toán số phút về sớm ban đầu: `Phút về sớm = max(0, WorkOut - CheckOut)`.
    - Hấp thụ thời gian vi phạm bằng số phút miễn giảm con nhỏ:
-     $$
-     \text{Exemption Used} = \min(T_{\text{late}} + T_{\text{early}},\; \text{Allowed Exemption Minutes})
-     $$
-   - Giảm trừ $T_{\text{late}}$ và $T_{\text{early}}$ tương ứng với phần thời gian đã được hấp thụ.
+     ```text
+     Thời gian miễn trừ sử dụng = min(Phút đi muộn + Phút về sớm, Số phút miễn trừ cho phép)
+     ```
+   - Giảm trừ số phút đi muộn và về sớm tương ứng với phần thời gian đã được hấp thụ.
 6. **`ProgressivePenaltyPipe`**:
    - Tra cứu bảng `penalty_tiers_json` để tính số tiền phạt theo nấc phút vi phạm.
    - Đếm số lần vi phạm lũy kế trong tháng từ ngày 1 đến ngày hiện tại để nhân hệ số phạt bậc tần suất (`frequency_penalty_json`).
@@ -723,41 +723,40 @@ flowchart LR
 
 #### A. Ràng buộc cứng (Hard Constraints - Không được vi phạm)
 1. **Nghỉ tối thiểu 12 giờ giữa 2 ca liên tiếp (Điều 110 BLLĐ)**:
-   $$
-   \forall i \in \text{Employees}, \forall d: \quad \text{StartTime}(Roster_{i, d+1}) - \text{EndTime}(Roster_{i, d}) \ge 12\text{ hours}
-   $$
+   ```text
+   Thời gian bắt đầu ca sau - Thời gian kết thúc ca trước >= 12 giờ (với mọi nhân viên và mọi ngày liên tiếp)
+   ```
 2. **Nghỉ hàng tuần tối thiểu 24 giờ liên tục (Điều 111 BLLĐ)**:
-   $$
-   \forall i \in \text{Employees}, \forall w \in \text{Weeks}: \quad \exists \text{RestPeriod} \ge 24\text{ hours}
-   $$
+   ```text
+   Khoảng nghỉ liên tục trong mỗi tuần >= 24 giờ (với mọi nhân viên)
+   ```
 3. **Giới hạn thời giờ làm việc bình thường (Điều 105 BLLĐ)**:
-   $$
-   \forall i \in \text{Employees}, \forall w \in \text{Weeks}: \quad \sum \text{StandardHours}_{i, w} \le 48\text{ hours}
-   $$
+   ```text
+   Tổng giờ làm việc tiêu chuẩn trong mỗi tuần <= 48 giờ (với mọi nhân viên)
+   ```
 4. **Bảo vệ thai sản & nuôi con nhỏ (Điều 137 BLLĐ 2019)**:
-   - *Lao động nữ mang thai (Khoản 1 Điểm a)*: Cấm tuyệt đối ca đêm ($22:00 - 06:00$), làm thêm giờ và đi công tác xa:
+   - *Lao động nữ mang thai (Khoản 1 Điểm a)*: Cấm tuyệt đối ca đêm (22:00 - 06:00), làm thêm giờ và đi công tác xa:
      - Từ tháng thứ 07 mang thai (đối với điều kiện làm việc bình thường).
-     - Từ tháng thứ 06 mang thai (nếu làm việc ở vùng cao, vùng sâu, vùng xa, biên giới, hải đảo: $Branch_i.\text{is\_remote\_or\_island} = \text{true}$).
-     $$
-     \text{Let } \text{Threshold}(Branch_i) = \begin{cases} 6 & \text{nếu } Branch_i.\text{is\_remote\_or\_island} = \text{true} \\ 7 & \text{mặc định} \end{cases}
-     $$
-     $$
-     \text{If } \text{IsPregnant}(i) \land \text{PregnancyMonth}(i) \ge \text{Threshold}(Branch_i) \implies \text{IsNightShift}(Shift) = \text{False} \land \text{IsOvertime}(Shift) = \text{False}
-     $$
+     - Từ tháng thứ 06 mang thai (nếu làm việc ở vùng cao, vùng sâu, vùng xa, biên giới, hải đảo: `is_remote_or_island = true`).
+     ```text
+     Nếu nhân viên mang thai >= Ngưỡng bảo vệ (tháng 6 đối với vùng sâu/hải đảo, tháng 7 đối với bình thường):
+     -> Ca làm việc KHÔNG ĐƯỢC là ca đêm (IsNightShift = False) và KHÔNG ĐƯỢC làm thêm giờ (IsOvertime = False)
+     ```
    - *Lao động nuôi con dưới 12 tháng (Khoản 1 Điểm b)*: Mặc định cấm ca đêm/OT, **trừ trường hợp người lao động có đơn đồng thuận tự nguyện** (`HasConsentForm`):
-     $$
-     \text{If } \text{ChildAgeMonths}(i) < 12 \land \neg\text{HasConsentForm}(i) \implies \text{IsNightShift}(Shift) = \text{False} \land \text{IsOvertime}(Shift) = \text{False}
-     $$
+     ```text
+     Nếu nhân viên nuôi con < 12 tháng và KHÔNG CÓ đơn thỏa thuận tự nguyện:
+     -> Ca làm việc KHÔNG ĐƯỢC là ca đêm và KHÔNG ĐƯỢC làm thêm giờ
+     ```
 
 #### B. Ràng buộc mềm (Soft Constraints - Mục tiêu Tối ưu)
 - **Hàm mục tiêu Công bằng (Fairness Objective)**:
-  $$
-  \min \sum_{i, j \in \text{Employees}} \left( |\text{NightShifts}_i - \text{NightShifts}_j| + |\text{WeekendShifts}_i - \text{WeekendShifts}_j| \right)
-  $$
+  ```text
+  Tối thiểu hóa chênh lệch số ca đêm và ca cuối tuần giữa các nhân viên cùng vị trí
+  ```
 - **Hàm mục tiêu Tối ưu Chi phí (Cost Objective)**:
-  $$
-  \min \sum_{i} \text{ExpectedOvertimeCost}(i)
-  $$
+  ```text
+  Tối thiểu hóa tổng chi phí làm thêm giờ phát sinh trong kỳ phân ca
+  ```
 
 ---
 
@@ -777,9 +776,9 @@ flowchart LR
 ### 4.4 Động cơ Tính Lương (Payroll Engine) & Thuế TNCN 5 Bậc mới
 
 1. **Lương cơ bản theo ngày công thực tế**:
-   $$
-   \text{Prorated Salary} = \frac{\text{Base Salary}}{\text{Standard Working Days}} \times \text{Actual Standard Days}
-   $$
+   ```text
+   Lương thực tế theo ngày công = (Lương cơ bản / Ngày công chuẩn) * Ngày công thực tế
+   ```
 2. **Thuật toán bóc tách Tiền OT miễn thuế 3 tầng trần**:
    - Theo Điều 98 BLLĐ 2019 và Thông tư 111/2013/TT-BTC: Phần tiền lương trả cao hơn do làm thêm giờ (ví dụ: phần 50% trong hệ số 150%, phần 100% trong hệ số 200%) được **miễn thuế TNCN**.
    - Tuy nhiên, phần miễn thuế bị khống chế bởi 3 tầng trần:
@@ -788,7 +787,7 @@ flowchart LR
      - *Trần năm*: Tối đa 200 giờ/năm (hoặc 300 giờ theo ngành đặc thù quy định tại Nghị định 145/2020).
      - Phần vượt quá các trần này vẫn được trả lương nhưng **chịu thuế TNCN 100%**.
 3. **Biểu thuế TNCN Lũy tiến 5 Bậc (Hiệu lực từ 2026)**:
-   - Thu nhập tính thuế: $\text{Assessable Income} = \text{Gross} - \text{BHXH} - \text{Giảm trừ bản thân (11tr)} - \text{Giảm trừ gia cảnh (4.4tr/người)} - \text{OT miễn thuế}$.
+   - Thu nhập tính thuế: `Thu nhập tính thuế = Gross - BHXH - Giảm trừ bản thân (11tr) - Giảm trừ gia cảnh (4.4tr/người) - OT miễn thuế`.
    - Công thức tính thuế lũy tiến từng phần theo 5 bậc:
 
 | Bậc | Thu nhập tính thuế/tháng | Thuế suất | Số trừ nhanh |
@@ -877,7 +876,9 @@ Hệ thống phân tách quyền hạn độc lập trên 5 Bounded Contexts c�
 ### 8.2 Thuật toán Phân giải Quyền hạn 4 Tầng Ưu tiên (4-Tier Permission Resolution Hierarchy)
 Khi một người dùng thực hiện một thao tác yêu cầu quyền (`can_view`, `can_manage`, `can_approve`), hệ thống giải quyết theo thứ tự ưu tiên giảm dần:
 
-$$\text{Super Admin (Bypass)} \succ \text{Ngoại lệ Cá nhân (USER)} \succ \text{Chức vụ (POSITION)} \succ \text{Phòng ban (DEPARTMENT)} \succ \text{Vai trò Mặc định (ROLE)}$$
+```text
+Super Admin (Bypass) > Ngoại lệ Cá nhân (USER) > Chức vụ (POSITION) > Phòng ban (DEPARTMENT) > Vai trò Mặc định (ROLE)
+```
 
 1. **Tầng 0 - Super Admin Bypass**: Quản trị viên cấp cao nhất (`SUPER_ADMIN`) luôn được trả về `TRUE` cho mọi phân hệ và mọi quyền mà không cần truy vấn bảng ma trận.
 2. **Tầng 1 - Ngoại lệ Cá nhân (`USER`)**: Cấp quyền đặc biệt trực tiếp cho một nhân sự cụ thể (ví dụ: Nhân viên IT chuyên trách quản lý tài nguyên `OFFICE_RESOURCES`).

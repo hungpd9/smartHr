@@ -11,7 +11,7 @@
 Module `LeavePolicy` bảo đảm doanh nghiệp thực thi chính xác các quy định về chế độ nghỉ ngơi và làm thêm giờ:
 1. **Quỹ Phép Năm Tự động (Annual Leave Balance Engine)**:
    - Khởi tạo 12 ngày phép/năm cho điều kiện lao động bình thường (14 ngày cho công việc nặng nhọc/độc hại).
-   - Tự động cộng dồn theo tỷ lệ từng tháng làm việc ($1\text{ ngày/tháng}$).
+   - Tự động cộng dồn theo tỷ lệ từng tháng làm việc (1 ngày/tháng).
    - **Tự động cộng thêm 1 ngày phép thâm niên cho mỗi đủ 5 năm làm việc** tại doanh nghiệp (Điều 114 BLLĐ 2019) dựa trên số năm thâm niên từ `CareerTimelineService`.
    - **Tích hợp ngày phép thưởng từ Phúc lợi Doanh nghiệp**: Tự động cộng thêm số ngày phép hàng năm theo quy định tại bảng `welfare_schemes.additional_leave_days_per_year` (VD: Lao động cao tuổi được cộng thêm 2 ngày phép/năm).
    - Quản lý quy tắc chuyển phép tồn sang năm sau (Carry-over) với hạn chót sử dụng (mặc định đến hết ngày 31/03 năm kế tiếp).
@@ -24,7 +24,7 @@ Module `LeavePolicy` bảo đảm doanh nghiệp thực thi chính xác các quy
    - Cha đẻ, mẹ đẻ, cha nuôi, mẹ nuôi; cha đẻ, mẹ đẻ, cha nuôi, mẹ nuôi của vợ hoặc chồng; vợ hoặc chồng; con đẻ, con nuôi chết: Nghỉ **03 ngày**.
 4. **Kiểm soát Trần Giờ Làm Thêm (Overtime Compliance Monitoring)**:
    - Kiểm soát chặt chẽ 3 trần làm thêm giờ theo Điều 107 BLLĐ 2019 và Nghị định 145/2020/NĐ-CP:
-     - Không quá $50\%$ số giờ làm việc bình thường trong ngày.
+     - Không quá 50% số giờ làm việc bình thường trong ngày.
      - Không quá **40 giờ/tháng**.
      - Không quá **200 giờ/năm** (hoặc tối đa **300 giờ/năm** đối với danh mục ngành nghề đặc thù có thông báo Sở LĐ-TB&XH).
      - *Lao động nuôi con dưới 12 tháng*: Mặc định không được làm thêm giờ, trừ trường hợp có đơn thỏa thuận tự nguyện hợp lệ.
@@ -51,7 +51,7 @@ erDiagram
 #### Bảng `leave_balances` (Quỹ Phép của Nhân viên theo Năm)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `year` (INT) — Năm tính phép (VD: `2026`)
 - `leave_type` (ENUM: `ANNUAL`, `COMPENSATION`) — Phép năm hoặc Nghỉ bù
 - `carried_over_days` (DECIMAL(4,2), Default: 0.00) — Số phép tồn năm trước chuyển sang
@@ -69,7 +69,7 @@ erDiagram
 
 #### Bảng `leave_transactions` (Lịch sử Biến động Quỹ Phép)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `leave_balance_id` (BIGINT UNSIGNED, FK $\to$ `leave_balances.id`)
+- `leave_balance_id` (BIGINT UNSIGNED, FK -> `leave_balances.id`)
 - `transaction_type` (ENUM: `ACCRUAL`, `USAGE`, `EXPIRATION`, `ADJUSTMENT`, `COMPENSATION_CONVERT`)
 - `days` (DECIMAL(4,2)) — Số ngày biến động (+ hoặc -)
 - `reference_id` (BIGINT UNSIGNED, Nullable) — ID đơn nghỉ phép hoặc đơn OT tương ứng
@@ -79,7 +79,7 @@ erDiagram
 #### Bảng `overtime_accumulations` (Theo dõi Lũy kế Giờ OT Năm)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `year` (INT)
 - `total_ot_hours_year` (DECIMAL(6,2), Default: 0.00)
 - `monthly_ot_json` (JSON) — Chi tiết số giờ OT theo từng tháng: `{"01": 15.5, "02": 20.0...}`
@@ -93,9 +93,9 @@ erDiagram
 
 ### 3.1 Tự động Cộng Phép Thâm niên (Điều 114 BLLĐ 2019)
 Vào ngày 01 tháng 01 hàng năm (hoặc khi nhân viên đạt mốc thâm niên tròn 5 năm, 10 năm trong năm):
-$$
-\text{Seniority Bonus Days} = \left\lfloor \frac{\text{Seniority Years}}{5} \right\rfloor
-$$
+```text
+Số ngày phép thâm niên = floor(Số năm thâm niên / 5)
+```
 Ví dụ:
 - Làm việc 4 năm: 0 ngày cộng thêm.
 - Làm việc từ đủ 5 năm đến 9 năm: +1 ngày phép thâm niên.
@@ -103,9 +103,9 @@ Ví dụ:
 
 ### 3.2 Tích lũy Phép Phúc lợi Doanh nghiệp
 Nếu doanh nghiệp ban hành chế độ phúc lợi có `additional_leave_days_per_year > 0` trong `welfare_schemes`:
-$$
-\text{Total Entitled Days} = \text{Statutory Allocated} + \text{Seniority Bonus} + \text{Welfare Bonus}
-$$
+```text
+Tổng ngày phép được hưởng = Phép luật định + Phép thâm niên + Phép phúc lợi doanh nghiệp
+```
 
 ---
 

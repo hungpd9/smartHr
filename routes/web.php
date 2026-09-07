@@ -216,6 +216,40 @@ Route::middleware('auth')->group(function () {
         Route::post('/configs', [\App\Modules\Workflow\Controllers\WorkflowConfigController::class, 'update'])->name('configs.update');
     });
 
+    // 11. Phân hệ Compliance & Early Warning (Trung tâm Giám sát Tuân thủ & Cảnh báo Sớm BLLĐ)
+    Route::prefix('compliance')->name('compliance.')->group(function () {
+        Route::get('/', [\App\Modules\Compliance\Controllers\ComplianceController::class, 'index'])->name('index');
+        Route::post('/scan', [\App\Modules\Compliance\Controllers\ComplianceController::class, 'scanNow'])->name('scan');
+        Route::post('/alerts/{id}/resolve', [\App\Modules\Compliance\Controllers\ComplianceController::class, 'resolve'])->name('resolve');
+        Route::post('/alerts/bulk-resolve', [\App\Modules\Compliance\Controllers\ComplianceController::class, 'bulkResolve'])->name('bulk-resolve');
+    });
+
+    // 12. Phân hệ Notification & Multi-Channel Engine (Thông Báo Đa Kênh & In-App Bell)
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [\App\Modules\Notification\Controllers\NotificationController::class, 'index'])->name('index');
+        Route::post('/{id}/read', [\App\Modules\Notification\Controllers\NotificationController::class, 'markRead'])->name('read');
+        Route::post('/read-all', [\App\Modules\Notification\Controllers\NotificationController::class, 'markAllRead'])->name('read-all');
+        Route::delete('/{id}', [\App\Modules\Notification\Controllers\NotificationController::class, 'destroy'])->name('destroy');
+        Route::post('/channels/save', [\App\Modules\Notification\Controllers\NotificationController::class, 'saveChannelConfig'])->name('channels.save');
+        Route::post('/channels/test', [\App\Modules\Notification\Controllers\NotificationController::class, 'testChannel'])->name('channels.test');
+    });
+
+    // 13. Phân hệ Reporting & High-Performance Streaming Export (Trung Tâm Báo Cáo Phân Tích & Xuất Dữ Liệu)
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [\App\Modules\Reporting\Controllers\ReportController::class, 'index'])->name('index');
+        Route::get('/preview', [\App\Modules\Reporting\Controllers\ReportController::class, 'preview'])->name('preview');
+        Route::get('/export', [\App\Modules\Reporting\Controllers\ReportController::class, 'export'])->name('export');
+        Route::get('/history', [\App\Modules\Reporting\Controllers\ReportController::class, 'history'])->name('history');
+    });
+
+    // 14. Phân hệ Licensing & Cryptographic Data Anchoring (Bản quyền Ed25519 & Móc neo Mật mã)
+    Route::prefix('licensing')->name('licensing.')->group(function () {
+        Route::get('/', [\App\Modules\Licensing\Controllers\LicensingController::class, 'index'])->name('index');
+        Route::post('/upload', [\App\Modules\Licensing\Controllers\LicensingController::class, 'upload'])->name('upload');
+        Route::post('/test-crypto', [\App\Modules\Licensing\Controllers\LicensingController::class, 'testCrypto'])->name('test-crypto');
+        Route::get('/sample-config', [\App\Modules\Licensing\Controllers\LicensingController::class, 'downloadSampleConfig'])->name('sample-config');
+    });
+
     // Alias tiện ích
     Route::get('/workflow', fn() => redirect()->route('workflow.requests.index'))->name('workflow');
     Route::get('/requests', fn() => redirect()->route('workflow.requests.index'))->name('requests');

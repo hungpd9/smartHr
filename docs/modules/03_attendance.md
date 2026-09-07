@@ -38,7 +38,7 @@ erDiagram
 
 #### Bảng `devices`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `branch_id` (BIGINT UNSIGNED, FK $\to$ `branches.id`)
+- `branch_id` (BIGINT UNSIGNED, FK -> `branches.id`)
 - `device_name` (VARCHAR(150))
 - `serial_number` (VARCHAR(100), Unique)
 - `ip_address` (VARCHAR(50)) — IP Private trong mạng LAN
@@ -51,9 +51,9 @@ erDiagram
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
 - `branch_id` (BIGINT UNSIGNED)
-- `device_id` (BIGINT UNSIGNED, FK $\to$ `devices.id`)
+- `device_id` (BIGINT UNSIGNED, FK -> `devices.id`)
 - `device_user_code` (VARCHAR(50)) — Mã ID trên máy chấm công
-- `employee_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `employees.id`) — Phân giải từ `device_user_code`
+- `employee_id` (BIGINT UNSIGNED, Nullable, FK -> `employees.id`) — Phân giải từ `device_user_code`
 - `punch_time` (DATETIME) — Thời gian quẹt thẻ chính xác
 - `punch_state` (TINYINT, Default: 255) — 0: CheckIn, 1: CheckOut, 255: Auto
 - `verify_type` (TINYINT, Default: 1) — 1: Vân tay, 2: FaceID, 3: Thẻ từ
@@ -64,9 +64,9 @@ erDiagram
 #### Bảng `daily_attendances` (Kết quả Công Ngày)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `date` (DATE)
-- `work_shift_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `work_shifts.id`)
+- `work_shift_id` (BIGINT UNSIGNED, Nullable, FK -> `work_shifts.id`)
 - `check_in` (DATETIME, Nullable)
 - `check_out` (DATETIME, Nullable)
 - `standard_hours` (DECIMAL(4,2), Default: 0.00) — Giờ làm việc chuẩn được ghi nhận
@@ -87,7 +87,7 @@ erDiagram
 #### Bảng `monthly_attendances` (Tổng hợp Công Tháng)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `month_year` (VARCHAR(7)) — Định dạng: `YYYY-MM`
 - `total_standard_days` (DECIMAL(5,2), Default: 0.00)
 - `total_actual_days` (DECIMAL(5,2), Default: 0.00)
@@ -99,7 +99,7 @@ erDiagram
 - `total_late_early_penalties` (DECIMAL(15,2), Default: 0.00)
 - `is_locked` (BOOLEAN, Default: FALSE) — TRUE: Đã khóa tháng
 - `locked_at` (TIMESTAMP, Nullable)
-- `locked_by` (BIGINT UNSIGNED, Nullable, FK $\to$ `employees.id`)
+- `locked_by` (BIGINT UNSIGNED, Nullable, FK -> `employees.id`)
 - Unique Index: `(employee_id, month_year)`
 
 ---
@@ -123,8 +123,8 @@ flowchart TD
 ### Chi tiết các Pipe xử lý:
 
 1. **`PairInOutPipe` (Ghép cặp Check-In / Check-Out)**:
-   - Thu thập toàn bộ log quẹt thẻ trong khoảng $[Date\text{ }04:00, (Date+1)\text{ }06:00]$ để bao quát ca đêm.
-   - *Khử trùng lặp (Debounce)*: Bỏ qua các lần quẹt thẻ cách nhau $< 60$ giây.
+   - Thu thập toàn bộ log quẹt thẻ trong khoảng [Date 04:00, (Date+1) 06:00] để bao quát ca đêm.
+   - *Khử trùng lặp (Debounce)*: Bỏ qua các lần quẹt thẻ cách nhau < 60 giây.
    - Lấy lần quẹt thẻ sớm nhất làm `candidate_in` và muộn nhất làm `candidate_out`.
 2. **`ShiftMatchingPipe` (Khớp Ca Làm Việc)**:
    - Kiểm tra lịch phân ca `rosters` của nhân viên tại ngày đó. Nếu không có lịch trước, tự động so khớp với danh mục `work_shifts` theo khung giờ thực tế tối ưu nhất.

@@ -15,8 +15,8 @@ Module `CoreHR` đóng vai trò là "Single Source of Truth" (Nguồn chân lý 
 4. **Hồ sơ Con nhỏ & Phúc lợi Gia đình (`employee_children`)**: Quản lý hồ sơ chi tiết từng con nhỏ của nhân viên (ngày sinh, giới tính, mã số thuế giảm trừ gia cảnh, ngày bắt đầu/kết thúc giảm trừ, mức trợ cấp con nhỏ hàng tháng mặc định 300.000 đ/tháng), cung cấp dữ liệu nền tảng cho Module 02 (Policy Engine), Module 03 (Attendance) và Module 07 (Payroll).
 5. **Cây Timeline Nghề nghiệp Nhân sự (`employee_career_timelines`)**: Quản lý toàn bộ lịch sử biến động nhân sự (Vào cty, Điều chuyển, Bổ nhiệm chức vụ, Nâng bậc lương, Nghỉ việc) theo cơ chế Effective Dating không hồi tố.
 6. **Hợp đồng Lao động (`employee_contracts`)**: Quản lý các loại hợp đồng theo Bộ luật Lao động 2019 (Thử việc, Xác định thời hạn, Không xác định thời hạn, Mùa vụ).
-7. **Phân hệ Quản trị Phân quyền Ma trận Granular RBAC 4 Tầng (`permission_assignments`)**: Cung cấp cơ chế phân quyền ma trận linh hoạt, cho phép gán 3 loại quyền (`can_view`, `can_manage`, `can_approve`) trên 5 modules lõi cho 4 đối tượng với thứ tự ưu tiên chặt chẽ: Cá nhân (`USER`) $\succ$ Chức vụ (`POSITION`) $\succ$ Phòng ban (`DEPARTMENT`) $\succ$ Vai trò (`ROLE`).
-8. **Cấu trúc Menu Điều hướng Phân cấp**: Chuẩn hóa cấu trúc điều hướng Sidebar theo nguyên tắc Menu Cấp 1 $\to$ Sub-menu Cấp 2, loại bỏ hoàn toàn các liên kết đơn lẻ rời rạc.
+7. **Phân hệ Quản trị Phân quyền Ma trận Granular RBAC 4 Tầng (`permission_assignments`)**: Cung cấp cơ chế phân quyền ma trận linh hoạt, cho phép gán 3 loại quyền (`can_view`, `can_manage`, `can_approve`) trên 5 modules lõi cho 4 đối tượng với thứ tự ưu tiên chặt chẽ: Cá nhân (`USER`) > Chức vụ (`POSITION`) > Phòng ban (`DEPARTMENT`) > Vai trò (`ROLE`).
+8. **Cấu trúc Menu Điều hướng Phân cấp**: Chuẩn hóa cấu trúc điều hướng Sidebar theo nguyên tắc Menu Cấp 1 -> Sub-menu Cấp 2, loại bỏ hoàn toàn các liên kết đơn lẻ rời rạc.
 
 ---
 
@@ -40,7 +40,7 @@ erDiagram
 
 #### Bảng `branches` (Chi nhánh / Cửa hàng / Kho bãi)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
 - `code` (VARCHAR(50), Unique per tenant) — Mã chi nhánh (VD: `HN_FLAGSHIP`, `PQ_STORE`)
 - `name` (VARCHAR(255)) — Tên chi nhánh/kho
 - `address` (VARCHAR(255), Nullable)
@@ -51,19 +51,19 @@ erDiagram
 
 #### Bảng `departments`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
-- `branch_id` (BIGINT UNSIGNED, FK $\to$ `branches.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
+- `branch_id` (BIGINT UNSIGNED, FK -> `branches.id`)
 - `code` (VARCHAR(50), Unique per tenant) — Mã cố định không đổi (VD: `TECH_DEV`, `SALES_RETAIL`)
-- `parent_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `departments.id`) — Phòng ban cha (cấu trúc Tree)
+- `parent_id` (BIGINT UNSIGNED, Nullable, FK -> `departments.id`) — Phòng ban cha (cấu trúc Tree)
 - `status` (ENUM: `ACTIVE`, `INACTIVE`, `ARCHIVED`, Default: `ACTIVE`)
 - `created_at`, `updated_at` (TIMESTAMP)
 
 #### Bảng `department_versions` (Lineage lịch sử phòng ban)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `department_id` (BIGINT UNSIGNED, FK $\to$ `departments.id`)
-- `name` (VARCHAR(255)) — Tên phòng ban tại thời kỳ này (VD: "Phòng Phát triển Phần mềm" $\to$ đổi thành "Khối Công nghệ & Đổi mới")
+- `department_id` (BIGINT UNSIGNED, FK -> `departments.id`)
+- `name` (VARCHAR(255)) — Tên phòng ban tại thời kỳ này (VD: "Phòng Phát triển Phần mềm" -> đổi thành "Khối Công nghệ & Đổi mới")
 - `mission_function` (TEXT, Nullable) — Chức năng, nhiệm vụ, quyền hạn chi tiết
-- `manager_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `employees.id`) — Trưởng phòng trong giai đoạn này
+- `manager_id` (BIGINT UNSIGNED, Nullable, FK -> `employees.id`) — Trưởng phòng trong giai đoạn này
 - `effective_date` (DATE) — Ngày bắt đầu áp dụng
 - `end_date` (DATE, Nullable) — Ngày kết thúc áp dụng (NULL nếu là phiên bản đang có hiệu lực)
 - `change_reason` (VARCHAR(255), Nullable) — Căn cứ đổi tên/tái cơ cấu (Số quyết định, lý do)
@@ -71,7 +71,7 @@ erDiagram
 
 #### Bảng `employees` (Hồ sơ Nhân sự Mở rộng)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
 - `user_code` (VARCHAR(50), Unique per tenant) — Mã định danh nhân viên (VD: `EMP001`)
 - `full_name` (VARCHAR(255))
 - `gender` (ENUM: `MALE`, `FEMALE`, `OTHER`)
@@ -96,8 +96,8 @@ erDiagram
 
 #### Bảng `employee_children` (Hồ sơ Con nhỏ & Đăng ký Giảm trừ Gia cảnh)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `full_name` (VARCHAR(150)) — Họ tên con
 - `gender` (ENUM: `MALE`, `FEMALE`, `OTHER`, Default: `MALE`)
 - `birth_date` (DATE) — Ngày tháng năm sinh của con
@@ -115,7 +115,7 @@ erDiagram
 
 #### Bảng `permission_assignments` (Ma Trận Phân Quyền Granular RBAC 4 Tầng)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
 - `subject_type` (ENUM: `ROLE`, `DEPARTMENT`, `POSITION`, `USER`) — Đối tượng được phân quyền
 - `subject_id` (BIGINT UNSIGNED, Nullable) — ID của Phòng ban, Chức vụ hoặc Nhân viên (NULL nếu là `ROLE`)
 - `subject_role` (VARCHAR(50), Nullable) — Tên vai trò nếu `subject_type = ROLE` (`SUPER_ADMIN`, `ADMIN`, `HR_MANAGER`, `ACCOUNTANT`, `BRANCH_MANAGER`, `EMPLOYEE`)
@@ -129,12 +129,12 @@ erDiagram
 
 #### Bảng `employee_career_timelines` (Cây Timeline Nghề nghiệp)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `event_type` (ENUM: `ONBOARDING`, `TRANSFER`, `PROMOTION`, `ROLE_CHANGE`, `SALARY_ADJUSTMENT`, `OFFBOARDING`)
-- `department_id` (BIGINT UNSIGNED, FK $\to$ `departments.id`) — Phòng ban trực thuộc tại thời điểm này
+- `department_id` (BIGINT UNSIGNED, FK -> `departments.id`) — Phòng ban trực thuộc tại thời điểm này
 - `position_id` (BIGINT UNSIGNED) — Vị trí công việc (Job Position)
 - `job_title` (VARCHAR(150)) — Chức danh hiển thị (VD: "Senior Backend Engineer")
-- `manager_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `employees.id`) — Người quản lý trực tiếp tại giai đoạn này
+- `manager_id` (BIGINT UNSIGNED, Nullable, FK -> `employees.id`) — Người quản lý trực tiếp tại giai đoạn này
 - `effective_date` (DATE) — Ngày bắt đầu có hiệu lực
 - `end_date` (DATE, Nullable) — Ngày kết thúc (NULL nếu đang là vị trí hiện tại)
 - `decision_number` (VARCHAR(100), Nullable) — Số Quyết định bổ nhiệm/điều chuyển
@@ -144,7 +144,7 @@ erDiagram
 
 #### Bảng `employee_contracts` (Hợp đồng Lao động)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `contract_number` (VARCHAR(100)) — Số hợp đồng lao động
 - `contract_type` (ENUM: `PROBATION`, `DEFINITE_TERM`, `INDEFINITE_TERM`, `SEASONAL`)
 - `start_date` (DATE) — Ngày bắt đầu hợp đồng
@@ -206,7 +206,7 @@ Khi nhân sự nghỉ việc (`OFFBOARDING`):
 1. Khi thêm mới hồ sơ con nhỏ trong `EmployeeChildrenController`:
    - Nếu `is_tax_dependent = true`: Tự động tăng `employees.dependent_count` thêm 1.
    - Tăng `employees.children_count` thêm 1.
-   - Tự động kiểm tra độ tuổi con tại ngày hiện tại: Nếu con $< 12$ tháng, cập nhật trường `employees.child_birth_date` để kích hoạt ngay các chế độ bảo vệ thai sản theo Điều 137 BLLĐ trong phân ca và tính công.
+   - Tự động kiểm tra độ tuổi con tại ngày hiện tại: Nếu con < 12 tháng, cập nhật trường `employees.child_birth_date` để kích hoạt ngay các chế độ bảo vệ thai sản theo Điều 137 BLLĐ trong phân ca và tính công.
 2. Dữ liệu này tự động chuyển tiếp tới Module 07 (Payroll) để giảm trừ thuế TNCN mà không cần kế toán nhập tay.
 
 ### 3.4 Cấu trúc Navigation/Sidebar Menu Doanh nghiệp

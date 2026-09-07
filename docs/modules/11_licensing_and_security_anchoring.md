@@ -73,11 +73,11 @@ flowchart TD
 ## 3. Quy trình Dẫn xuất Khóa Mật mã CSDL (Cryptographic Data Anchoring)
 
 Khóa giải mã dữ liệu (`Data Encryption Key - DEK`) được sinh ra tự động:
-$$
-\text{DEK} = \text{HKDF-SHA256}\Big(\text{Salt} = \text{Domain},\; \text{IKM} = \text{Ed25519\_Signature},\; \text{Info} = \text{"SmartHR\_DEK\_v1"}\Big)
-$$
+```text
+DEK = HKDF-SHA256(Salt = Domain, IKM = Ed25519_Signature, Info = "SmartHR_DEK_v1")
+```
 1. Khi đọc CCCD hoặc mức lương cơ bản: Hệ thống dùng `DEK` giải mã ciphertext từ cột `citizen_id` và `base_salary`.
-2. Nếu mã nguồn PHP bị chỉnh sửa để bypass kiểm tra license: Biến `Ed25519_Signature` bị rỗng $\to$ `DEK` sai $\to$ Không thể giải mã dữ liệu $\to$ Toàn bộ hệ thống tính lương và hồ sơ nhân sự bị vô hiệu hóa.
+2. Nếu mã nguồn PHP bị chỉnh sửa để bypass kiểm tra license: Biến `Ed25519_Signature` bị rỗng -> `DEK` sai -> Không thể giải mã dữ liệu -> Toàn bộ hệ thống tính lương và hồ sơ nhân sự bị vô hiệu hóa.
 
 ---
 

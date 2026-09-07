@@ -62,7 +62,7 @@ erDiagram
 
 #### Bảng `policy_versions`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
 - `code` (VARCHAR(50)) — Mã phiên bản (VD: `POL_2026_V1`)
 - `name` (VARCHAR(255)) — Tên phiên bản (VD: "Quy chế Lao động & Đãi ngộ Áp dụng Từ 01/2026")
 - `effective_from` (DATE) — Ngày bắt đầu áp dụng tính toán
@@ -74,7 +74,7 @@ erDiagram
 
 #### Bảng `attendance_policy_configs`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`, Unique)
+- `policy_version_id` (BIGINT UNSIGNED, FK -> `policy_versions.id`, Unique)
 - `grace_period_late_minutes` (INT, Default: 0) — Số phút muộn cho phép không phạt
 - `grace_period_early_minutes` (INT, Default: 0) — Số phút về sớm cho phép không phạt
 - `leave_unit_hours` (DECIMAL(4,2), Default: 4.00) — Đơn vị làm tròn nghỉ phép (4h = nửa ngày, 8h = 1 ngày)
@@ -92,7 +92,7 @@ erDiagram
 
 #### Bảng `payroll_policy_configs` (Cấu hình Lương, Thuế & BHXH)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`, Unique)
+- `policy_version_id` (BIGINT UNSIGNED, FK -> `policy_versions.id`, Unique)
 - `standard_working_days_mode` (ENUM: `FIXED`, `CALENDAR_BASED`, Default: `FIXED`)
 - `fixed_standard_working_days` (DECIMAL(4,2), Default: 26.00) — Ngày công chuẩn cố định
 - `standard_working_hours_per_day` (DECIMAL(4,2), Default: 8.00) — Giờ chuẩn ngày
@@ -125,8 +125,8 @@ erDiagram
 
 #### Bảng `welfare_schemes` (Khung Phúc lợi Doanh nghiệp Đa năng)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
-- `policy_version_id` (BIGINT UNSIGNED, Nullable, FK $\to$ `policy_versions.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
+- `policy_version_id` (BIGINT UNSIGNED, Nullable, FK -> `policy_versions.id`)
 - `code` (VARCHAR(50)) — Mã phúc lợi (VD: `CON_NHO_HO_TRO`, `PHU_NU_THAI_SAN`, `NGUOI_CAO_TUOI`)
 - `name` (VARCHAR(200)) — Tên chế độ phúc lợi
 - `category` (ENUM: `CHILD_CARE`, `MATERNITY_FEMALE`, `HEALTH_WELLNESS`, `WORKING_COND`, `FINANCIAL_SUPPORT`, `SPECIAL_ALLOWANCE`)
@@ -149,7 +149,7 @@ erDiagram
 
 #### Bảng `allowances` (Danh mục Phụ cấp Lương Doanh nghiệp)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
 - `code` (VARCHAR(50)) — Mã phụ cấp (VD: `PC_AN_TRUA`, `PC_DIEN_THOAI`, `PC_XANG_XE`, `PC_CHUYEN_CAN`)
 - `name` (VARCHAR(200)) — Tên phụ cấp
 - `apply_type` (ENUM: `COMPANY_FIXED`, `INDIVIDUAL_FIXED`, `IRREGULAR`)
@@ -164,7 +164,7 @@ erDiagram
 
 #### Bảng `child_welfare_policies` (Ma trận phúc lợi con nhỏ luật định)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`)
+- `policy_version_id` (BIGINT UNSIGNED, FK -> `policy_versions.id`)
 - `name` (VARCHAR(150))
 - `min_age_months` (INT)
 - `max_age_months` (INT)
@@ -178,7 +178,7 @@ erDiagram
 
 #### Bảng `pit_tax_brackets` (Biểu thuế TNCN 5 bậc)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `policy_version_id` (BIGINT UNSIGNED, FK $\to$ `policy_versions.id`)
+- `policy_version_id` (BIGINT UNSIGNED, FK -> `policy_versions.id`)
 - `tier` (INT) — Bậc 1 đến 5
 - `min_income` (DECIMAL(15,2))
 - `max_income` (DECIMAL(15,2), Nullable)

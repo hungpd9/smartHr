@@ -19,7 +19,7 @@ Module `Workflow` là trung tâm điều phối mọi yêu cầu xử lý từ n
    - **Đơn Thỏa thuận Tự nguyện Làm Đêm / Làm Thêm Giờ (`CONSENT_NIGHT_OT`)**: Dành riêng cho lao động nuôi con dưới 12 tháng tự nguyện đăng ký làm ca đêm hoặc OT theo Điều 137 Khoản 1 Điểm b BLLĐ 2019.
    - **Đơn Đăng ký Hưởng Chế độ Phúc lợi Doanh nghiệp (`WELFARE_CLAIM`)**: Đăng ký trợ cấp con nhỏ, hỗ trợ tài chính, quà kết hôn/sinh con theo `welfare_schemes`.
 3. **Cơ chế Định tuyến Phê duyệt Đa dạng**:
-   - *Duyệt theo Cây Tổ chức (Hierarchical Routing)*: Tự động tìm Quản lý trực tiếp (`manager_id`) $\to$ Trưởng phòng ban $\to$ Ban Giám đốc dựa trên `employee_career_timelines`.
+   - *Duyệt theo Cây Tổ chức (Hierarchical Routing)*: Tự động tìm Quản lý trực tiếp (`manager_id`) -> Trưởng phòng ban -> Ban Giám đốc dựa trên `employee_career_timelines`.
    - *Duyệt theo Nhóm Chỉ định (Custom Approval Groups)*: Định nghĩa danh sách người duyệt theo từng cấp bậc (`ALL` song song hoặc `ANY` linh hoạt).
 4. **Cơ chế Snapshot Chuỗi Phê duyệt (Temporal Approval Snapshot)**:
    - Chụp lại danh sách người duyệt chính xác tại thời điểm nộp đơn. Đảm bảo tính pháp lý lịch sử khi phòng ban thay đổi trưởng phòng.
@@ -47,7 +47,7 @@ erDiagram
 #### Bảng `requests` (Đơn Từ Tổng Hợp)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `request_type` (ENUM: `EDIT_TIMESHEET`, `OVERTIME`, `LEAVE_ANNUAL`, `LEAVE_COMPENSATION`, `LEAVE_UNPAID`, `LEAVE_SPECIAL`, `LEAVE_SI`, `WOMEN_BREAK`, `CONSENT_NIGHT_OT`, `WELFARE_CLAIM`, `CUSTOM`)
 - `start_time` (DATETIME) — Thời gian bắt đầu
 - `end_time` (DATETIME) — Thời gian kết thúc
@@ -62,9 +62,9 @@ erDiagram
 
 #### Bảng `approval_snapshots` (Đóng Băng Người Duyệt Lịch Sử)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `request_id` (BIGINT UNSIGNED, FK $\to$ `requests.id`, Unique per level)
+- `request_id` (BIGINT UNSIGNED, FK -> `requests.id`, Unique per level)
 - `level` (INT) — Cấp duyệt
-- `approver_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`) — Người có thẩm quyền duyệt tại thời điểm nộp
+- `approver_id` (BIGINT UNSIGNED, FK -> `employees.id`) — Người có thẩm quyền duyệt tại thời điểm nộp
 - `approver_name` (VARCHAR(255))
 - `approver_position` (VARCHAR(150))
 - `status` (ENUM: `WAITING`, `APPROVED`, `REJECTED`, `SKIPPED`, Default: `WAITING`)
@@ -74,8 +74,8 @@ erDiagram
 
 #### Bảng `approval_histories` (Nhật ký Phê duyệt Kiểm toán)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `request_id` (BIGINT UNSIGNED, FK $\to$ `requests.id`)
-- `actor_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`) — Người thực hiện hành động
+- `request_id` (BIGINT UNSIGNED, FK -> `requests.id`)
+- `actor_id` (BIGINT UNSIGNED, FK -> `employees.id`) — Người thực hiện hành động
 - `action` (ENUM: `SUBMIT`, `APPROVE`, `REJECT`, `CANCEL`, `DELEGATE`)
 - `level` (INT)
 - `comments` (TEXT, Nullable)

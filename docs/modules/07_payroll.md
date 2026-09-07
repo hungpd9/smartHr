@@ -22,10 +22,10 @@ Module `Payroll` là phân hệ tài chính nhạy cảm nhất trong hệ thố
    - Nhân số lượng người phụ thuộc với mức giảm trừ người phụ thuộc quy định tại `payroll_policy_configs.dependent_deduction` (mặc định 4.400.000 đ hoặc 6.160.000 đ/tháng).
 5. **Thuật toán Bóc tách Tiền OT Miễn thuế 3 Tầng Trần**:
    - Bóc tách phần thù lao trả cao hơn do làm thêm giờ (50% của ngày thường, 100% của cuối tuần, 200% của ngày lễ) được miễn thuế TNCN.
-   - Kiểm soát 3 tầng trần: Ngày $50\%$ ca, Tháng $40$h, Năm $200$h/$300$h theo Nghị định 145/2020/NĐ-CP. Nếu vượt trần, phần vượt vẫn được trả lương đầy đủ nhưng chịu thuế TNCN 100%.
+   - Kiểm soát 3 tầng trần: Ngày 50% ca, Tháng 40h, Năm 200h/300h theo Nghị định 145/2020/NĐ-CP. Nếu vượt trần, phần vượt vẫn được trả lương đầy đủ nhưng chịu thuế TNCN 100%.
 6. **Trích nộp Bảo hiểm Xã hội Bắt buộc**:
-   - Trích nộp phần người lao động: BHXH $8\%$, BHYT $1.5\%$, BHTN $1\%$ (Tổng $10.5\%$).
-   - Trích nộp phần người sử dụng lao động: BHXH $17.5\%$, BHYT $3\%$, BHTN $1\%$ (Tổng $21.5\%$).
+   - Trích nộp phần người lao động: BHXH 8%, BHYT 1.5%, BHTN 1% (Tổng 10.5%).
+   - Trích nộp phần người sử dụng lao động: BHXH 17.5%, BHYT 3%, BHTN 1% (Tổng 21.5%).
    - Khống chế mức trần đóng BHXH/BHYT bằng 20 lần mức lương cơ sở (`max_salary_bhxh`).
 7. **Biểu thuế TNCN Lũy tiến Động 5 Bậc (Hiệu lực từ 2026)**:
    - Áp dụng biểu thuế lũy tiến từng phần 5 bậc mới nhất: 5%, 10%, 20%, 30%, 35%.
@@ -51,8 +51,8 @@ erDiagram
 #### Bảng `payroll_records` (Bảng Lương Tổng Hợp của Nhân Viên)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
-- `monthly_attendance_id` (BIGINT UNSIGNED, FK $\to$ `monthly_attendances.id`, Unique per month)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
+- `monthly_attendance_id` (BIGINT UNSIGNED, FK -> `monthly_attendances.id`, Unique per month)
 - `month_year` (VARCHAR(7)) — Format: `YYYY-MM`
 - `contract_salary` (DECIMAL(15,2)) — Lương thỏa thuận trên hợp đồng
 - `actual_standard_salary` (DECIMAL(15,2)) — Lương cơ bản theo ngày công thực tế
@@ -74,7 +74,7 @@ erDiagram
 - `late_early_penalty_deduction` (DECIMAL(15,2), Default: 0.00) — Tiền phạt đi muộn/về sớm
 - `net_salary` (DECIMAL(15,2)) — Lương thực lĩnh chuyển khoản
 - `status` (ENUM: `DRAFT`, `APPROVED`, `PAID`, Default: `DRAFT`)
-- `approved_by` (BIGINT UNSIGNED, Nullable, FK $\to$ `employees.id`)
+- `approved_by` (BIGINT UNSIGNED, Nullable, FK -> `employees.id`)
 - `approved_at` (TIMESTAMP, Nullable)
 - `paid_at` (TIMESTAMP, Nullable)
 - `created_at`, `updated_at` (TIMESTAMP)
@@ -82,7 +82,7 @@ erDiagram
 
 #### Bảng `payroll_allowances` (Chi tiết Các Khoản Phụ cấp)
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `payroll_record_id` (BIGINT UNSIGNED, FK $\to$ `payroll_records.id`)
+- `payroll_record_id` (BIGINT UNSIGNED, FK -> `payroll_records.id`)
 - `allowance_code` (VARCHAR(50)) — Khớp với mã trong bảng `allowances`
 - `amount` (DECIMAL(15,2))
 - `taxable_part` (DECIMAL(15,2)) — Phần tính thuế TNCN
@@ -107,31 +107,31 @@ flowchart TD
 
 ### 3.1 Đơn giá Giờ Chuẩn & Lương Cơ bản Thực tế
 1. **Đơn giá giờ làm việc chuẩn (`Hourly Wage`)**:
-   $$
-   \text{Hourly Wage} = \frac{\text{Base Salary} + \sum \text{Allowances}_{\text{included\_in\_ot}}}{\text{Standard Working Days} \times \text{Standard Hours Per Day}}
-   $$
+   ```text
+   Hourly Wage = (Base Salary + Tổng phụ cấp tính vào OT) / (Ngày công chuẩn * Giờ chuẩn mỗi ngày)
+   ```
 2. **Lương cơ bản theo ngày công thực tế (`Actual Standard Salary`)**:
-   $$
-   \text{Actual Standard Salary} = \frac{\text{Base Salary}}{\text{Standard Working Days}} \times \text{Actual Standard Days}
-   $$
+   ```text
+   Actual Standard Salary = (Base Salary / Ngày công chuẩn) * Ngày công thực tế
+   ```
 
 ### 3.2 Thu nhập Tính thuế & Giảm trừ Gia cảnh Con nhỏ
-$$
-\text{Dependent Deduction} = \text{Count}(\text{Active Dependent Children}) \times \text{dependent\_deduction\_rate}
-$$
-$$
-\text{Assessable Income} = \max\left(0,\; \text{Taxable Income} - \text{Total Insurance} - \text{Personal Deduction} - \text{Dependent Deduction}\right)
-$$
+```text
+Giảm trừ người phụ thuộc = Số con nhỏ phụ thuộc * Mức giảm trừ mỗi người
+```
+```text
+Thu nhập tính thuế = max(0, Thu nhập chịu thuế - Tổng bảo hiểm - Giảm trừ bản thân - Giảm trừ người phụ thuộc)
+```
 
 ### 3.3 Tra cứu Biểu thuế TNCN 5 Bậc Mới
 
-| Bậc | Thu nhập tính thuế ($I$) | Thuế suất ($r$) | Số trừ nhanh ($Q$) | Tiền thuế phải nộp ($T = I \times r - Q$) |
+| Bậc | Thu nhập tính thuế (I) | Thuế suất (r) | Số trừ nhanh (Q) | Tiền thuế phải nộp (T = I * r - Q) |
 |:---:|---|:---:|:---:|---|
-| **1** | Đến 10 triệu đồng | 5% | 0 | $I \times 5\%$ |
-| **2** | Trên 10 đến 30 triệu đồng | 10% | 500.000 đ | $I \times 10\% - 500.000$ |
-| **3** | Trên 30 đến 60 triệu đồng | 20% | 3.500.000 đ | $I \times 20\% - 3.500.000$ |
-| **4** | Trên 60 đến 100 triệu đồng | 30% | 9.500.000 đ | $I \times 30\% - 9.500.000$ |
-| **5** | Trên 100 triệu đồng | 35% | 14.500.000 đ | $I \times 35\% - 14.500.000$ |
+| **1** | Đến 10 triệu đồng | 5% | 0 | I * 5% |
+| **2** | Trên 10 đến 30 triệu đồng | 10% | 500.000 đ | I * 10% - 500.000 đ |
+| **3** | Trên 30 đến 60 triệu đồng | 20% | 3.500.000 đ | I * 20% - 3.500.000 đ |
+| **4** | Trên 60 đến 100 triệu đồng | 30% | 9.500.000 đ | I * 30% - 9.500.000 đ |
+| **5** | Trên 100 triệu đồng | 35% | 14.500.000 đ | I * 35% - 14.500.000 đ |
 
 ---
 
@@ -155,4 +155,4 @@ $$
    - Kết quả kỳ vọng: `dependent_deduction_amount = 8.800.000 đ`. Thu nhập tính thuế giảm tương ứng trước khi áp biểu thuế 5 bậc.
 2. **Test `OvertimeTaxExemptThreeTierCapEnforcement`**:
    - Nhân viên làm 45 giờ OT trong tháng (vượt trần tháng 40 giờ theo Điều 107).
-   - Kết quả kỳ vọng: 40 giờ OT đầu tiên được miễn thuế phần trả cao hơn ($50\%$ đơn giá). 5 giờ OT vượt trần vẫn được nhận đủ 150% tiền lương nhưng chịu thuế TNCN toàn bộ 100%.
+   - Kết quả kỳ vọng: 40 giờ OT đầu tiên được miễn thuế phần trả cao hơn (50% đơn giá). 5 giờ OT vượt trần vẫn được nhận đủ 150% tiền lương nhưng chịu thuế TNCN toàn bộ 100%.

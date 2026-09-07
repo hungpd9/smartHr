@@ -17,6 +17,7 @@ use App\Modules\Rostering\Models\Roster;
 use App\Modules\Workflow\Enums\ApprovalAction;
 use App\Modules\Workflow\Enums\RequestStatus;
 use App\Modules\Workflow\Enums\RequestType;
+use App\Modules\Notification\Services\NotificationDispatcherService;
 use App\Modules\Workflow\Models\ApprovalHistory;
 use App\Modules\Workflow\Models\ApprovalRequest;
 use Carbon\Carbon;
@@ -95,7 +96,7 @@ class WorkflowExecutionService
             );
 
             // 4. Tạo bản ghi đơn phê duyệt
-            return ApprovalRequest::create([
+            $createdRequest = ApprovalRequest::create([
                 'tenant_id' => $tenantId,
                 'employee_id' => $employee->id,
                 'request_type' => $requestType,
@@ -107,6 +108,14 @@ class WorkflowExecutionService
                 'snapshot_approvers' => $snapshotApprovers,
                 'status' => RequestStatus::PENDING->value,
             ]);
+
+            // Phát thông báo đến cấp duyệt đầu tiên
+            $firstStep = $snapshotApprovers[0] ?? null;
+            if ($firstStep && !empty($firstStep['approver_id'])) {
+                $this->notifyApproverForStep($tenantId, (int) $firstStep['approver_id'], $createdRequest, $employee);
+            }
+
+            return $createdRequest;
         });
     }
 
@@ -187,12 +196,21 @@ class WorkflowExecutionService
 
                 // Kích hoạt nghiệp vụ hậu phê duyệt
                 $this->dispatchPostApprovalEffect($request);
+
+                // Phát thông báo kết quả phê duyệt tới người tạo đơn
+                $this->notifySubmitterStatus($request, 'APPROVED', $approver->full_name, $comment);
             } else {
                 // Chuyển sang cấp duyệt tiếp theo
                 $request->current_step = $currentStep + 1;
                 $snapshot[$stepIndex + 1]['status'] = 'PENDING';
                 $request->snapshot_approvers = $snapshot;
                 $request->save();
+
+                // Phát thông báo tới người duyệt cấp tiếp theo
+                $nextStep = $snapshot[$stepIndex + 1] ?? null;
+                if ($nextStep && !empty($nextStep['approver_id'])) {
+                    $this->notifyApproverForStep($request->tenant_id, (int) $nextStep['approver_id'], $request, $request->employee);
+                }
             }
 
             return $request->fresh();
@@ -273,6 +291,9 @@ class WorkflowExecutionService
 
             // Hoàn lại phép tạm giữ nếu là đơn phép năm
             $this->rollbackPendingHolds($request);
+
+            // Phát thông báo từ chối tới người tạo đơn
+            $this->notifySubmitterStatus($request, 'REJECTED', $approver->full_name, $comment);
 
             return $request->fresh();
         });
@@ -492,4 +513,77 @@ class WorkflowExecutionService
             }
         }
     }
+
+    /**
+     * Gửi thông báo đến cấp duyệt
+     */
+    protected function notifyApproverForStep(int $tenantId, int $approverId, ApprovalRequest $request, ?Employee $employee = null): void
+    {
+        try {
+            $approverUser = User::where('employee_id', $approverId)->first();
+            if (!$approverUser) {
+                $approverEmp = Employee::find($approverId);
+                if ($approverEmp) {
+                    $approverUser = User::where('email', $approverEmp->email)->first();
+                }
+            }
+            if ($approverUser) {
+                $empName = $employee?->full_name ?? 'Nhân viên';
+                $empCode = $employee?->user_code ? " ({$employee->user_code})" : '';
+                app(NotificationDispatcherService::class)->sendToUser(
+                    tenantId: $tenantId,
+                    userId: $approverUser->id,
+                    type: 'WORKFLOW_PENDING_APPROVAL',
+                    title: "Đơn cần duyệt: {$request->request_type} - {$empName}",
+                    content: "Nhân viên {$empName}{$empCode} đã gửi một đơn {$request->request_type} cần bạn phê duyệt.",
+                    actionUrl: '/workflow/requests?tab=to_approve',
+                    payload: ['request_id' => $request->id, 'type' => $request->request_type],
+                    severity: 'INFO',
+                    employeeId: $approverId
+                );
+            }
+        } catch (\Throwable) {
+            // Không làm gián đoạn luồng nghiệp vụ
+        }
+    }
+
+    /**
+     * Gửi thông báo kết quả phê duyệt đến người nộp đơn
+     */
+    protected function notifySubmitterStatus(ApprovalRequest $request, string $status, string $approverName, string $comment = ''): void
+    {
+        try {
+            $submitterUser = User::where('employee_id', $request->employee_id)->first();
+            if (!$submitterUser) {
+                $emp = $request->employee ?? Employee::find($request->employee_id);
+                if ($emp) {
+                    $submitterUser = User::where('email', $emp->email)->first();
+                }
+            }
+            if ($submitterUser) {
+                $isApproved = ($status === 'APPROVED');
+                $type = $isApproved ? 'WORKFLOW_APPROVED' : 'WORKFLOW_REJECTED';
+                $severity = $isApproved ? 'SUCCESS' : 'WARNING';
+                $actionText = $isApproved ? 'phê duyệt' : 'từ chối';
+                $title = "Đơn {$request->request_type} đã được {$actionText}";
+                $reasonText = (!$isApproved && $comment) ? " Lý do: {$comment}" : '';
+                $content = "Đơn {$request->request_type} của bạn đã được {$approverName} {$actionText}.{$reasonText}";
+
+                app(NotificationDispatcherService::class)->sendToUser(
+                    tenantId: $request->tenant_id,
+                    userId: $submitterUser->id,
+                    type: $type,
+                    title: $title,
+                    content: $content,
+                    actionUrl: '/workflow/requests?tab=my_requests',
+                    payload: ['request_id' => $request->id, 'status' => $status],
+                    severity: $severity,
+                    employeeId: $request->employee_id
+                );
+            }
+        } catch (\Throwable) {
+            // Không làm gián đoạn luồng nghiệp vụ
+        }
+    }
 }
+

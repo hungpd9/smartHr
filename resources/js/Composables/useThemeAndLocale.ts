@@ -64,6 +64,7 @@ const translations: Record<string, Record<SupportedLocale, string>> = {
     compliance: { vi: 'Tuân thủ (Compliance)', en: 'Compliance & Audit' },
     access_control: { vi: 'Phân quyền & Tài nguyên', en: 'Access Control & Matrix' },
     notifications: { vi: 'Thông báo', en: 'Notifications' },
+    reports: { vi: 'Báo cáo & Phân tích', en: 'Reports & Analytics' },
     licensing: { vi: 'Bản quyền & Máy chấm công', en: 'Licensing & Edge' },
 
     // Header & Actions

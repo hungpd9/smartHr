@@ -62,6 +62,17 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'in_app_notifications' => fn () => $user ? app(\App\Modules\Notification\Services\NotificationDispatcherService::class)->getRecentNotificationsForUser($user, 10)->map(fn ($n) => [
+                'id' => $n->id,
+                'type' => $n->type,
+                'severity' => strtolower($n->severity),
+                'title' => $n->title,
+                'content' => $n->content,
+                'action_url' => $n->action_url,
+                'is_read' => (bool) $n->is_read,
+                'created_at' => $n->created_at?->diffForHumans() ?? 'Vừa xong',
+            ]) : [],
+            'unread_notifications_count' => fn () => $user ? app(\App\Modules\Notification\Services\NotificationDispatcherService::class)->getUnreadCountForUser($user) : 0,
         ];
     }
 }

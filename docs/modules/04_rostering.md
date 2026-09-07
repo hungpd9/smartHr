@@ -44,7 +44,7 @@ erDiagram
 
 #### Bảng `work_shifts`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
-- `tenant_id` (BIGINT UNSIGNED, FK $\to$ `tenants.id`)
+- `tenant_id` (BIGINT UNSIGNED, FK -> `tenants.id`)
 - `code` (VARCHAR(50)) — Mã ca (VD: `SHIFT_SANG`, `SHIFT_TOI`, `SPLIT_FNB`)
 - `name` (VARCHAR(150)) — Tên ca hiển thị
 - `start_time` (TIME) — Giờ bắt đầu (VD: `08:00:00`)
@@ -52,7 +52,7 @@ erDiagram
 - `break_start` (TIME, Nullable) — Bắt đầu giờ nghỉ giữa ca
 - `break_end` (TIME, Nullable) — Kết thúc giờ nghỉ giữa ca
 - `work_hours` (DECIMAL(4,2), Default: 8.00) — Số giờ làm việc tính công của ca
-- `is_night_shift` (BOOLEAN, Default: FALSE) — TRUE nếu có khung giờ nằm trong $22:00 - 06:00$
+- `is_night_shift` (BOOLEAN, Default: FALSE) — TRUE nếu có khung giờ nằm trong 22:00 - 06:00
 - `is_split_shift` (BOOLEAN, Default: FALSE) — TRUE nếu là ca gãy
 - `split_start_time_2` (TIME, Nullable) — Giờ bắt đầu đoạn ca 2 (cho ca gãy)
 - `split_end_time_2` (TIME, Nullable) — Giờ kết thúc đoạn ca 2 (cho ca gãy)
@@ -62,10 +62,10 @@ erDiagram
 #### Bảng `rosters`
 - `id` (BIGINT UNSIGNED, PK, Auto Increment)
 - `tenant_id` (BIGINT UNSIGNED)
-- `branch_id` (BIGINT UNSIGNED, FK $\to$ `branches.id`)
-- `employee_id` (BIGINT UNSIGNED, FK $\to$ `employees.id`)
+- `branch_id` (BIGINT UNSIGNED, FK -> `branches.id`)
+- `employee_id` (BIGINT UNSIGNED, FK -> `employees.id`)
 - `date` (DATE) — Ngày làm việc
-- `work_shift_id` (BIGINT UNSIGNED, FK $\to$ `work_shifts.id`)
+- `work_shift_id` (BIGINT UNSIGNED, FK -> `work_shifts.id`)
 - `status` (ENUM: `DRAFT`, `PUBLISHED`, `SWAP_PENDING`, `CANCELLED`, Default: `DRAFT`)
 - `published_at` (TIMESTAMP, Nullable)
 - `created_at`, `updated_at` (TIMESTAMP)
@@ -77,19 +77,19 @@ erDiagram
 
 ### 3.1 Ràng buộc Cứng (Hard Constraints - Bắt buộc Tuân thủ)
 
-| Mã Ràng buộc | Tên Ràng buộc | Căn cứ Pháp luật | Biểu thức Toán học / Logic |
+| Mã Ràng buộc | Tên Ràng buộc | Căn cứ Pháp luật | Biểu thức Logic / Quy tắc Nghiệp vụ |
 |:---:|---|---|---|
-| **HC-01** | Nghỉ tối thiểu giữa 2 ca | Điều 110 BLLĐ 2019 | $\forall i, d: \quad \text{Start}(Roster_{i, d+1}) - \text{End}(Roster_{i, d}) \ge 12\text{ hours}$ |
-| **HC-02** | Nghỉ hàng tuần liên tục | Điều 111 BLLĐ 2019 | $\forall i, w \in \text{Weeks}: \quad \text{ConsecutiveRestHours}(i, w) \ge 24\text{ hours}$ |
-| **HC-03** | Trần giờ làm chuẩn tuần | Điều 105 BLLĐ 2019 | $\forall i, w \in \text{Weeks}: \quad \sum_{d \in w} \text{StandardHours}(Roster_{i, d}) \le 48\text{ hours}$ |
-| **HC-04** | Bảo vệ lao động mang thai | Điều 137 Khoản 1 Điểm a BLLĐ | Cấm ca đêm ($22:00 - 06:00$) & OT từ tháng thứ 7 (tháng thứ 6 nếu chi nhánh có `is_remote_or_island = true`). |
+| **HC-01** | Nghỉ tối thiểu giữa 2 ca | Điều 110 BLLĐ 2019 | Bắt đầu ca sau - Kết thúc ca trước >= 12 giờ (với mọi nhân viên & ngày liên tiếp) |
+| **HC-02** | Nghỉ hàng tuần liên tục | Điều 111 BLLĐ 2019 | Khoảng nghỉ liên tục trong tuần >= 24 giờ |
+| **HC-03** | Trần giờ làm chuẩn tuần | Điều 105 BLLĐ 2019 | Tổng giờ tiêu chuẩn trong tuần <= 48 giờ |
+| **HC-04** | Bảo vệ lao động mang thai | Điều 137 Khoản 1 Điểm a BLLĐ | Cấm ca đêm (22:00 - 06:00) & OT từ tháng thứ 7 (tháng thứ 6 nếu chi nhánh có `is_remote_or_island = true`). |
 | **HC-05** | Bảo vệ nuôi con dưới 12 tháng | Điều 137 Khoản 1 Điểm b BLLĐ | Cấm ca đêm & OT, TRỪ KHI có đơn thỏa thuận tự nguyện (`CONSENT_NIGHT_OT`) hợp lệ. Kiểm tra độ tuổi từ `employee_children` (hoặc `child_birth_date`). |
-| **HC-06** | Định biên tối thiểu ca | Nhu cầu chi nhánh | $\forall s \in \text{Shifts}, d: \quad \sum_{i} \mathbb{I}(Roster_{i, d} == s) \ge \text{MinRequiredStaff}(s, d)$ |
+| **HC-06** | Định biên tối thiểu ca | Nhu cầu chi nhánh | Số nhân viên được gán vào ca >= Định biên nhân sự tối thiểu của ca |
 
 > ⚠️ **Quy tắc Kiểm tra Con nhỏ (HC-05)**:  
-> Solver truy vấn danh sách con nhỏ của nhân viên từ bảng `employee_children`. Nếu có ít nhất 01 con có $\text{AgeInMonths}(d) < 12$:
-> - Nếu nhân viên **chưa có đơn thỏa thuận tự nguyện** được duyệt $\to$ Solver tuyệt đối không gán ca có cờ `is_night_shift = true` hoặc ca làm thêm giờ.
-> - Nếu nhân viên **đã có đơn thỏa thuận tự nguyện** được duyệt $\to$ Solver được phép gán ca đêm/OT và ghi nhận mã đơn vào lịch sử kiểm toán.
+> Solver truy vấn danh sách con nhỏ của nhân viên từ bảng `employee_children`. Nếu có ít nhất 01 con dưới 12 tháng tuổi (AgeInMonths < 12):
+> - Nếu nhân viên **chưa có đơn thỏa thuận tự nguyện** được duyệt -> Solver tuyệt đối không gán ca có cờ `is_night_shift = true` hoặc ca làm thêm giờ.
+> - Nếu nhân viên **đã có đơn thỏa thuận tự nguyện** được duyệt -> Solver được phép gán ca đêm/OT và ghi nhận mã đơn vào lịch sử kiểm toán.
 
 ---
 

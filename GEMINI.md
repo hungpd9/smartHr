@@ -31,7 +31,7 @@ Hệ thống được cấu thành từ các thành phần cốt lõi:
 Agent **TUYỆT ĐỐI KHÔNG** hardcode các tham số nghiệp vụ, tỷ lệ tính toán hoặc quy định pháp luật vào mã nguồn:
 1. **Trung tâm Cấu hình Quy chế (Unified Policy Engine)**:
    - Toàn bộ nấc phạt muộn/sớm, thời gian miễn trừ (grace period), đơn vị làm tròn (`leave_unit`, `early_leave_unit`), giờ tự động checkout, hệ số OT, giờ nghỉ tối thiểu giữa ca, và tỷ lệ bảo hiểm đều phải được lưu trữ trong bảng phiên bản cấu hình (`policy_versions`, `attendance_policy_configs`).
-   - Mọi thay đổi pháp luật hoặc nội quy chỉ cần tạo một phiên bản cấu hình mới với mốc thời gian áp dụng (`effective_from` $\to$ `effective_to`), đảm bảo dữ liệu quá khứ không bị thay đổi.
+   - Mọi thay đổi pháp luật hoặc nội quy chỉ cần tạo một phiên bản cấu hình mới với mốc thời gian áp dụng (`effective_from` -> `effective_to`), đảm bảo dữ liệu quá khứ không bị thay đổi.
 2. **Biểu thuế TNCN Lũy tiến Động (5 Bậc)**:
    - Áp dụng biểu thuế TNCN 5 bậc hiệu lực từ tháng 01/2026. Bảng `pit_tax_brackets` gắn liền với phiên bản chính sách, không viết cứng các ngưỡng thu nhập và thuế suất trong code.
 3. **Cơ chế Phúc lợi Con nhỏ & Gia đình Linh hoạt**:
@@ -55,7 +55,7 @@ Agent **TUYỆT ĐỐI KHÔNG** hardcode các tham số nghiệp vụ, tỷ lệ
 ### 4.1 Động cơ Tính công Lũy tiến & Bảng công Tạm tính
 - Triển khai theo mô hình **Pipeline Pattern** với các Pipe xử lý độc lập (`PairInOutPipe`, `ShiftMatchingPipe`, `ChildPolicyPipe`, `TieredOvertimePipe`, `MinuteTierLateEarlyPipe`, `FrequencyTierPenaltyPipe`).
 - **3 Loại Lũy tiến**:
-  1. *Lũy tiến OT*: Nấc 1 ($\le 2$h) 1.5x, Nấc 2 ($> 2$h) 2.0x, Cuối tuần 2.0x, Lễ tết 3.0x, Phụ cấp ca đêm 30%, OT đêm 200%/270%/390%.
+  1. *Lũy tiến OT*: Nấc 1 (<= 2h) 1.5x, Nấc 2 (> 2h) 2.0x, Cuối tuần 2.0x, Lễ tết 3.0x, Phụ cấp ca đêm 30%, OT đêm 200%/270%/390%.
   2. *Lũy tiến phạt muộn/sớm theo số phút*: Biểu nấc động từ cấu hình policy.
   3. *Lũy tiến phạt theo tần suất*: Nhân hệ số phạt theo số lần vi phạm lũy kế trong tháng của nhân viên.
 - **Tách biệt Bảng công Tạm tính & Đã duyệt**:
@@ -66,7 +66,7 @@ Agent **TUYỆT ĐỐI KHÔNG** hardcode các tham số nghiệp vụ, tỷ lệ
   - Nghỉ tối thiểu giữa 2 ca liên tiếp: ít nhất **12 giờ** (Điều 110 BLLĐ 2019).
   - Tối thiểu **01 ngày nghỉ liên tục (24 giờ)** mỗi tuần (Điều 111 BLLĐ 2019).
   - Giờ làm việc bình thường không quá 8h/ngày hoặc 48h/tuần.
-  - Tuyệt đối cấm phân ca đêm ($22:00 - 06:00$) hoặc làm thêm giờ đối với lao động nữ mang thai từ tháng thứ 7 (Điều 137 Khoản 1 Điểm a BLLĐ 2019).
+  - Tuyệt đối cấm phân ca đêm (22:00 - 06:00) hoặc làm thêm giờ đối với lao động nữ mang thai từ tháng thứ 7 (Điều 137 Khoản 1 Điểm a BLLĐ 2019).
   - Đối với lao động nuôi con dưới 12 tháng tuổi: Mặc định không phân ca đêm hoặc OT, TRỪ TRƯỜNG HỢP người lao động có đơn thỏa thuận/đồng thuận tự nguyện (Điều 137 Khoản 1 Điểm b BLLĐ 2019). Khi tạo đơn OT/Ca đêm, hệ thống yêu cầu ký cam kết tự nguyện và nhắc nhở Approver kiểm tra văn bản đồng thuận trước khi phê duyệt.
 - **Ràng buộc mềm (Soft Constraints - Chiến lược tối ưu)**:
   - *Chế độ Công bằng (Fairness)*: Cân bằng số ca đêm, ca cuối tuần giữa các nhân viên cùng vị trí.
