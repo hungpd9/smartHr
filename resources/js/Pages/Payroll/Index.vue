@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import AuditHistoryDrawer from '@/Components/AuditHistoryDrawer.vue';
+import PayslipModal from './Components/PayslipModal.vue';
 import {
     Wallet,
     Calendar,
@@ -17,8 +18,14 @@ import {
     Money,
     List,
     Check,
+    Plus,
+    Edit,
+    Delete,
+    Search,
+    Printer
 } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
+import { useSyncedTab } from '@/Composables/useNavigationHistory';
 
 interface PayrollRecord {
     id: number;
@@ -35,12 +42,17 @@ interface PayrollRecord {
     unemployment_insurance_employee: string | number;
     pit_tax_amount: string | number;
     net_salary: string | number;
+    salary_breakdown?: any;
     status: string;
     employee?: {
         id: number;
         user_code: string;
         full_name: string;
         status: string;
+        current_timeline?: {
+            department?: { current_version?: { name: string } };
+            position?: { name: string };
+        };
     };
 }
 
@@ -53,6 +65,28 @@ interface UnapprovedEmployee {
     is_approved: boolean;
     total_days: number;
     reason: string;
+}
+
+interface EmployeeSalaryItem {
+    id: number;
+    tenant_id: number;
+    employee_id: number;
+    base_salary: string | number;
+    insurance_salary: string | number | null;
+    contract_type: string;
+    effective_date: string;
+    end_date: string | null;
+    notes: string | null;
+    is_locked: boolean;
+    employee?: {
+        id: number;
+        user_code: string;
+        full_name: string;
+        current_timeline?: {
+            department?: { current_version?: { name: string } };
+            position?: { name: string };
+        };
+    };
 }
 
 interface PayrollPeriod {
@@ -74,18 +108,106 @@ const props = defineProps<{
     payrollPeriod: PayrollPeriod | null;
     records: PayrollRecord[];
     unapprovedEmployees: UnapprovedEmployee[];
+    employeeSalaries: EmployeeSalaryItem[];
+    allEmployees: Array<{ id: number; user_code: string; full_name: string; status: string }>;
     totalEmployeesCount: number;
     calculatedCount: number;
     unapprovedCount: number;
 }>();
 
-import { useSyncedTab } from '@/Composables/useNavigationHistory';
-import { watch } from 'vue';
-
 const selectedMonth = ref(props.monthYear);
 const activeTab = useSyncedTab('records', 'tab');
 const isCalculating = ref(false);
 const isLocking = ref(false);
+
+// Phiếu lương chi tiết (Payslip Modal)
+const isPayslipModalVisible = ref(false);
+const selectedPayslipRecord = ref<any>(null);
+
+const openPayslip = (record: any) => {
+    selectedPayslipRecord.value = record;
+    isPayslipModalVisible.value = true;
+};
+
+// Quản lý Mức lương nhân viên (Employee Salary Dialog)
+const salaryDialogVisible = ref(false);
+const editingSalary = ref<EmployeeSalaryItem | null>(null);
+const salaryForm = useForm({
+    employee_id: null as number | null,
+    base_salary: 10000000,
+    insurance_salary: null as number | null,
+    contract_type: 'OFFICIAL',
+    effective_date: new Date().toISOString().substring(0, 10),
+    end_date: null as string | null,
+    notes: '',
+});
+
+const openCreateSalary = () => {
+    editingSalary.value = null;
+    salaryForm.reset();
+    salaryForm.effective_date = new Date().toISOString().substring(0, 10);
+    salaryDialogVisible.value = true;
+};
+
+const openEditSalary = (item: EmployeeSalaryItem) => {
+    if (item.is_locked) {
+        ElMessage.warning('Mức lương này đã được áp dụng trong kỳ lương đã khóa sổ, không thể chỉnh sửa.');
+        return;
+    }
+    editingSalary.value = item;
+    salaryForm.employee_id = item.employee_id;
+    salaryForm.base_salary = Number(item.base_salary);
+    salaryForm.insurance_salary = item.insurance_salary ? Number(item.insurance_salary) : null;
+    salaryForm.contract_type = item.contract_type;
+    salaryForm.effective_date = item.effective_date;
+    salaryForm.end_date = item.end_date;
+    salaryForm.notes = item.notes || '';
+    salaryDialogVisible.value = true;
+};
+
+const submitSalaryForm = () => {
+    if (editingSalary.value) {
+        salaryForm.put(`/payroll/salaries/${editingSalary.value.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                ElMessage.success('Đã cập nhật mức lương nhân sự thành công!');
+                salaryDialogVisible.value = false;
+            },
+            onError: (errs) => {
+                ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi khi lưu mức lương.');
+            }
+        });
+    } else {
+        salaryForm.post('/payroll/salaries', {
+            preserveScroll: true,
+            onSuccess: () => {
+                ElMessage.success('Đã thêm mức lương mới thành công!');
+                salaryDialogVisible.value = false;
+            },
+            onError: (errs) => {
+                ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi khi thêm mức lương.');
+            }
+        });
+    }
+};
+
+const deleteSalaryItem = (item: EmployeeSalaryItem) => {
+    if (item.is_locked) {
+        ElMessage.warning('Mức lương này đã được áp dụng trong kỳ lương đã khóa sổ, không thể xóa.');
+        return;
+    }
+
+    ElMessageBox.confirm(
+        `Bạn có chắc chắn muốn xóa bản ghi mức lương của nhân sự ${item.employee?.full_name}?`,
+        'Xác nhận xóa mức lương',
+        { confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy', type: 'warning' }
+    ).then(() => {
+        router.delete(`/payroll/salaries/${item.id}`, {
+            preserveScroll: true,
+            onSuccess: () => ElMessage.success('Đã xóa mức lương thành công.'),
+        });
+    });
+};
 
 // Tự động đồng bộ selectedMonth khi người dùng bấm Back / Forward trình duyệt
 watch(() => props.monthYear, (newVal) => {
@@ -158,7 +280,7 @@ const handleCalculate = () => {
 
 const handleLockPeriod = () => {
     ElMessageBox.confirm(
-        `CẢNH BÁO KIỂM TOÁN: Sau khi khóa sổ kỳ lương ${selectedMonth.value}, toàn bộ dữ liệu công và lương của kỳ này sẽ trở thành BẤT BIẾN, không thể sửa đổi hay hồi tố. Bạn có chắc chắn muốn tiếp tục?`,
+        `CẢNH BÁO KIỂM TOÁN: Sau khi khóa sổ kỳ lương ${selectedMonth.value}, toàn bộ dữ liệu công, lương và các mức lương cá nhân có hiệu lực trong kỳ này sẽ trở thành BẤT BIẾN, không thể sửa đổi hay hồi tố. Bạn có chắc chắn muốn tiếp tục?`,
         'Khóa sổ kỳ lương bất biến',
         {
             confirmButtonText: 'Khóa sổ vĩnh viễn',
@@ -282,7 +404,7 @@ const openAuditHistory = () => {
                             • <strong>Quy tắc loại trừ bắt buộc:</strong> Bất kỳ nhân sự nào <strong>chưa được Quản lý duyệt bảng chấm công tháng</strong> (<code>is_approved = false</code>) sẽ <strong>tự động bị bỏ qua</strong> không tính lương để bảo vệ ngân sách doanh nghiệp.
                         </div>
                         <div>
-                            • <strong>Bảo vệ Bất biến:</strong> Khi kỳ lương đã Khóa sổ (<code>is_locked = true</code>), mọi thao tác sửa đổi công, lương, phụ cấp hay đơn từ quá khứ đều bị phong tỏa hoàn toàn.
+                            • <strong>Bảo vệ Bất biến:</strong> Khi kỳ lương đã Khóa sổ (<code>is_locked = true</code>), mọi thao tác sửa đổi công, lương, phụ cấp hay mức lương cá nhân có hiệu lực trong kỳ đều bị phong tỏa hoàn toàn.
                         </div>
                     </div>
                 </template>
@@ -363,7 +485,7 @@ const openAuditHistory = () => {
                 </div>
             </div>
 
-            <!-- Tabs: Bảng lương đã tính vs Danh sách bị bỏ qua -->
+            <!-- Tabs: Bảng lương đã tính vs Danh sách bị bỏ qua vs Mức lương nhân viên -->
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs">
                 <el-tabs v-model="activeTab">
                     <!-- Tab 1: Danh sách bảng lương chi tiết -->
@@ -428,15 +550,29 @@ const openAuditHistory = () => {
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Thuế TNCN (5 Bậc)" width="140" align="right">
+                                <el-table-column label="Thuế TNCN" width="130" align="right">
                                     <template #default="{ row }">
                                         <span class="text-xs font-semibold text-amber-600 dark:text-amber-400">{{ formatCurrency(row.pit_tax_amount) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Lương Thực Nhận (Net)" width="160" align="right" fixed="right">
+                                <el-table-column label="Thực Nhận (Net)" width="150" align="right">
                                     <template #default="{ row }">
                                         <span class="font-black text-indigo-600 dark:text-indigo-400 text-sm">{{ formatCurrency(row.net_salary) }}</span>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Phiếu Lương" width="120" align="center" fixed="right">
+                                    <template #default="{ row }">
+                                        <el-button
+                                            size="small"
+                                            type="primary"
+                                            plain
+                                            :icon="Document"
+                                            @click="openPayslip(row)"
+                                        >
+                                            Phiếu Lương
+                                        </el-button>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -518,9 +654,235 @@ const openAuditHistory = () => {
                             </el-table>
                         </div>
                     </el-tab-pane>
+
+                    <!-- Tab 3: Quản lý Mức Lương Nhân Viên (Effective Dating) -->
+                    <el-tab-pane name="salaries">
+                        <template #label>
+                            <span class="flex items-center gap-1.5 font-bold text-sm">
+                                <el-icon><Money /></el-icon>
+                                Mức Lương Nhân Viên ({{ employeeSalaries.length }})
+                            </span>
+                        </template>
+
+                        <div class="mt-3 space-y-4">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <div class="text-xs text-slate-500">
+                                    Quản lý mức lương cơ bản thỏa thuận theo dòng thời gian (Effective Dating). Mức lương trong kỳ đã chốt sổ sẽ tự động bị khóa chống sửa đổi hồi tố.
+                                </div>
+                                <el-button
+                                    type="primary"
+                                    size="small"
+                                    :icon="Plus"
+                                    @click="openCreateSalary"
+                                >
+                                    Thiết Lập Mức Lương Mới
+                                </el-button>
+                            </div>
+
+                            <el-table
+                                :data="employeeSalaries"
+                                stripe
+                                border
+                                style="width: 100%"
+                                empty-text="Chưa có bản ghi mức lương cá nhân nào."
+                            >
+                                <el-table-column prop="employee.user_code" label="Mã NV" width="100" fixed>
+                                    <template #default="{ row }">
+                                        <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ row.employee?.user_code }}</span>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="employee.full_name" label="Họ và Tên" min-width="170" fixed>
+                                    <template #default="{ row }">
+                                        <div class="font-medium text-slate-800 dark:text-slate-200">{{ row.employee?.full_name }}</div>
+                                        <div class="text-[11px] text-slate-400">
+                                            {{ row.employee?.current_timeline?.position?.name || 'Nhân viên' }}
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Lương Cơ Bản" width="150" align="right">
+                                    <template #default="{ row }">
+                                        <span class="font-bold text-slate-900 dark:text-white">{{ formatCurrency(row.base_salary) }}</span>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Lương Đóng BH" width="150" align="right">
+                                    <template #default="{ row }">
+                                        <span v-if="row.insurance_salary" class="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                            {{ formatCurrency(row.insurance_salary) }}
+                                        </span>
+                                        <span v-else class="text-xs text-slate-400 italic">Theo lương cơ bản</span>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Loại HĐ" width="110" align="center">
+                                    <template #default="{ row }">
+                                        <el-tag size="small" :type="row.contract_type === 'OFFICIAL' ? 'success' : 'warning'">
+                                            {{ row.contract_type }}
+                                        </el-tag>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Thời Gian Áp Dụng" min-width="180">
+                                    <template #default="{ row }">
+                                        <div class="text-xs">
+                                            Từ: <strong>{{ row.effective_date }}</strong>
+                                            <span v-if="row.end_date"> &rarr; <strong>{{ row.end_date }}</strong></span>
+                                            <span v-else class="text-emerald-600 font-semibold"> (Hiện tại)</span>
+                                        </div>
+                                        <div v-if="row.notes" class="text-[11px] text-slate-400 italic truncate max-w-xs">
+                                            "{{ row.notes }}"
+                                        </div>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Khóa Sổ" width="90" align="center">
+                                    <template #default="{ row }">
+                                        <el-tag v-if="row.is_locked" type="danger" size="small" effect="plain">LOCKED</el-tag>
+                                        <el-tag v-else type="info" size="small" effect="plain">Mở</el-tag>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="Thao Tác" width="140" align="center" fixed="right">
+                                    <template #default="{ row }">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <el-button
+                                                size="small"
+                                                type="primary"
+                                                link
+                                                :disabled="row.is_locked"
+                                                :icon="Edit"
+                                                @click="openEditSalary(row)"
+                                            >
+                                                Sửa
+                                            </el-button>
+                                            <el-button
+                                                size="small"
+                                                type="danger"
+                                                link
+                                                :disabled="row.is_locked"
+                                                :icon="Delete"
+                                                @click="deleteSalaryItem(row)"
+                                            >
+                                                Xóa
+                                            </el-button>
+                                        </div>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </div>
+                    </el-tab-pane>
                 </el-tabs>
             </div>
         </div>
+
+        <!-- DIALOG THIẾT LẬP MỨC LƯƠNG NHÂN SỰ -->
+        <el-dialog
+            v-model="salaryDialogVisible"
+            :title="editingSalary ? 'Chỉnh Sửa Mức Lương Nhân Sự' : 'Thiết Lập Mức Lương Mới Cho Nhân Sự'"
+            width="560px"
+        >
+            <el-form :model="salaryForm" label-position="top" class="space-y-3 text-xs">
+                <el-form-item label="Nhân sự áp dụng" required>
+                    <el-select
+                        v-model="salaryForm.employee_id"
+                        placeholder="Chọn nhân viên"
+                        filterable
+                        :disabled="!!editingSalary"
+                        class="w-full"
+                    >
+                        <el-option
+                            v-for="emp in allEmployees"
+                            :key="emp.id"
+                            :label="`${emp.full_name} (${emp.user_code})`"
+                            :value="emp.id"
+                        />
+                    </el-select>
+                </el-form-item>
+
+                <el-row :gutter="12">
+                    <el-col :span="12">
+                        <el-form-item label="Mức lương cơ bản thỏa thuận (VND)" required>
+                            <el-input-number
+                                v-model="salaryForm.base_salary"
+                                :min="0"
+                                :step="500000"
+                                class="w-full"
+                            />
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="Lương đóng bảo hiểm (VND)">
+                            <el-input-number
+                                v-model="salaryForm.insurance_salary"
+                                :min="0"
+                                :step="500000"
+                                placeholder="Mặc định bằng lương cơ bản"
+                                class="w-full"
+                            />
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="12">
+                    <el-col :span="8">
+                        <el-form-item label="Loại hợp đồng" required>
+                            <el-select v-model="salaryForm.contract_type" class="w-full">
+                                <el-option label="Chính thức" value="OFFICIAL" />
+                                <el-option label="Thử việc (85%)" value="PROBATION" />
+                                <el-option label="Thời vụ / Vãng lai" value="SEASONAL" />
+                                <el-option label="Thực tập sinh" value="INTERN" />
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="Ngày bắt đầu hiệu lực" required>
+                            <el-date-picker
+                                v-model="salaryForm.effective_date"
+                                type="date"
+                                value-format="YYYY-MM-DD"
+                                format="DD/MM/YYYY"
+                                class="w-full"
+                            />
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="Ngày hết hạn (tùy chọn)">
+                            <el-date-picker
+                                v-model="salaryForm.end_date"
+                                type="date"
+                                value-format="YYYY-MM-DD"
+                                format="DD/MM/YYYY"
+                                class="w-full"
+                            />
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-form-item label="Ghi chú điều chỉnh">
+                    <el-input
+                        v-model="salaryForm.notes"
+                        placeholder="Lý do điều chỉnh (kết thúc thử việc, tăng lương định kỳ, bổ nhiệm...)"
+                    />
+                </el-form-item>
+            </el-form>
+
+            <template #footer>
+                <div class="flex justify-end gap-2">
+                    <el-button @click="salaryDialogVisible = false">Hủy</el-button>
+                    <el-button type="primary" :loading="salaryForm.processing" @click="submitSalaryForm">
+                        Lưu Mức Lương
+                    </el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- PAYSLIP MODAL CHI TIẾT -->
+        <PayslipModal
+            v-model="isPayslipModalVisible"
+            :record="selectedPayslipRecord"
+        />
 
         <!-- Audit History Drawer -->
         <AuditHistoryDrawer
@@ -531,3 +893,12 @@ const openAuditHistory = () => {
         />
     </AppLayout>
 </template>
+
+<style scoped>
+:deep(.el-table) {
+    --el-table-header-bg-color: #f8fafc;
+}
+.dark :deep(.el-table) {
+    --el-table-header-bg-color: #0f172a;
+}
+</style>

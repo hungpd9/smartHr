@@ -189,6 +189,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/calculate', [\App\Modules\Payroll\Controllers\PayrollController::class, 'calculate'])->name('calculate');
         Route::post('/lock-period', [\App\Modules\Payroll\Controllers\PayrollController::class, 'lockPeriod'])->name('lock-period');
         Route::post('/approve-timesheet/{employeeId}', [\App\Modules\Payroll\Controllers\PayrollController::class, 'approveTimesheet'])->name('approve-timesheet');
+        Route::get('/records/{id}/payslip', [\App\Modules\Payroll\Controllers\PayrollController::class, 'payslip'])->name('payslip');
+
+        // Quản lý mức lương thỏa thuận cá nhân (Employee Salaries)
+        Route::post('/salaries', [\App\Modules\Payroll\Controllers\PayrollController::class, 'storeSalary'])->name('salaries.store');
+        Route::put('/salaries/{id}', [\App\Modules\Payroll\Controllers\PayrollController::class, 'updateSalary'])->name('salaries.update');
+        Route::delete('/salaries/{id}', [\App\Modules\Payroll\Controllers\PayrollController::class, 'destroySalary'])->name('salaries.destroy');
     });
 
     // 9. Phân hệ Trung tâm Hướng dẫn Sử dụng Đa tầng (Role-Based Help Center)
@@ -196,5 +202,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [\App\Modules\Compliance\Controllers\HelpGuideController::class, 'index'])->name('index');
         Route::get('/{role}/{slug}', [\App\Modules\Compliance\Controllers\HelpGuideController::class, 'show'])->name('show');
     });
+
+    // 10. Phân hệ Workflow Engine (Quản trị Luồng Đơn Từ & Phê Duyệt Đa Cấp)
+    Route::prefix('workflow')->name('workflow.')->group(function () {
+        Route::get('/requests', [\App\Modules\Workflow\Controllers\ApprovalRequestController::class, 'index'])->name('requests.index');
+        Route::post('/requests', [\App\Modules\Workflow\Controllers\ApprovalRequestController::class, 'store'])->name('requests.store');
+        Route::post('/requests/{id}/approve', [\App\Modules\Workflow\Controllers\ApprovalRequestController::class, 'approve'])->name('requests.approve');
+        Route::post('/requests/{id}/reject', [\App\Modules\Workflow\Controllers\ApprovalRequestController::class, 'reject'])->name('requests.reject');
+        Route::post('/requests/{id}/cancel', [\App\Modules\Workflow\Controllers\ApprovalRequestController::class, 'cancel'])->name('requests.cancel');
+        Route::get('/preview-chain', [\App\Modules\Workflow\Controllers\ApprovalRequestController::class, 'previewChain'])->name('requests.preview-chain');
+
+        // Cấu hình quy trình phê duyệt đa cấp
+        Route::post('/configs', [\App\Modules\Workflow\Controllers\WorkflowConfigController::class, 'update'])->name('configs.update');
+    });
+
+    // Alias tiện ích
+    Route::get('/workflow', fn() => redirect()->route('workflow.requests.index'))->name('workflow');
+    Route::get('/requests', fn() => redirect()->route('workflow.requests.index'))->name('requests');
 });
 

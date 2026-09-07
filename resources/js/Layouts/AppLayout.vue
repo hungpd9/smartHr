@@ -93,7 +93,15 @@ const navigationItems: NavigationItem[] = [
             { key: 'leave_ot_caps', label: 'Giám Sát Trần OT (40h/200h)', route: '/leave/ot-accumulations' },
         ],
     },
-    { key: 'workflow', icon: CircleCheck, route: '/workflow' },
+    {
+        key: 'workflow',
+        icon: CircleCheck,
+        children: [
+            { key: 'workflow_to_approve', label: 'Đơn cần tôi duyệt', route: '/workflow/requests?tab=to_approve' },
+            { key: 'workflow_my_requests', label: 'Đơn từ của tôi', route: '/workflow/requests?tab=my_requests' },
+            { key: 'workflow_configs', label: 'Cấu hình quy trình', route: '/workflow/requests?tab=configs' },
+        ],
+    },
     { key: 'payroll', icon: Wallet, route: '/payroll' },
     { key: 'compliance', icon: Warning, route: '/compliance' },
     { key: 'licensing', icon: Key, route: '/licensing' },
@@ -105,6 +113,7 @@ const expandedMenus = ref<Record<string, boolean>>({
     policy: true,
     rostering: true,
     leaves: true,
+    workflow: true,
 });
 
 const toggleSubmenu = (key: string) => {

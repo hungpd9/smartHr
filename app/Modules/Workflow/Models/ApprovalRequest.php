@@ -48,4 +48,42 @@ class ApprovalRequest extends Model
     {
         return $this->hasMany(ApprovalHistory::class, 'request_id')->orderBy('step');
     }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'PENDING';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'APPROVED';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'REJECTED';
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'CANCELLED';
+    }
+
+    /**
+     * Lấy cấu hình thông tin người duyệt ở bước hiện tại từ snapshot
+     */
+    public function getCurrentApproverStep(): ?array
+    {
+        if (empty($this->snapshot_approvers)) {
+            return null;
+        }
+
+        foreach ($this->snapshot_approvers as $stepConfig) {
+            if (($stepConfig['level'] ?? $stepConfig['step'] ?? null) === $this->current_step) {
+                return $stepConfig;
+            }
+        }
+
+        return null;
+    }
 }

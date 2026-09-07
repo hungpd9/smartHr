@@ -99,6 +99,41 @@ class Employee extends Model
         return $this->hasMany(\App\Modules\LeavePolicy\Models\OvertimeAccumulation::class);
     }
 
+    public function salaries(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Payroll\Models\EmployeeSalary::class);
+    }
+
+    public function currentSalary(): HasOne
+    {
+        return $this->hasOne(\App\Modules\Payroll\Models\EmployeeSalary::class)
+            ->where('effective_date', '<=', Carbon::today())
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', Carbon::today());
+            })
+            ->latest('effective_date');
+    }
+
+    /**
+     * Lấy mức lương cơ bản thỏa thuận tại một mốc thời gian (Effective Dating)
+     */
+    public function getBaseSalaryAt(Carbon $targetDate, float $fallback = 10000000.00): float
+    {
+        $targetDateStr = $targetDate->toDateString();
+
+        $salary = $this->salaries()
+            ->whereDate('effective_date', '<=', $targetDateStr)
+            ->where(function ($query) use ($targetDateStr) {
+                $query->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $targetDateStr);
+            })
+            ->latest('effective_date')
+            ->first();
+
+        return $salary ? (float) $salary->base_salary : $fallback;
+    }
+
     /**
      * Lấy dòng thời gian sự nghiệp hiện tại đang áp dụng
      */

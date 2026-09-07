@@ -9,10 +9,13 @@ use App\Modules\Attendance\Models\MonthlyAttendance;
 use App\Modules\Compliance\Services\AuditTrailService;
 use App\Modules\Compliance\Services\TemporalLockService;
 use App\Modules\CoreHR\Models\Employee;
+use App\Modules\Payroll\Models\EmployeeSalary;
 use App\Modules\Payroll\Models\PayrollPeriod;
 use App\Modules\Payroll\Models\PayrollRecord;
+use App\Modules\Payroll\Services\EmployeeSalaryService;
 use App\Modules\Payroll\Services\PayrollCalculationService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,6 +25,7 @@ class PayrollController extends Controller
 {
     public function __construct(
         protected PayrollCalculationService $payrollCalculationService,
+        protected EmployeeSalaryService $employeeSalaryService,
         protected TemporalLockService $temporalLockService,
         protected AuditTrailService $auditTrailService
     ) {}
@@ -43,12 +47,14 @@ class PayrollController extends Controller
         // 2. Lấy danh sách PayrollRecord đã tính
         $records = PayrollRecord::where('tenant_id', $tenantId)
             ->where('month_year', $monthYear)
-            ->with(['employee'])
+            ->with(['employee.currentTimeline.department.currentVersion', 'employee.currentTimeline.position'])
             ->get();
 
         // 3. Lấy danh sách nhân viên để đối chiếu trạng thái duyệt bảng chấm công
         $allEmployees = Employee::where('tenant_id', $tenantId)
             ->whereIn('status', ['OFFICIAL', 'PROBATION', 'ON_LEAVE'])
+            ->select('id', 'user_code', 'full_name', 'status', 'gender')
+            ->orderBy('full_name')
             ->get();
 
         $monthlyAttendances = MonthlyAttendance::where('tenant_id', $tenantId)
@@ -75,11 +81,19 @@ class PayrollController extends Controller
             }
         }
 
+        // 4. Lấy danh sách mức lương cá nhân của toàn bộ nhân sự (Employee Salaries)
+        $employeeSalaries = EmployeeSalary::where('tenant_id', $tenantId)
+            ->with(['employee.currentTimeline.department.currentVersion', 'employee.currentTimeline.position'])
+            ->orderByDesc('effective_date')
+            ->get();
+
         return Inertia::render('Payroll/Index', [
             'monthYear' => $monthYear,
             'payrollPeriod' => $payrollPeriod,
             'records' => $records,
             'unapprovedEmployees' => $unapprovedEmployees,
+            'employeeSalaries' => $employeeSalaries,
+            'allEmployees' => $allEmployees,
             'totalEmployeesCount' => $allEmployees->count(),
             'calculatedCount' => $records->count(),
             'unapprovedCount' => count($unapprovedEmployees),
@@ -139,6 +153,9 @@ class PayrollController extends Controller
             'locked_at' => Carbon::now(),
         ]);
 
+        // Tự động khóa các mức lương cá nhân có hiệu lực trong kỳ lương này
+        $this->employeeSalaryService->lockSalariesForPeriod($tenantId, $monthYear);
+
         $this->auditTrailService->log(
             tenantId: $tenantId,
             action: 'LOCK_PAYROLL_PERIOD',
@@ -152,7 +169,24 @@ class PayrollController extends Controller
         );
 
         return redirect()->route('payroll.index', ['month_year' => $monthYear])
-            ->with('success', "Đã khóa sổ kỳ lương {$monthYear} thành công. Dữ liệu đã được bảo vệ bất biến.");
+            ->with('success', "Đã khóa sổ kỳ lương {$monthYear} thành công. Toàn bộ bảng lương và cấu hình lương đã được bảo vệ bất biến.");
+    }
+
+    /**
+     * API Xem chi tiết phiếu lương điện tử của 1 nhân viên
+     */
+    public function payslip(Request $request, int $id): JsonResponse
+    {
+        $tenantId = (int) ($request->user()->tenant_id ?? 1);
+
+        $record = PayrollRecord::where('tenant_id', $tenantId)
+            ->with(['employee.currentTimeline.department.currentVersion', 'employee.currentTimeline.position'])
+            ->findOrFail($id);
+
+        return response()->json([
+            'record' => $record,
+            'salary_breakdown' => $record->salary_breakdown,
+        ]);
     }
 
     /**
@@ -177,5 +211,60 @@ class PayrollController extends Controller
 
         return redirect()->back()
             ->with('success', 'Đã phê duyệt bảng chấm công nhân viên thành công.');
+    }
+
+    /**
+     * Thêm mới mức lương thỏa thuận cá nhân cho nhân sự
+     */
+    public function storeSalary(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'employee_id' => ['required', 'integer', 'exists:employees,id'],
+            'base_salary' => ['required', 'numeric', 'min:0'],
+            'insurance_salary' => ['nullable', 'numeric', 'min:0'],
+            'contract_type' => ['required', 'string', 'in:OFFICIAL,PROBATION,SEASONAL,INTERN'],
+            'effective_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after:effective_date'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $tenantId = (int) ($request->user()->tenant_id ?? 1);
+
+        $this->employeeSalaryService->createSalary($tenantId, $request->all());
+
+        return redirect()->back()->with('success', 'Đã thêm mức lương mới cho nhân sự thành công.');
+    }
+
+    /**
+     * Cập nhật mức lương thỏa thuận cá nhân
+     */
+    public function updateSalary(Request $request, int $id): RedirectResponse
+    {
+        $request->validate([
+            'base_salary' => ['required', 'numeric', 'min:0'],
+            'insurance_salary' => ['nullable', 'numeric', 'min:0'],
+            'contract_type' => ['required', 'string', 'in:OFFICIAL,PROBATION,SEASONAL,INTERN'],
+            'effective_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after:effective_date'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $tenantId = (int) ($request->user()->tenant_id ?? 1);
+
+        $this->employeeSalaryService->updateSalary($tenantId, $id, $request->all());
+
+        return redirect()->back()->with('success', 'Đã cập nhật mức lương nhân sự thành công.');
+    }
+
+    /**
+     * Xóa bản ghi mức lương cá nhân
+     */
+    public function destroySalary(Request $request, int $id): RedirectResponse
+    {
+        $tenantId = (int) ($request->user()->tenant_id ?? 1);
+
+        $this->employeeSalaryService->deleteSalary($tenantId, $id);
+
+        return redirect()->back()->with('success', 'Đã xóa bản ghi mức lương thành công.');
     }
 }

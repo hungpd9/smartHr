@@ -161,4 +161,18 @@ class TemporalLockService
             ]);
         }
     }
+
+    /**
+     * Ràng buộc: Chặn sửa/xóa cấu hình mức lương cá nhân rơi vào kỳ lương đã khóa sổ
+     */
+    public function assertSalaryConfigNotLocked(int $tenantId, int $employeeId, Carbon $effectiveDate): void
+    {
+        $month = $effectiveDate->format('Y-m');
+
+        if ($this->isPayrollLocked($tenantId, $month)) {
+            throw ValidationException::withMessages([
+                'salary' => ["Kỳ lương tháng {$month} đã được quyết toán và khóa sổ bất biến. Không thể thêm mới, sửa đổi hoặc xóa mức lương cá nhân có hiệu lực trong kỳ này."],
+            ]);
+        }
+    }
 }
