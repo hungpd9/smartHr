@@ -291,7 +291,7 @@ const submitConsent = () => {
                         </div>
                     </div>
 
-                    <!-- Chart 2: Turnover Trend (Biến động Nhân sự 2026) -->
+                    <!-- Chart 2: Turnover Trend 2026 -->
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between mb-2">
@@ -351,7 +351,7 @@ const submitConsent = () => {
                         </div>
                     </div>
 
-                    <!-- Chart 3: Headcount Distribution (Cơ cấu Nhân sự theo Khối) -->
+                    <!-- Chart 3: Headcount Distribution by Division -->
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between mb-2">
@@ -404,7 +404,7 @@ const submitConsent = () => {
                         </div>
                     </div>
 
-                    <!-- Chart 4: Attendance Health Index (Chỉ số Sức khỏe Kỷ luật) -->
+                    <!-- Chart 4: Attendance Discipline & Health Index -->
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between mb-2">
