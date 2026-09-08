@@ -361,10 +361,10 @@ const markAllNotificationsAsRead = () => {
                             </div>
                             <div v-show="!isSidebarCollapsed" class="flex flex-col truncate">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="font-semibold text-slate-700 dark:text-slate-200 truncate">{{ t('enterprise_licensed') }}</span>
+                                    <span class="font-semibold text-slate-700 dark:text-slate-200 truncate">{{ t('footer.enterprise_licensed') }}</span>
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 </div>
-                                <span class="text-[10px] text-slate-400 truncate">{{ t('data_anchored') }}</span>
+                                <span class="text-[10px] text-slate-400 truncate">{{ t('footer.data_anchored') }}</span>
                             </div>
                         </div>
                     </div>
@@ -399,10 +399,10 @@ const markAllNotificationsAsRead = () => {
 
                             <div class="flex items-center space-x-2 text-xs bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-full border border-indigo-200/50 dark:border-indigo-800/50">
                                 <el-icon :size="14"><OfficeBuilding /></el-icon>
-                                <span class="font-medium">{{ t('headquarters') }}</span>
+                                <span class="font-medium">{{ t('header.headquarters') }}</span>
                             </div>
                             <div class="text-xs text-slate-400 hidden sm:block">
-                                {{ t('compliance_badge') }}
+                                {{ t('header.compliance_badge') }}
                             </div>
                         </div>
 
@@ -467,7 +467,7 @@ const markAllNotificationsAsRead = () => {
                             <button
                                 @click="toggleTheme"
                                 class="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition"
-                                :title="isDark ? t('light_mode') : t('dark_mode')"
+                                :title="isDark ? t('header.light_mode') : t('header.dark_mode')"
                             >
                                 <el-icon :size="18">
                                     <component :is="isDark ? Sunny : Moon" />
@@ -488,7 +488,7 @@ const markAllNotificationsAsRead = () => {
                                 <template #reference>
                                     <button
                                         class="relative p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition"
-                                        :title="t('system_notifications')"
+                                        :title="t('header.system_notifications')"
                                     >
                                         <el-icon :size="18"><Bell /></el-icon>
                                         <span
@@ -501,7 +501,7 @@ const markAllNotificationsAsRead = () => {
                                 <div class="space-y-3">
                                     <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                                         <div class="flex items-center space-x-2">
-                                            <span class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ t('system_notifications') }}</span>
+                                            <span class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ t('header.system_notifications') }}</span>
                                             <span v-if="unreadCount > 0" class="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 font-bold">
                                                 {{ unreadCount }}
                                             </span>
@@ -511,7 +511,7 @@ const markAllNotificationsAsRead = () => {
                                             @click="markAllNotificationsAsRead"
                                             class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
                                         >
-                                            {{ t('mark_all_read') }}
+                                            {{ t('header.mark_all_read') }}
                                         </button>
                                     </div>
 
@@ -544,7 +544,7 @@ const markAllNotificationsAsRead = () => {
 
                                     <div v-else class="text-center py-6 text-slate-400 text-xs">
                                         <el-icon :size="28" class="text-slate-300 mb-1"><ChatDotRound /></el-icon>
-                                        <p>{{ t('no_new_notifications') }}</p>
+                                        <p>{{ t('header.no_new_notifications') }}</p>
                                     </div>
 
                                     <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-center">

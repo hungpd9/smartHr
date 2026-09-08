@@ -1520,7 +1520,6 @@ export const vi = {
         tab_attendance_policy: 'Quy Chế Chấm Công & Phạt',
         tab_pit_brackets: 'Biểu Thuế TNCN Lũy Tiến (5 Bậc)',
         tab_welfare: 'Chế Độ Phúc Lợi Con Nhỏ & Gia Đình',
-        tab_allowances: 'Danh Mục Phụ Cấp & Trợ Cấp',
         btn_new_version: 'Tạo Phiên Bản Quy Chế Mới',
         version_code: 'Mã phiên bản',
         effective_date_range: 'Khoảng thời gian hiệu lực',

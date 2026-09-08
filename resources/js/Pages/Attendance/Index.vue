@@ -419,7 +419,7 @@ const handleViewRawLogs = async (dateStr: string) => {
 
 // Helpers format
 const formatVND = (val: number | string | null | undefined) => {
-    if (!val) return '0 đ';
+    if (!val) return `0 ${t('common.currency_vnd')}`;
     const num = typeof val === 'string' ? parseFloat(val) : val;
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 };

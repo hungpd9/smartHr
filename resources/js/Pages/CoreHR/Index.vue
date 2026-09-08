@@ -1135,10 +1135,10 @@ const submitBranch = () => {
                                     {{ departments.find(d => d.id === pos.department_id)?.name ?? $t('core_hr.dept_all_company') }}
                                 </td>
                                 <td class="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                                    {{ Number(pos.allowance_amount || 0).toLocaleString('vi-VN') }} đ
+                                    {{ Number(pos.allowance_amount || 0).toLocaleString('vi-VN') }} {{ $t('common.currency_vnd') }}
                                 </td>
                                 <td class="py-3.5 px-4 text-right font-mono text-slate-700 dark:text-slate-300">
-                                    {{ Number(pos.bonus_one_time || 0).toLocaleString('vi-VN') }} đ
+                                    {{ Number(pos.bonus_one_time || 0).toLocaleString('vi-VN') }} {{ $t('common.currency_vnd') }}
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-400 truncate max-w-xs">{{ pos.description || '—' }}</td>
                                 <td class="py-3.5 px-4">

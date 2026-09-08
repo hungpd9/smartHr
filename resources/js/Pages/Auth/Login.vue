@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useForm, Head } from '@inertiajs/vue3';
 import { useThemeAndLocale, type SupportedLocale } from '@/Composables/useThemeAndLocale';
 import {
@@ -117,7 +116,7 @@ const getRoleBadgeColor = (role: string) => {
                 <button
                     @click="toggleTheme"
                     class="p-2 rounded-xl bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition border border-slate-200 dark:border-slate-800 shadow-xs"
-                    :title="isDark ? t('light_mode') : t('dark_mode')"
+                    :title="isDark ? t('header.light_mode') : t('header.dark_mode')"
                 >
                     <el-icon :size="18">
                         <component :is="isDark ? Sunny : Moon" />

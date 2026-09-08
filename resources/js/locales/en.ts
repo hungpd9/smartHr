@@ -1520,7 +1520,6 @@ export const en = {
         tab_attendance_policy: 'Attendance & Penalty Policies',
         tab_pit_brackets: 'Progressive PIT Tax Brackets (5 Tiers)',
         tab_welfare: 'Child Welfare & Family Support Schemes',
-        tab_allowances: 'Allowance & Benefit Catalog',
         btn_new_version: 'Create New Policy Version',
         version_code: 'Version Code',
         effective_date_range: 'Effective Validity Range',

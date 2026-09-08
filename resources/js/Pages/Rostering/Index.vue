@@ -656,7 +656,7 @@ const handlePublishRoster = () => {
                         <div class="p-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg">
                             <div class="text-[10px] text-amber-600 dark:text-amber-400">{{ $t('rostering.kpi_allowance_est') }}</div>
                             <div class="font-bold text-amber-700 dark:text-amber-300 text-sm">
-                                {{ Number(simulationResult.estimated_night_allowance).toLocaleString('vi-VN') }} đ
+                                {{ Number(simulationResult.estimated_night_allowance).toLocaleString('vi-VN') }} {{ $t('common.currency_vnd') }}
                             </div>
                         </div>
                         <div class="p-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg">
@@ -689,7 +689,7 @@ const handlePublishRoster = () => {
                                     <td class="p-2 text-center font-bold text-purple-600">{{ emp.night_shifts_count }}</td>
                                     <td class="p-2 text-center">{{ emp.rest_days_count }}</td>
                                     <td class="p-2 text-right font-mono text-amber-700 dark:text-amber-400">
-                                        {{ Number(emp.estimated_night_allowance).toLocaleString('vi-VN') }} đ
+                                        {{ Number(emp.estimated_night_allowance).toLocaleString('vi-VN') }} {{ $t('common.currency_vnd') }}
                                     </td>
                                 </tr>
                             </tbody>

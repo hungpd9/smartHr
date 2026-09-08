@@ -111,7 +111,7 @@ const fetchPreviewChain = async () => {
             previewChain.value = data.chain || [];
         }
     } catch (e) {
-        console.error('Lỗi lấy preview chain:', e);
+        console.error('Error fetching preview chain:', e);
     } finally {
         loadingPreview.value = false;
     }
