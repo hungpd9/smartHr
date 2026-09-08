@@ -12,6 +12,7 @@ import {
     Calendar,
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface SwapRequestItem {
     id: number;
@@ -61,35 +62,36 @@ const props = defineProps<{
         total: number;
     };
 }>();
+const { t } = useThemeAndLocale();
 
 const handleApprove = (req: SwapRequestItem) => {
     ElMessageBox.confirm(
-        `Phê duyệt hoán đổi ca giữa ${req.requester.full_name} và ${req.target_employee.full_name}? Lịch phân ca sẽ tự động được cập nhật.`,
-        'Xác nhận Phê duyệt',
+        t('rostering.swaps_approve_confirm_msg', { from: req.requester.full_name, to: req.target_employee.full_name }),
+        t('rostering.swaps_approve_confirm_title'),
         {
-            confirmButtonText: 'Phê duyệt',
-            cancelButtonText: 'Xem lại',
+            confirmButtonText: t('rostering.swaps_btn_approve'),
+            cancelButtonText: t('rostering.btn_review'),
             type: 'success',
         }
     ).then(() => {
         router.post(`/rosters/swaps/${req.id}/approve`, {}, {
             onSuccess: () => {
-                ElMessage.success('Đã phê duyệt yêu cầu đổi ca thành công.');
+                ElMessage.success(t('rostering.swaps_approve_success'));
             },
         });
     }).catch(() => {});
 };
 
 const handleReject = (req: SwapRequestItem) => {
-    ElMessageBox.prompt('Vui lòng nhập lý do từ chối yêu cầu đổi ca này:', 'Từ chối Đổi ca', {
-        confirmButtonText: 'Từ chối',
-        cancelButtonText: 'Hủy',
+    ElMessageBox.prompt(t('rostering.swaps_reject_prompt_msg'), t('rostering.swaps_reject_title'), {
+        confirmButtonText: t('rostering.swaps_btn_reject'),
+        cancelButtonText: t('common.cancel'),
         inputPattern: /\S+/,
-        inputErrorMessage: 'Lý do từ chối không được để trống.',
+        inputErrorMessage: t('rostering.swaps_reject_reason_required'),
     }).then(({ value }) => {
         router.post(`/rosters/swaps/${req.id}/reject`, { reason: value }, {
             onSuccess: () => {
-                ElMessage.success('Đã từ chối yêu cầu đổi ca.');
+                ElMessage.success(t('rostering.swaps_reject_success'));
             },
         });
     }).catch(() => {});
@@ -98,7 +100,7 @@ const handleReject = (req: SwapRequestItem) => {
 
 <template>
     <AppLayout>
-        <Head title="Yêu cầu Đổi ca & Bắt ca thay - Smart-HR" />
+        <Head :title="t('rostering.swaps_page_title')" />
 
         <div class="p-6 max-w-7xl mx-auto space-y-6">
             <!-- Header Card -->
@@ -109,10 +111,10 @@ const handleReject = (req: SwapRequestItem) => {
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-slate-900 dark:text-white">
-                            Yêu Cầu Đổi Ca & Bắt Ca Thay (Shift Swap & Cover)
+                            {{ $t('rostering.swaps_heading') }}
                         </h1>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Theo dõi và phê duyệt các yêu cầu hoán đổi ca làm việc của nhân viên, đối soát tự động tính tuân thủ pháp luật
+                            {{ $t('rostering.swaps_subtitle') }}
                         </p>
                     </div>
                 </div>
@@ -121,7 +123,7 @@ const handleReject = (req: SwapRequestItem) => {
             <!-- Table Card -->
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 <el-table :data="swapRequests.data" stripe style="width: 100%" class="!text-sm">
-                    <el-table-column label="Người Đề Xuất & Ca Gốc" min-width="200">
+                    <el-table-column :label="$t('rostering.swaps_col_requester')" min-width="200">
                         <template #default="{ row }">
                             <div>
                                 <div class="font-bold text-slate-900 dark:text-white">
@@ -138,7 +140,7 @@ const handleReject = (req: SwapRequestItem) => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Đồng Nghiệp Nhận Đổi" min-width="200">
+                    <el-table-column :label="$t('rostering.swaps_col_target')" min-width="200">
                         <template #default="{ row }">
                             <div>
                                 <div class="font-bold text-slate-900 dark:text-white">
@@ -152,30 +154,30 @@ const handleReject = (req: SwapRequestItem) => {
                                     <span>{{ row.target_roster.shift?.name }}</span>
                                 </div>
                                 <div v-else class="mt-1 text-xs text-slate-400 italic">
-                                    (Nhận ca thay - Cover)
+                                    {{ $t('rostering.swaps_cover_note') }}
                                 </div>
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Hình Thức" width="130">
+                    <el-table-column :label="$t('rostering.swaps_col_type')" width="130">
                         <template #default="{ row }">
                             <el-tag :type="row.swap_type === 'SWAP' ? 'primary' : 'warning'" size="small" class="!rounded-md">
-                                {{ row.swap_type === 'SWAP' ? 'Đổi Ca Hai Chiều' : 'Bắt Ca Thay' }}
+                                {{ row.swap_type === 'SWAP' ? $t('rostering.swaps_type_swap') : $t('rostering.swaps_type_cover') }}
                             </el-tag>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Tuân Thủ BLLĐ" width="180">
+                    <el-table-column :label="$t('rostering.swaps_col_compliance')" width="180">
                         <template #default="{ row }">
                             <div v-if="row.is_legal_compliant" class="flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
                                 <el-icon><Check /></el-icon>
-                                <span>Hợp lệ (Đủ 12h/24h)</span>
+                                <span>{{ $t('rostering.swaps_legal_ok') }}</span>
                             </div>
                             <div v-else class="flex flex-col text-xs text-red-600 dark:text-red-400">
                                 <div class="flex items-center space-x-1 font-bold">
                                     <el-icon><WarningFilled /></el-icon>
-                                    <span>Có cảnh báo luật</span>
+                                    <span>{{ $t('rostering.swaps_legal_warn') }}</span>
                                 </div>
                                 <div class="text-[10px] text-slate-400 truncate mt-0.5" :title="row.violation_warnings?.join('; ')">
                                     {{ row.violation_warnings?.[0] }}
@@ -184,21 +186,21 @@ const handleReject = (req: SwapRequestItem) => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Trạng Thái" width="140">
+                    <el-table-column :label="$t('rostering.swaps_col_status')" width="140">
                         <template #default="{ row }">
-                            <el-tag v-if="row.status === 'APPROVED'" type="success" size="small">Đã Duyệt</el-tag>
-                            <el-tag v-else-if="row.status === 'REJECTED'" type="danger" size="small">Từ Chối</el-tag>
-                            <el-tag v-else type="warning" size="small">Chờ Duyệt</el-tag>
+                            <el-tag v-if="row.status === 'APPROVED'" type="success" size="small">{{ $t('rostering.swaps_status_approved') }}</el-tag>
+                            <el-tag v-else-if="row.status === 'REJECTED'" type="danger" size="small">{{ $t('rostering.swaps_status_rejected') }}</el-tag>
+                            <el-tag v-else type="warning" size="small">{{ $t('rostering.swaps_status_pending') }}</el-tag>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Thao Tác" width="160" fixed="right">
+                    <el-table-column :label="$t('rostering.swaps_col_actions')" width="160" fixed="right">
                         <template #default="{ row }">
                             <div v-if="row.status === 'PENDING_MANAGER'" class="flex items-center space-x-2">
-                                <el-button size="small" type="success" :icon="Check" circle @click="handleApprove(row)" title="Phê duyệt" />
-                                <el-button size="small" type="danger" :icon="Close" circle @click="handleReject(row)" title="Từ chối" />
+                                <el-button size="small" type="success" :icon="Check" circle @click="handleApprove(row)" :title="$t('rostering.swaps_btn_approve')" />
+                                <el-button size="small" type="danger" :icon="Close" circle @click="handleReject(row)" :title="$t('rostering.swaps_btn_reject')" />
                             </div>
-                            <span v-else class="text-xs text-slate-400 italic">Đã hoàn tất</span>
+                            <span v-else class="text-xs text-slate-400 italic">{{ $t('rostering.swaps_done') }}</span>
                         </template>
                     </el-table-column>
                 </el-table>

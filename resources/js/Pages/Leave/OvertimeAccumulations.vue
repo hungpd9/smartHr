@@ -3,12 +3,16 @@ import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import {
     Clock,
     Refresh,
     Search,
     Histogram,
     TrendCharts,
+    Warning,
+    CircleClose,
+    CircleCheck,
 } from '@element-plus/icons-vue';
 
 interface Employee {
@@ -60,6 +64,8 @@ const props = defineProps<{
     };
 }>();
 
+const { t, currentLang } = useThemeAndLocale();
+
 const selectedYear = ref<number>(props.filters.year);
 const selectedDepartment = ref<number | null>(props.filters.department_id);
 const selectedWarningFilter = ref<string>(props.filters.warning_filter || 'all');
@@ -89,11 +95,11 @@ const handleSync = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                ElMessage.success(`Đồng bộ giờ làm thêm năm ${selectedYear.value} thành công!`);
+                ElMessage.success(t('ot_caps.sync_success', { year: selectedYear.value }));
                 isSyncing.value = false;
             },
             onError: () => {
-                ElMessage.error('Có lỗi xảy ra khi đồng bộ giờ OT.');
+                ElMessage.error(t('common.error'));
                 isSyncing.value = false;
             },
         }
@@ -130,7 +136,7 @@ const getMonthCellStyle = (hours: number) => {
 
 <template>
     <AppLayout>
-        <Head title="Giám Sát Trần Làm Thêm Giờ (OT) - Smart-HR Enterprise" />
+        <Head :title="t('ot_caps.page_title')" />
 
         <div class="space-y-6">
             <!-- Header Banner Doanh nghiệp Chuyên nghiệp -->
@@ -143,10 +149,10 @@ const getMonthCellStyle = (hours: number) => {
                             </div>
                             <div>
                                 <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                                    Giám Sát Trần Làm Thêm Giờ (OT Compliance)
+                                    {{ t('ot_caps.title') }}
                                 </h1>
                                 <p class="mt-1 text-sm text-blue-100/80">
-                                    Smart-HR Enterprise • Kiểm soát 3 tầng trần: Ngày 50%, Tháng 40h, Năm 200h/300h theo Điều 107 BLLĐ & Nghị định 145/2020
+                                    {{ t('ot_caps.subtitle') }}
                                 </p>
                             </div>
                         </div>
@@ -161,7 +167,7 @@ const getMonthCellStyle = (hours: number) => {
                             @click="handleSync"
                             class="!rounded-xl !bg-blue-600 hover:!bg-blue-500 !border-none"
                         >
-                            Đồng bộ lại Giờ OT Năm {{ selectedYear }}
+                            {{ t('ot_caps.resync_btn', { year: selectedYear }) }}
                         </el-button>
                     </div>
                 </div>
@@ -174,68 +180,68 @@ const getMonthCellStyle = (hours: number) => {
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
                     <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
-                        <span>Tổng Giờ OT Toàn Cty</span>
+                        <span>{{ t('ot_caps.total_ot_hours') }}</span>
                         <el-icon class="text-blue-500"><Histogram /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-slate-900 dark:text-slate-100">
-                        {{ summary.total_ot_hours }} <span class="text-xs font-normal text-slate-400">h</span>
+                        {{ summary.total_ot_hours }} <span class="text-xs font-normal text-slate-400">{{ t('ot_caps.hours_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-slate-400">{{ summary.total_employees_tracked }} nhân sự theo dõi</div>
+                    <div class="mt-1 text-[11px] text-slate-400">{{ summary.total_employees_tracked }} {{ t('ot_caps.employees_tracked') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
                     <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
-                        <span>Vượt Trần 200h Năm</span>
+                        <span>{{ t('ot_caps.exceeded_200h_year') }}</span>
                         <el-icon class="text-rose-500"><Warning /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold" :class="summary.exceeded_200h_count > 0 ? 'text-rose-600' : 'text-slate-800 dark:text-slate-100'">
-                        {{ summary.exceeded_200h_count }} <span class="text-xs font-normal text-slate-400">người</span>
+                        {{ summary.exceeded_200h_count }} <span class="text-xs font-normal text-slate-400">{{ t('ot_caps.people_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-rose-500">Giới hạn luật định</div>
+                    <div class="mt-1 text-[11px] text-rose-500">{{ t('ot_caps.statutory_limit') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
                     <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
-                        <span>Vượt Trần 300h Đặc Thù</span>
+                        <span>{{ t('ot_caps.exceeded_300h_special') }}</span>
                         <el-icon class="text-rose-700"><CircleClose /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold" :class="summary.exceeded_300h_count > 0 ? 'text-rose-700' : 'text-slate-800 dark:text-slate-100'">
-                        {{ summary.exceeded_300h_count }} <span class="text-xs font-normal text-slate-400">người</span>
+                        {{ summary.exceeded_300h_count }} <span class="text-xs font-normal text-slate-400">{{ t('ot_caps.people_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-slate-400">Ngành nghề đặc biệt</div>
+                    <div class="mt-1 text-[11px] text-slate-400">{{ t('ot_caps.special_industries') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
                     <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
-                        <span>Vượt 40h Tháng Hiện Tại</span>
+                        <span>{{ t('ot_caps.exceeded_40h_current_month') }}</span>
                         <el-icon class="text-rose-500"><Warning /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold" :class="summary.breach_monthly_count > 0 ? 'text-rose-600' : 'text-slate-800 dark:text-slate-100'">
-                        {{ summary.breach_monthly_count }} <span class="text-xs font-normal text-slate-400">người</span>
+                        {{ summary.breach_monthly_count }} <span class="text-xs font-normal text-slate-400">{{ t('ot_caps.people_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-rose-500">Vi phạm Điều 107</div>
+                    <div class="mt-1 text-[11px] text-rose-500">{{ t('ot_caps.article_107_breach') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
                     <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
-                        <span>Cảnh Báo Chạm (35h-40h)</span>
+                        <span>{{ t('ot_caps.warning_35_40h') }}</span>
                         <el-icon class="text-amber-500"><TrendCharts /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-amber-600">
-                        {{ summary.warning_monthly_count }} <span class="text-xs font-normal text-slate-400">người</span>
+                        {{ summary.warning_monthly_count }} <span class="text-xs font-normal text-slate-400">{{ t('ot_caps.people_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-amber-600/80">Tiệm cận trần tháng</div>
+                    <div class="mt-1 text-[11px] text-amber-600/80">{{ t('ot_caps.approaching_monthly_cap') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
                     <div class="flex items-center justify-between text-slate-500 text-xs font-medium">
-                        <span>Tỷ Lệ Tuân Thủ</span>
+                        <span>{{ t('ot_caps.compliance_rate') }}</span>
                         <el-icon class="text-emerald-500"><CircleCheck /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-emerald-600">
                         {{ summary.compliance_rate }}%
                     </div>
-                    <div class="mt-1 text-[11px] text-emerald-600/80">Chỉ số BLLĐ</div>
+                    <div class="mt-1 text-[11px] text-emerald-600/80">{{ t('ot_caps.labor_code_index') }}</div>
                 </div>
             </div>
 
@@ -244,7 +250,7 @@ const getMonthCellStyle = (hours: number) => {
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="flex flex-wrap items-center gap-3">
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Năm:</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ t('ot_caps.filter_year') }}</span>
                             <el-select v-model="selectedYear" @change="handleYearChange" class="!w-28">
                                 <el-option :value="2024" label="2024" />
                                 <el-option :value="2025" label="2025" />
@@ -254,10 +260,10 @@ const getMonthCellStyle = (hours: number) => {
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Phòng ban:</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ t('ot_caps.filter_dept') }}</span>
                             <el-select
                                 v-model="selectedDepartment"
-                                placeholder="Tất cả phòng ban"
+                                :placeholder="t('ot_caps.all_departments')"
                                 clearable
                                 @change="applyFilters"
                                 class="!w-48"
@@ -272,11 +278,11 @@ const getMonthCellStyle = (hours: number) => {
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Trạng thái:</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ t('ot_caps.filter_status') }}</span>
                             <el-radio-group v-model="selectedWarningFilter" size="small" @change="applyFilters">
-                                <el-radio-button value="all">Tất cả</el-radio-button>
-                                <el-radio-button value="warning">Tiệm cận (35h-40h)</el-radio-button>
-                                <el-radio-button value="breached">Vi phạm trần</el-radio-button>
+                                <el-radio-button value="all">{{ t('ot_caps.filter_all') }}</el-radio-button>
+                                <el-radio-button value="warning">{{ t('ot_caps.filter_warning') }}</el-radio-button>
+                                <el-radio-button value="breached">{{ t('ot_caps.filter_breached') }}</el-radio-button>
                             </el-radio-group>
                         </div>
                     </div>
@@ -285,15 +291,15 @@ const getMonthCellStyle = (hours: number) => {
                     <div class="flex items-center gap-4 text-xs text-slate-500">
                         <div class="flex items-center gap-1.5">
                             <span class="inline-block h-2.5 w-2.5 rounded-full bg-slate-300"></span>
-                            <span>&le; 30h (An toàn)</span>
+                            <span>{{ t('ot_caps.legend_safe') }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-500"></span>
-                            <span>35h - 40h (Cảnh báo)</span>
+                            <span>{{ t('ot_caps.legend_warning') }}</span>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="inline-block h-2.5 w-2.5 rounded-full bg-rose-500"></span>
-                            <span>&gt; 40h (Vi phạm luật)</span>
+                            <span>{{ t('ot_caps.legend_breach') }}</span>
                         </div>
                     </div>
                 </div>
@@ -305,9 +311,9 @@ const getMonthCellStyle = (hours: number) => {
                     :data="accumulations"
                     stripe
                     style="width: 100%"
-                    empty-text="Chưa có dữ liệu làm thêm giờ cho năm này. Vui lòng bấm 'Đồng bộ lại Giờ OT'."
+                    :empty-text="t('ot_caps.empty_table')"
                 >
-                    <el-table-column label="Nhân sự" min-width="200" fixed="left">
+                    <el-table-column :label="t('ot_caps.col_employee')" min-width="200" fixed="left">
                         <template #default="{ row }">
                             <div class="flex items-center gap-2.5 py-1">
                                 <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-slate-700">
@@ -318,14 +324,14 @@ const getMonthCellStyle = (hours: number) => {
                                         {{ row.employee?.full_name }}
                                     </div>
                                     <div class="text-[11px] text-slate-400 font-mono">
-                                        {{ row.employee?.user_code }} • {{ row.employee?.current_timeline?.department?.name || 'Chưa rõ' }}
+                                        {{ row.employee?.user_code }} • {{ row.employee?.current_timeline?.department?.name || '-' }}
                                     </div>
                                 </div>
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Tổng OT Năm / Trần 200h" min-width="210">
+                    <el-table-column :label="t('ot_caps.col_total_ot_year')" min-width="210">
                         <template #default="{ row }">
                             <div class="space-y-1">
                                 <div class="flex justify-between items-center text-xs">
@@ -333,7 +339,7 @@ const getMonthCellStyle = (hours: number) => {
                                         {{ row.total_ot_hours_year }}h
                                     </span>
                                     <span class="text-[11px] text-slate-400">
-                                        {{ calculatePercentage(row.total_ot_hours_year) }}% của 200h
+                                        {{ calculatePercentage(row.total_ot_hours_year) }}% {{ t('ot_caps.of_200h') }}
                                     </span>
                                 </div>
                                 <el-progress
@@ -350,7 +356,7 @@ const getMonthCellStyle = (hours: number) => {
                     <el-table-column
                         v-for="m in monthKeys"
                         :key="m"
-                        :label="`T${m}`"
+                        :label="currentLang === 'en' ? `M${m}` : `T${m}`"
                         width="68"
                         align="center"
                     >
@@ -364,31 +370,31 @@ const getMonthCellStyle = (hours: number) => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Tuân thủ BLLĐ" width="150" align="center" fixed="right">
+                    <el-table-column :label="t('ot_caps.col_compliance')" width="150" align="center" fixed="right">
                         <template #default="{ row }">
                             <div v-if="row.is_exceeded_300h">
                                 <el-tag type="danger" effect="dark" size="small" class="font-bold">
-                                    VƯỢT TRẦN 300H
+                                    {{ t('ot_caps.badge_exceeded_300h') }}
                                 </el-tag>
                             </div>
                             <div v-else-if="row.is_exceeded_200h">
                                 <el-tag type="danger" effect="dark" size="small" class="font-bold">
-                                    VƯỢT TRẦN 200H
+                                    {{ t('ot_caps.badge_exceeded_200h') }}
                                 </el-tag>
                             </div>
                             <div v-else-if="Object.values(row.monthly_ot_json || {}).some((h: any) => Number(h) > 40.0)">
                                 <el-tag type="danger" effect="plain" size="small" class="font-semibold">
-                                    Vượt 40h tháng
+                                    {{ t('ot_caps.badge_exceeded_40h_month') }}
                                 </el-tag>
                             </div>
                             <div v-else-if="Object.values(row.monthly_ot_json || {}).some((h: any) => Number(h) >= 35.0)">
                                 <el-tag type="warning" effect="plain" size="small" class="font-semibold">
-                                    Tiệm cận 40h
+                                    {{ t('ot_caps.badge_warning_40h') }}
                                 </el-tag>
                             </div>
                             <div v-else>
                                 <el-tag type="success" effect="plain" size="small">
-                                    Chuẩn tuân thủ
+                                    {{ t('ot_caps.badge_compliant') }}
                                 </el-tag>
                             </div>
                         </template>

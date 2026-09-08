@@ -86,27 +86,27 @@ const getRoleBadgeColor = (role: string) => {
 
 <template>
     <el-config-provider :locale="currentElLocale">
-        <Head title="Đăng nhập Hệ thống" />
+        <Head :title="t('auth.sign_in_title')" />
 
         <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 transition-colors duration-200 relative overflow-hidden font-sans">
             <!-- Top Controls (Language & Theme) -->
             <div class="absolute top-6 right-6 flex items-center space-x-3 z-20">
                 <el-dropdown trigger="click" @command="(lang: SupportedLocale) => setLanguage(lang)">
                     <button class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-slate-200 dark:border-slate-800 shadow-xs">
-                        <span>{{ currentLang === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh' }}</span>
+                        <span>{{ currentLang === 'vi' ? t('header.vietnamese') : t('header.english') }}</span>
                         <el-icon :size="11" class="text-slate-400 ml-0.5"><ArrowDown /></el-icon>
                     </button>
                     <template #dropdown>
                         <el-dropdown-menu>
                             <el-dropdown-item command="vi">
                                 <div class="flex items-center justify-between w-full min-w-[110px]">
-                                    <span :class="currentLang === 'vi' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">Tiếng Việt</span>
+                                    <span :class="currentLang === 'vi' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">{{ t('header.vietnamese') }}</span>
                                     <el-icon v-if="currentLang === 'vi'" :size="14" class="text-indigo-600 dark:text-indigo-400 ml-2"><Check /></el-icon>
                                 </div>
                             </el-dropdown-item>
                             <el-dropdown-item command="en">
                                 <div class="flex items-center justify-between w-full min-w-[110px]">
-                                    <span :class="currentLang === 'en' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">Tiếng Anh</span>
+                                    <span :class="currentLang === 'en' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">{{ t('header.english') }}</span>
                                     <el-icon v-if="currentLang === 'en'" :size="14" class="text-indigo-600 dark:text-indigo-400 ml-2"><Check /></el-icon>
                                 </div>
                             </el-dropdown-item>
@@ -136,15 +136,15 @@ const getRoleBadgeColor = (role: string) => {
                                 SH
                             </div>
                             <div>
-                                <h1 class="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">Smart-HR Enterprise</h1>
-                                <p class="text-xs text-slate-400 font-medium">Hệ sinh thái Quản trị Nhân sự & Phân ca Thông minh</p>
+                                <h1 class="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">{{ t('auth.brand_title') }}</h1>
+                                <p class="text-xs text-slate-400 font-medium">{{ t('auth.brand_subtitle') }}</p>
                             </div>
                         </div>
 
                         <div class="mb-6">
-                            <h2 class="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Đăng nhập tài khoản</h2>
+                            <h2 class="text-xl font-bold text-slate-800 dark:text-white tracking-tight">{{ t('auth.sign_in_title') }}</h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Vui lòng nhập Email hoặc Mã nhân sự của bạn để tiếp tục
+                                {{ t('auth.sign_in_subtitle') }}
                             </p>
                         </div>
 
@@ -157,11 +157,11 @@ const getRoleBadgeColor = (role: string) => {
                         <form @submit.prevent="submit" class="space-y-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                    Email hoặc Mã Nhân sự
+                                    {{ t('auth.email_or_code') }}
                                 </label>
                                 <el-input
                                     v-model="form.email"
-                                    placeholder="admin@smarthr.vn hoặc EMP001"
+                                    :placeholder="t('auth.email_placeholder')"
                                     :prefix-icon="User"
                                     size="large"
                                     class="!rounded-xl"
@@ -171,13 +171,13 @@ const getRoleBadgeColor = (role: string) => {
 
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                    Mật khẩu bảo mật
+                                    {{ t('auth.password') }}
                                 </label>
                                 <el-input
                                     v-model="form.password"
                                     type="password"
                                     show-password
-                                    placeholder="••••••••"
+                                    :placeholder="t('auth.password_placeholder')"
                                     :prefix-icon="Lock"
                                     size="large"
                                     class="!rounded-xl"
@@ -186,9 +186,9 @@ const getRoleBadgeColor = (role: string) => {
 
                             <div class="flex items-center justify-between pt-1">
                                 <el-checkbox v-model="form.remember">
-                                    <span class="text-xs text-slate-600 dark:text-slate-400">Ghi nhớ phiên đăng nhập</span>
+                                    <span class="text-xs text-slate-600 dark:text-slate-400">{{ t('auth.remember_me') }}</span>
                                 </el-checkbox>
-                                <span class="text-xs text-slate-400">Mặc định: password</span>
+                                <span class="text-xs text-slate-400">{{ t('auth.default_password') }}</span>
                             </div>
 
                             <div class="pt-2">
@@ -199,15 +199,15 @@ const getRoleBadgeColor = (role: string) => {
                                     :loading="form.processing"
                                     class="w-full !bg-indigo-600 hover:!bg-indigo-700 !rounded-xl !h-12 !font-bold !text-sm !shadow-md shadow-indigo-200 dark:shadow-none"
                                 >
-                                    Đăng nhập hệ thống
+                                    {{ t('auth.sign_in_button') }}
                                 </el-button>
                             </div>
                         </form>
                     </div>
 
                     <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Tuân thủ Bộ luật Lao động 2019</span>
-                        <span>Mã hóa AES-256-GCM</span>
+                        <span>{{ t('auth.labor_code_compliant') }}</span>
+                        <span>{{ t('auth.aes_encrypted') }}</span>
                     </div>
                 </div>
 
@@ -217,11 +217,11 @@ const getRoleBadgeColor = (role: string) => {
                         <div class="flex items-center space-x-2 mb-4">
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                             <h3 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                                Tài khoản Thử nghiệm (Demo)
+                                {{ t('auth.demo_accounts_title') }}
                             </h3>
                         </div>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
-                            Bấm vào từng vai trò để hệ thống tự động đăng nhập và trải nghiệm phân quyền thực tế:
+                            {{ t('auth.demo_accounts_desc') }}
                         </p>
 
                         <div class="space-y-2.5">
@@ -243,14 +243,14 @@ const getRoleBadgeColor = (role: string) => {
                                     </div>
                                 </div>
                                 <span class="text-[10px] px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-300 font-semibold group-hover:bg-indigo-600 group-hover:text-white transition shrink-0 ml-2">
-                                    1-Click
+                                    {{ t('auth.one_click') }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 text-center">
-                        Hệ thống tự động đồng bộ vai trò & quyền hạn với giao diện.
+                        {{ t('auth.auto_sync_roles') }}
                     </div>
                 </div>
             </div>

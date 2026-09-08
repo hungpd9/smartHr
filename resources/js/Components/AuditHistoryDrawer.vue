@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 import { Clock, User, Monitor, Document, Refresh } from '@element-plus/icons-vue';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface AuditTrail {
     id: number;
@@ -29,14 +30,17 @@ const props = withDefaults(
         title?: string;
     }>(),
     {
-        title: 'Lịch sử Biến động & Nhật ký Kiểm toán',
         auditableId: null,
     }
 );
 
+const { t } = useThemeAndLocale();
+
 const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void;
 }>();
+
+const drawerTitle = computed(() => props.title || t('common.audit.drawer_title'));
 
 const loading = ref(false);
 const logs = ref<AuditTrail[]>([]);
@@ -53,7 +57,7 @@ const fetchAuditLogs = async () => {
         });
         logs.value = response.data.data || [];
     } catch (error) {
-        ElMessage.error('Không thể tải lịch sử kiểm toán.');
+        ElMessage.error(t('common.audit.load_error'));
     } finally {
         loading.value = false;
     }
@@ -112,21 +116,17 @@ const getActionTagType = (action: string): '' | 'success' | 'warning' | 'danger'
     }
 };
 
+const actionLabelKeys: Record<string, string> = {
+    CREATED: 'common.audit.action_created',
+    UPDATED: 'common.audit.action_updated',
+    DELETED: 'common.audit.action_deleted',
+    STATUS_CHANGED: 'common.audit.action_status_changed',
+    POLICY_VERSIONED: 'common.audit.action_policy_versioned',
+};
+
 const getActionLabel = (action: string): string => {
-    switch (action.toUpperCase()) {
-        case 'CREATED':
-            return 'Tạo mới';
-        case 'UPDATED':
-            return 'Chỉnh sửa';
-        case 'DELETED':
-            return 'Xóa bản ghi';
-        case 'STATUS_CHANGED':
-            return 'Đổi trạng thái';
-        case 'POLICY_VERSIONED':
-            return 'Tạo phiên bản mới';
-        default:
-            return action;
-    }
+    const key = actionLabelKeys[action.toUpperCase()];
+    return key ? t(key) : action;
 };
 
 // Tính toán các trường bị thay đổi giữa old và new
@@ -138,8 +138,8 @@ const getDiffKeys = (oldVal: Record<string, any> | null, newVal: Record<string, 
 };
 
 const formatValue = (val: any): string => {
-    if (val === null || val === undefined) return '(Trống)';
-    if (typeof val === 'boolean') return val ? 'Bật / Có' : 'Tắt / Không';
+    if (val === null || val === undefined) return t('common.audit.value_empty');
+    if (typeof val === 'boolean') return val ? t('common.audit.value_true') : t('common.audit.value_false');
     if (typeof val === 'object') return JSON.stringify(val);
     return String(val);
 };
@@ -152,7 +152,7 @@ const handleClose = () => {
 <template>
     <el-drawer
         :model-value="modelValue"
-        :title="title"
+        :title="drawerTitle"
         direction="rtl"
         size="640px"
         @close="handleClose"
@@ -161,16 +161,16 @@ const handleClose = () => {
             <div class="flex items-center justify-between pr-4">
                 <div class="flex items-center gap-2">
                     <el-icon class="text-primary text-lg"><Document /></el-icon>
-                    <span class="font-bold text-gray-800 dark:text-gray-100 text-base">{{ title }}</span>
+                    <span class="font-bold text-gray-800 dark:text-gray-100 text-base">{{ drawerTitle }}</span>
                 </div>
-                <el-button size="small" :icon="Refresh" circle :loading="loading" @click="fetchAuditLogs" title="Làm mới" />
+                <el-button size="small" :icon="Refresh" circle :loading="loading" @click="fetchAuditLogs" :title="$t('common.refresh')" />
             </div>
         </template>
 
         <div v-loading="loading" class="p-2 min-h-[300px]">
             <div v-if="logs.length === 0 && !loading" class="py-16 text-center text-gray-400">
                 <el-icon class="text-5xl mb-3"><Document /></el-icon>
-                <p>Chưa có ghi nhận nhật ký kiểm toán nào cho đối tượng này.</p>
+                <p>{{ $t('common.audit.empty') }}</p>
             </div>
 
             <el-timeline v-else class="pr-2">
@@ -192,7 +192,7 @@ const handleClose = () => {
                             </div>
                             <div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                                 <el-icon><User /></el-icon>
-                                <span class="font-medium">{{ log.user?.name ?? 'Hệ thống' }}</span>
+                                <span class="font-medium">{{ log.user?.name ?? $t('common.audit.system_user') }}</span>
                                 <span v-if="log.user?.role" class="text-gray-400 text-[11px]">({{ log.user.role }})</span>
                             </div>
                         </div>
@@ -200,7 +200,7 @@ const handleClose = () => {
                         <!-- Diff Viewer -->
                         <div v-if="log.action.toUpperCase() === 'UPDATED'" class="space-y-2">
                             <div class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                                Chi tiết biến động trường:
+                                {{ $t('common.audit.field_changes') }}
                             </div>
                             <div
                                 v-for="key in getDiffKeys(log.old_values, log.new_values)"
@@ -210,11 +210,11 @@ const handleClose = () => {
                                 <div class="font-mono font-medium text-gray-700 dark:text-gray-300 mb-1">{{ key }}</div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div class="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 p-1.5 rounded border border-red-100 dark:border-red-900/50">
-                                        <span class="block text-[10px] uppercase font-bold text-red-400 mb-0.5">Cũ:</span>
+                                        <span class="block text-[10px] uppercase font-bold text-red-400 mb-0.5">{{ $t('common.audit.old_value') }}</span>
                                         <span class="break-all">{{ formatValue(log.old_values?.[key]) }}</span>
                                     </div>
                                     <div class="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 p-1.5 rounded border border-emerald-100 dark:border-emerald-900/50">
-                                        <span class="block text-[10px] uppercase font-bold text-emerald-400 mb-0.5">Mới:</span>
+                                        <span class="block text-[10px] uppercase font-bold text-emerald-400 mb-0.5">{{ $t('common.audit.new_value') }}</span>
                                         <span class="break-all">{{ formatValue(log.new_values?.[key]) }}</span>
                                     </div>
                                 </div>
@@ -223,7 +223,7 @@ const handleClose = () => {
 
                         <!-- New Record Snapshot -->
                         <div v-else-if="log.action.toUpperCase() === 'CREATED' && log.new_values" class="text-xs">
-                            <div class="font-semibold text-gray-600 dark:text-gray-300 mb-1">Dữ liệu khởi tạo:</div>
+                            <div class="font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ $t('common.audit.initial_data') }}</div>
                             <div class="bg-gray-50 dark:bg-gray-900/60 p-2.5 rounded-lg border border-gray-100 dark:border-gray-800 space-y-1 font-mono text-[11px]">
                                 <div v-for="(val, k) in log.new_values" :key="k" class="flex justify-between py-0.5 border-b border-gray-100 dark:border-gray-800/50 last:border-0">
                                     <span class="text-gray-500">{{ k }}:</span>

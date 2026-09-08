@@ -5,6 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import AuditHistoryDrawer from '@/Components/AuditHistoryDrawer.vue';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import {
     Operation,
     Calendar,
@@ -204,6 +205,8 @@ const props = defineProps<{
 
 import { useSyncedTab } from '@/Composables/useNavigationHistory';
 
+const { t } = useThemeAndLocale();
+
 // Tự động nhận và đồng bộ tab với URL query và Browser History (Back/Forward)
 const activeTab = useSyncedTab('attendance', 'tab');
 
@@ -222,7 +225,7 @@ const handleCreateVersion = () => {
         onSuccess: () => {
             isCreateVersionDialogVisible.value = false;
             versionForm.reset();
-            ElMessage.success('Khởi tạo phiên bản quy chế mới thành công!');
+            ElMessage.success(t('policy.msg_version_create_success'));
         },
     });
 };
@@ -252,7 +255,7 @@ const handleSaveAttendanceConfig = () => {
     if (!props.activeVersion?.id) return;
     attendanceConfigForm.put(`/policies/attendance-config/${props.activeVersion.id}`, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success('Đã lưu cấu hình chu trình đóng công và quy chế kỷ luật thành công!'),
+        onSuccess: () => ElMessage.success(t('policy.msg_attendance_save_success')),
     });
 };
 
@@ -294,7 +297,7 @@ const handleSavePayrollConfig = () => {
     if (!props.activeVersion?.id) return;
     payrollForm.put(`/policies/payroll-config/${props.activeVersion.id}`, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success('Đã lưu cấu hình tiền lương, thuế và bảo hiểm thành công!'),
+        onSuccess: () => ElMessage.success(t('policy.msg_payroll_save_success')),
     });
 };
 
@@ -317,7 +320,7 @@ const handleAddChildPolicy = () => {
         onSuccess: () => {
             isChildPolicyDialogVisible.value = false;
             childPolicyForm.reset();
-            ElMessage.success('Thêm chính sách con nhỏ thành công!');
+            ElMessage.success(t('policy.msg_child_add_success'));
         },
     });
 };
@@ -325,7 +328,7 @@ const handleAddChildPolicy = () => {
 const handleToggleChildPolicyVisibility = (id: number) => {
     router.patch(`/policies/child-welfare/${id}/toggle`, {}, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success('Đã cập nhật trạng thái hiển thị chính sách.'),
+        onSuccess: () => ElMessage.success(t('policy.msg_child_toggle_success')),
     });
 };
 
@@ -364,23 +367,23 @@ const handleUpdateChildPolicy = () => {
         preserveScroll: true,
         onSuccess: () => {
             isEditChildPolicyDialogVisible.value = false;
-            ElMessage.success('Cập nhật chính sách con nhỏ thành công!');
+            ElMessage.success(t('policy.msg_child_update_success'));
         },
-        onError: () => ElMessage.error('Không thể cập nhật chính sách con nhỏ!'),
+        onError: () => ElMessage.error(t('policy.msg_child_update_error')),
     });
 };
 
 const handleDeleteChildPolicy = (id: number, name: string) => {
-    ElMessageBox.confirm(`Bạn có chắc chắn muốn xóa chính sách "${name}"?`, 'Xác nhận xóa', {
+    ElMessageBox.confirm(t('policy.child_delete_confirm_msg', { name }), t('policy.delete_confirm_title'), {
         type: 'warning',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy',
+        confirmButtonText: t('policy.btn_delete'),
+        cancelButtonText: t('common.cancel'),
         confirmButtonClass: 'el-button--danger',
     }).then(() => {
         router.delete(`/policies/child-welfare/${id}`, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã xóa chính sách con nhỏ.'),
-            onError: () => ElMessage.error('Không thể xóa chính sách này.'),
+            onSuccess: () => ElMessage.success(t('policy.msg_child_delete_success')),
+            onError: () => ElMessage.error(t('policy.msg_child_delete_error')),
         });
     }).catch(() => {});
 };
@@ -423,46 +426,46 @@ const handleSavePitBracket = () => {
             preserveScroll: true,
             onSuccess: () => {
                 isPitBracketDialogVisible.value = false;
-                ElMessage.success('Cập nhật bậc thuế thành công!');
+                ElMessage.success(t('policy.msg_pit_update_success'));
             },
-            onError: () => ElMessage.error('Không thể cập nhật bậc thuế!'),
+            onError: () => ElMessage.error(t('policy.msg_pit_update_error')),
         });
     } else {
         pitBracketForm.post(`/policies/pit-tax-brackets/${props.activeVersion.id}`, {
             preserveScroll: true,
             onSuccess: () => {
                 isPitBracketDialogVisible.value = false;
-                ElMessage.success('Thêm bậc thuế mới thành công!');
+                ElMessage.success(t('policy.msg_pit_create_success'));
             },
-            onError: () => ElMessage.error('Không thể thêm bậc thuế!'),
+            onError: () => ElMessage.error(t('policy.msg_pit_create_error')),
         });
     }
 };
 
 const handleDeletePitBracket = (id: number, tier: number) => {
-    ElMessageBox.confirm(`Bạn có chắc chắn muốn xóa Bậc ${tier}?`, 'Xác nhận xóa bậc thuế', {
+    ElMessageBox.confirm(t('policy.pit_delete_confirm_msg', { tier }), t('policy.pit_delete_confirm_title'), {
         type: 'warning',
-        confirmButtonText: 'Xóa bậc',
-        cancelButtonText: 'Hủy',
+        confirmButtonText: t('policy.pit_delete_confirm_btn'),
+        cancelButtonText: t('common.cancel'),
         confirmButtonClass: 'el-button--danger',
     }).then(() => {
         router.delete(`/policies/pit-tax-brackets/${id}`, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã xóa bậc thuế.'),
-            onError: () => ElMessage.error('Không thể xóa bậc thuế.'),
+            onSuccess: () => ElMessage.success(t('policy.msg_pit_delete_success')),
+            onError: () => ElMessage.error(t('policy.msg_pit_delete_error')),
         });
     }).catch(() => {});
 };
 
 const handleResetPitBrackets = () => {
-    ElMessageBox.confirm('Hệ thống sẽ thiết lập lại Biểu thuế TNCN 5 bậc chuẩn luật định 2026 cho phiên bản này. Bạn có muốn tiếp tục?', 'Khôi phục 5 bậc chuẩn 2026', {
+    ElMessageBox.confirm(t('policy.pit_reset_confirm_msg'), t('policy.pit_reset_confirm_title'), {
         type: 'info',
-        confirmButtonText: 'Khôi phục',
-        cancelButtonText: 'Hủy',
+        confirmButtonText: t('policy.pit_reset_confirm_btn'),
+        cancelButtonText: t('common.cancel'),
     }).then(() => {
         router.post(`/policies/pit-tax-brackets/${props.activeVersion.id}/reset-defaults`, {}, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã thiết lập lại Biểu thuế TNCN 5 bậc chuẩn năm 2026.'),
+            onSuccess: () => ElMessage.success(t('policy.msg_pit_reset_success')),
         });
     }).catch(() => {});
 };
@@ -517,7 +520,7 @@ const handleAddWelfareScheme = () => {
         onSuccess: () => {
             isWelfareDialogVisible.value = false;
             welfareForm.reset();
-            ElMessage.success('Thêm chế độ phúc lợi thành công!');
+            ElMessage.success(t('policy.msg_welfare_add_success'));
         },
     });
 };
@@ -551,28 +554,28 @@ const handleUpdateWelfareScheme = () => {
         preserveScroll: true,
         onSuccess: () => {
             isEditWelfareDialogVisible.value = false;
-            ElMessage.success('Cập nhật chế độ phúc lợi thành công!');
+            ElMessage.success(t('policy.msg_welfare_update_success'));
         },
-        onError: () => ElMessage.error('Không thể cập nhật chế độ phúc lợi!'),
+        onError: () => ElMessage.error(t('policy.msg_welfare_update_error')),
     });
 };
 
 const handleToggleWelfareScheme = (id: number) => {
     router.patch(`/policies/welfare-schemes/${id}/toggle`, {}, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success('Đã cập nhật trạng thái chế độ phúc lợi.'),
+        onSuccess: () => ElMessage.success(t('policy.msg_welfare_toggle_success')),
     });
 };
 
 const handleDeleteWelfareScheme = (id: number, name: string) => {
-    ElMessageBox.confirm(`Bạn có chắc chắn muốn xóa chế độ "${name}"?`, 'Xác nhận xóa', {
+    ElMessageBox.confirm(t('policy.welfare_delete_confirm_msg', { name }), t('policy.delete_confirm_title'), {
         type: 'warning',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy',
+        confirmButtonText: t('policy.btn_delete'),
+        cancelButtonText: t('common.cancel'),
     }).then(() => {
         router.delete(`/policies/welfare-schemes/${id}`, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã xóa chế độ phúc lợi.'),
+            onSuccess: () => ElMessage.success(t('policy.msg_welfare_delete_success')),
         });
     }).catch(() => {});
 };
@@ -611,7 +614,7 @@ const handleAddAllowance = () => {
         onSuccess: () => {
             isAllowanceDialogVisible.value = false;
             allowanceForm.reset();
-            ElMessage.success('Thêm danh mục phụ cấp thành công!');
+            ElMessage.success(t('policy.msg_allowance_add_success'));
         },
     });
 };
@@ -637,28 +640,28 @@ const handleUpdateAllowance = () => {
         preserveScroll: true,
         onSuccess: () => {
             isEditAllowanceDialogVisible.value = false;
-            ElMessage.success('Cập nhật khoản phụ cấp thành công!');
+            ElMessage.success(t('policy.msg_allowance_update_success'));
         },
-        onError: () => ElMessage.error('Không thể cập nhật phụ cấp!'),
+        onError: () => ElMessage.error(t('policy.msg_allowance_update_error')),
     });
 };
 
 const handleToggleAllowance = (id: number) => {
     router.patch(`/policies/allowances/${id}/toggle`, {}, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success('Đã cập nhật trạng thái hiển thị phụ cấp.'),
+        onSuccess: () => ElMessage.success(t('policy.msg_allowance_toggle_success')),
     });
 };
 
 const handleDeleteAllowance = (id: number, name: string) => {
-    ElMessageBox.confirm(`Bạn có chắc muốn xóa phụ cấp "${name}"?`, 'Xác nhận xóa', {
+    ElMessageBox.confirm(t('policy.allowance_delete_confirm_msg', { name }), t('policy.delete_confirm_title'), {
         type: 'warning',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy',
+        confirmButtonText: t('policy.btn_delete'),
+        cancelButtonText: t('common.cancel'),
     }).then(() => {
         router.delete(`/policies/allowances/${id}`, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã xóa khoản phụ cấp.'),
+            onSuccess: () => ElMessage.success(t('policy.msg_allowance_delete_success')),
         });
     }).catch(() => {});
 };
@@ -699,7 +702,7 @@ const runLatePenaltyTest = async () => {
         });
         lateTest.value.result = res.data.result;
     } catch (e: any) {
-        ElMessage.error(e.response?.data?.message || 'Có lỗi khi chạy thử nghiệm.');
+        ElMessage.error(e.response?.data?.message || t('policy.msg_test_error'));
     } finally {
         lateTest.value.loading = false;
     }
@@ -720,7 +723,7 @@ const runPitTaxTest = async () => {
         });
         taxTest.value.result = res.data.result;
     } catch (e: any) {
-        ElMessage.error(e.response?.data?.message || 'Có lỗi khi chạy tính thuế.');
+        ElMessage.error(e.response?.data?.message || t('policy.msg_test_tax_error'));
     } finally {
         taxTest.value.loading = false;
     }
@@ -728,13 +731,13 @@ const runPitTaxTest = async () => {
 
 // Helpers
 const formatVND = (value: number | string | null | undefined) => {
-    if (value === null || value === undefined || value === '') return 'Không giới hạn';
+    if (value === null || value === undefined || value === '') return t('policy.unlimited');
     const num = typeof value === 'string' ? parseFloat(value) : value;
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 };
 
 const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Vô thời hạn (Đang áp dụng)';
+    if (!dateStr) return t('policy.indefinite');
     const d = new Date(dateStr);
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 };
@@ -742,7 +745,7 @@ const formatDate = (dateStr: string | null) => {
 
 <template>
     <AppLayout>
-        <Head title="Trung tâm Cấu hình Quy chế & Hệ thống - Smart-HR" />
+        <Head :title="t('policy.doc_title')" />
 
         <div class="space-y-6">
             <!-- Header Banner -->
@@ -752,23 +755,23 @@ const formatDate = (dateStr: string | null) => {
                         <div class="flex items-center gap-2.5 flex-wrap">
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
                                 <Cpu class="w-3.5 h-3.5" />
-                                Zero-Hardcode Unified Policy & Configuration Engine
+                                {{ $t('policy.engine_badge') }}
                             </span>
                             <span v-if="activeVersion?.is_active" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Đang có hiệu lực
+                                {{ $t('policy.active_badge') }}
                             </span>
                             <span v-if="isLocked" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                                 <el-icon><Lock /></el-icon>
-                                Đã khóa Bất biến Lịch sử
+                                {{ $t('policy.locked_badge') }}
                             </span>
                         </div>
                         <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-                            {{ activeVersion?.name || 'Quy chế Quản trị Hệ thống' }}
+                            {{ activeVersion?.name || $t('policy.fallback_policy_name') }}
                         </h1>
                         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                            Mã phiên bản: <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">{{ activeVersion?.code }}</span> • 
-                            Hiệu lực: <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatDate(activeVersion?.effective_from) }}</span> đến <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatDate(activeVersion?.effective_to) }}</span>
+                            {{ $t('policy.version_code_label') }} <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">{{ activeVersion?.code }}</span> •
+                            {{ $t('policy.effective_label') }} <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatDate(activeVersion?.effective_from) }}</span> {{ $t('policy.to_label') }} <span class="font-medium text-slate-700 dark:text-slate-300">{{ formatDate(activeVersion?.effective_to) }}</span>
                         </p>
                     </div>
 
@@ -776,7 +779,7 @@ const formatDate = (dateStr: string | null) => {
                     <div class="flex items-center gap-3 flex-wrap">
                         <el-select
                             :model-value="activeVersion?.id"
-                            placeholder="Chọn phiên bản quy chế"
+                            :placeholder="$t('policy.select_version_placeholder')"
                             class="w-64"
                             @change="handleSelectVersion"
                         >
@@ -791,9 +794,9 @@ const formatDate = (dateStr: string | null) => {
                         <el-button
                             size="default"
                             :icon="Clock"
-                            @click="openAuditDrawer('App\\Modules\\PolicyEngine\\Models\\PolicyVersion', activeVersion?.id, 'Nhật ký Kiểm toán Quy chế: ' + (activeVersion?.name || ''))"
+                            @click="openAuditDrawer('App\\Modules\\PolicyEngine\\Models\\PolicyVersion', activeVersion?.id, $t('policy.audit_title_prefix') + ' ' + (activeVersion?.name || ''))"
                         >
-                            Lịch sử Kiểm toán
+                            {{ $t('policy.btn_audit_history') }}
                         </el-button>
 
                         <el-button
@@ -802,7 +805,7 @@ const formatDate = (dateStr: string | null) => {
                             @click="isCreateVersionDialogVisible = true"
                             class="!rounded-xl shadow-xs"
                         >
-                            Tạo phiên bản mới
+                            {{ $t('policy.btn_create_version') }}
                         </el-button>
                     </div>
                 </div>
@@ -811,8 +814,8 @@ const formatDate = (dateStr: string | null) => {
                 <div v-if="isLocked" class="mt-4 p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
                     <el-icon class="text-amber-600 text-base mt-0.5 shrink-0"><Lock /></el-icon>
                     <div>
-                        <span class="font-bold">Bảo vệ Toàn vẹn Dữ liệu Quá khứ:</span>
-                        Phiên bản quy chế này đã áp dụng cho các kỳ bảng công hoặc kỳ chi trả lương đã chốt. Để đảm bảo dữ liệu quá khứ không bị sai lệch, hệ thống đã khóa chỉnh sửa trực tiếp. Để áp dụng chính sách mới, vui lòng nhấn <strong>"Tạo phiên bản mới (Effective Dating)"</strong> với ngày hiệu lực kế tiếp.
+                        <span class="font-bold">{{ $t('policy.locked_alert_title') }}</span>
+                        {{ $t('policy.locked_alert_body_prefix') }} <strong>{{ $t('policy.locked_alert_cta') }}</strong> {{ $t('policy.locked_alert_body_suffix') }}
                     </div>
                 </div>
             </div>
@@ -821,11 +824,11 @@ const formatDate = (dateStr: string | null) => {
             <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
                 <el-tabs v-model="activeTab" class="demo-tabs">
                     <!-- Tab 1: Chấm công & Nấc phạt -->
-                    <el-tab-pane label="Chấm công & Kỷ luật" name="attendance">
+                    <el-tab-pane :label="$t('policy.tab_attendance')" name="attendance">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Clock class="w-4 h-4" />
-                                <span>Chấm công & Kỷ luật</span>
+                                <span>{{ $t('policy.tab_attendance') }}</span>
                             </span>
                         </template>
 
@@ -833,35 +836,35 @@ const formatDate = (dateStr: string | null) => {
                             <!-- Metrics Cards -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Miễn trừ Muộn / Sớm</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('policy.metric_grace_title') }}</div>
                                     <div class="text-lg font-bold text-slate-800 dark:text-white mt-1">
-                                        {{ activeVersion?.attendance_config?.grace_period_late_minutes || 0 }} phút
+                                        {{ $t('policy.metric_grace_value', { value: activeVersion?.attendance_config?.grace_period_late_minutes || 0 }) }}
                                     </div>
-                                    <div class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">Không bị phạt nếu đến trong biên độ</div>
+                                    <div class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">{{ $t('policy.metric_grace_desc') }}</div>
                                 </div>
 
                                 <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Nghỉ giữa 2 ca liên tiếp</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('policy.metric_rest_title') }}</div>
                                     <div class="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-                                        {{ activeVersion?.attendance_config?.min_rest_hours_between_shifts || 12 }} giờ
+                                        {{ $t('policy.metric_rest_value', { value: activeVersion?.attendance_config?.min_rest_hours_between_shifts || 12 }) }}
                                     </div>
-                                    <div class="text-[11px] text-slate-400 mt-0.5">Bắt buộc theo Điều 110 BLLĐ 2019</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">{{ $t('policy.metric_rest_desc') }}</div>
                                 </div>
 
                                 <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Nghỉ hàng tuần liên tục</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('policy.metric_weekly_rest_title') }}</div>
                                     <div class="text-lg font-bold text-slate-800 dark:text-white mt-1">
-                                        {{ activeVersion?.attendance_config?.min_weekly_rest_hours || 24 }} giờ
+                                        {{ $t('policy.metric_weekly_rest_value', { value: activeVersion?.attendance_config?.min_weekly_rest_hours || 24 }) }}
                                     </div>
-                                    <div class="text-[11px] text-slate-400 mt-0.5">Bắt buộc theo Điều 111 BLLĐ 2019</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">{{ $t('policy.metric_weekly_rest_desc') }}</div>
                                 </div>
 
                                 <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Giờ làm việc chuẩn tuần</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('policy.metric_weekly_hours_title') }}</div>
                                     <div class="text-lg font-bold text-slate-800 dark:text-white mt-1">
-                                        {{ activeVersion?.attendance_config?.max_weekly_standard_hours || 48 }} giờ
+                                        {{ $t('policy.metric_weekly_hours_value', { value: activeVersion?.attendance_config?.max_weekly_standard_hours || 48 }) }}
                                     </div>
-                                    <div class="text-[11px] text-slate-400 mt-0.5">Giới hạn tối đa Điều 105 BLLĐ</div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">{{ $t('policy.metric_weekly_hours_desc') }}</div>
                                 </div>
                             </div>
 
@@ -871,9 +874,9 @@ const formatDate = (dateStr: string | null) => {
                                     <div class="flex items-center justify-between mb-3">
                                         <h3 class="font-semibold text-slate-800 dark:text-white text-sm flex items-center gap-1.5">
                                             <Document class="w-4 h-4 text-indigo-600" />
-                                            Biểu nấc phạt theo số phút vi phạm
+                                            {{ $t('policy.penalty_table_title') }}
                                         </h3>
-                                        <span class="text-xs text-slate-400">Động từ DB</span>
+                                        <span class="text-xs text-slate-400">{{ $t('policy.penalty_table_sub') }}</span>
                                     </div>
                                     <el-table
                                         :data="activeVersion?.attendance_config?.penalty_tiers_json || []"
@@ -881,15 +884,15 @@ const formatDate = (dateStr: string | null) => {
                                         style="width: 100%"
                                         size="small"
                                     >
-                                        <el-table-column label="Từ (phút)" prop="min" width="90">
+                                        <el-table-column :label="$t('policy.col_penalty_from')" prop="min" width="90">
                                             <template #default="{ row }"><span class="font-mono">{{ row.min }}p</span></template>
                                         </el-table-column>
-                                        <el-table-column label="Đến (phút)" prop="max" width="90">
+                                        <el-table-column :label="$t('policy.col_penalty_to')" prop="max" width="90">
                                             <template #default="{ row }">
-                                                <span class="font-mono">{{ row.max ? row.max + 'p' : 'Trở lên' }}</span>
+                                                <span class="font-mono">{{ row.max ? row.max + 'p' : $t('policy.col_penalty_upward') }}</span>
                                             </template>
                                         </el-table-column>
-                                        <el-table-column label="Mức phạt (VNĐ)" prop="fine">
+                                        <el-table-column :label="$t('policy.col_penalty_fine')" prop="fine">
                                             <template #default="{ row }">
                                                 <span class="font-semibold text-rose-600 dark:text-rose-400">{{ formatVND(row.fine) }}</span>
                                             </template>
@@ -901,9 +904,9 @@ const formatDate = (dateStr: string | null) => {
                                     <div class="flex items-center justify-between mb-3">
                                         <h3 class="font-semibold text-slate-800 dark:text-white text-sm flex items-center gap-1.5">
                                             <Operation class="w-4 h-4 text-indigo-600" />
-                                            Hệ số lũy tiến phạt theo tần suất trong tháng
+                                            {{ $t('policy.frequency_table_title') }}
                                         </h3>
-                                        <span class="text-xs text-slate-400">Nhân hệ số vi phạm</span>
+                                        <span class="text-xs text-slate-400">{{ $t('policy.frequency_table_sub') }}</span>
                                     </div>
                                     <el-table
                                         :data="activeVersion?.attendance_config?.frequency_penalty_json || []"
@@ -911,12 +914,12 @@ const formatDate = (dateStr: string | null) => {
                                         style="width: 100%"
                                         size="small"
                                     >
-                                        <el-table-column label="Số lần vi phạm" prop="count">
+                                        <el-table-column :label="$t('policy.col_frequency_count')" prop="count">
                                             <template #default="{ row }">
-                                                <span>Từ lần thứ <strong>{{ row.count }}</strong> trở đi</span>
+                                                <span>{{ $t('policy.frequency_from_x', { count: row.count }) }}</span>
                                             </template>
                                         </el-table-column>
-                                        <el-table-column label="Hệ số nhân" prop="multiplier" width="120">
+                                        <el-table-column :label="$t('policy.col_frequency_multiplier')" prop="multiplier" width="120">
                                             <template #default="{ row }">
                                                 <el-tag type="warning" size="small" round effect="plain">
                                                     {{ row.multiplier }}x
@@ -936,11 +939,11 @@ const formatDate = (dateStr: string | null) => {
                                                 <Calendar class="w-5 h-5" />
                                             </span>
                                             <h3 class="text-base font-bold text-slate-800 dark:text-white">
-                                                Chu Trình Đóng Công & Tự Động Gửi Bảng Công (Monthly Lifecycle)
+                                                {{ $t('policy.lifecycle_title') }}
                                             </h3>
                                         </div>
                                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            Cấu hình các mốc ngày trong chu trình chốt công, gửi duyệt và chi trả lương hàng tháng (Quy tắc Không Hardcode).
+                                            {{ $t('policy.lifecycle_desc') }}
                                         </p>
                                     </div>
 
@@ -951,7 +954,7 @@ const formatDate = (dateStr: string | null) => {
                                         @click="handleSaveAttendanceConfig"
                                     >
                                         <el-icon class="mr-1.5"><Check /></el-icon>
-                                        Lưu cấu hình chu trình
+                                        {{ $t('policy.btn_save_lifecycle') }}
                                     </el-button>
                                 </div>
 
@@ -959,61 +962,61 @@ const formatDate = (dateStr: string | null) => {
                                 <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                                     <div class="p-3 rounded-xl border border-sky-200/80 dark:border-sky-900/60 bg-sky-50/50 dark:bg-sky-950/30">
                                         <div class="flex items-center justify-between text-xs font-semibold text-sky-700 dark:text-sky-300">
-                                            <span>Mốc 1: Rà soát</span>
-                                            <span class="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900 text-[10px]">Ngày 1 - {{ attendanceConfigForm.emp_review_deadline_day }}</span>
+                                            <span>{{ $t('policy.milestone_1_title') }}</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900 text-[10px]">{{ $t('policy.milestone_1_day', { day: attendanceConfigForm.emp_review_deadline_day }) }}</span>
                                         </div>
                                         <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                            Nhân viên kiểm tra công, nộp bổ sung đơn nghỉ, OT, sinh lý...
+                                            {{ $t('policy.milestone_1_desc') }}
                                         </p>
                                     </div>
 
                                     <div class="p-3 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/30">
                                         <div class="flex items-center justify-between text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                                            <span>Mốc 2: Tự động gửi</span>
-                                            <span class="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-[10px]">Ngày {{ attendanceConfigForm.auto_submit_day }}</span>
+                                            <span>{{ $t('policy.milestone_2_title') }}</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900 text-[10px]">{{ $t('policy.milestone_2_day', { day: attendanceConfigForm.auto_submit_day }) }}</span>
                                         </div>
                                         <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                            Hệ thống tự động chốt & gửi bảng công lên Quản lý nếu chưa nộp.
+                                            {{ $t('policy.milestone_2_desc') }}
                                         </p>
                                     </div>
 
                                     <div class="p-3 rounded-xl border border-amber-200/80 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30">
                                         <div class="flex items-center justify-between text-xs font-semibold text-amber-700 dark:text-amber-300">
-                                            <span>Mốc 3: Quản lý duyệt</span>
-                                            <span class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-[10px]">Đến ngày {{ attendanceConfigForm.manager_approval_deadline_day }}</span>
+                                            <span>{{ $t('policy.milestone_3_title') }}</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900 text-[10px]">{{ $t('policy.milestone_3_day', { day: attendanceConfigForm.manager_approval_deadline_day }) }}</span>
                                         </div>
                                         <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                            Quản lý trực tiếp duyệt công, duyệt đơn hoặc từ chối giải trình.
+                                            {{ $t('policy.milestone_3_desc') }}
                                         </p>
                                     </div>
 
                                     <div class="p-3 rounded-xl border border-purple-200/80 dark:border-purple-900/60 bg-purple-50/50 dark:bg-purple-950/30">
                                         <div class="flex items-center justify-between text-xs font-semibold text-purple-700 dark:text-purple-300">
-                                            <span>Mốc 4: Khối rà soát</span>
-                                            <span class="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-[10px]">Đến ngày {{ attendanceConfigForm.higher_manager_deadline_day }}</span>
+                                            <span>{{ $t('policy.milestone_4_title') }}</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900 text-[10px]">{{ $t('policy.milestone_4_day', { day: attendanceConfigForm.higher_manager_deadline_day }) }}</span>
                                         </div>
                                         <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                            Lãnh đạo khối / Quản lý cấp cao thẩm định toàn bộ bộ phận.
+                                            {{ $t('policy.milestone_4_desc') }}
                                         </p>
                                     </div>
 
                                     <div class="p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30">
                                         <div class="flex items-center justify-between text-xs font-semibold text-rose-700 dark:text-rose-300">
-                                            <span>Mốc 5: HR Khóa công</span>
-                                            <span class="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900 text-[10px]">Ngày {{ attendanceConfigForm.hr_lock_deadline_day }}</span>
+                                            <span>{{ $t('policy.milestone_5_title') }}</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900 text-[10px]">{{ $t('policy.milestone_5_day', { day: attendanceConfigForm.hr_lock_deadline_day }) }}</span>
                                         </div>
                                         <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                            Trưởng phòng HR / Giám đốc chốt công và khóa bất biến kỳ công.
+                                            {{ $t('policy.milestone_5_desc') }}
                                         </p>
                                     </div>
 
                                     <div class="p-3 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/30">
                                         <div class="flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                                            <span>Mốc 6: Trả lương</span>
-                                            <span class="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-[10px]">Ngày {{ attendanceConfigForm.payroll_payment_day }}</span>
+                                            <span>{{ $t('policy.milestone_6_title') }}</span>
+                                            <span class="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-[10px]">{{ $t('policy.milestone_6_day', { day: attendanceConfigForm.payroll_payment_day }) }}</span>
                                         </div>
                                         <p class="text-[11px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                            Kế toán quyết toán lương và giải ngân chi trả cho người lao động.
+                                            {{ $t('policy.milestone_6_desc') }}
                                         </p>
                                     </div>
                                 </div>
@@ -1022,8 +1025,8 @@ const formatDate = (dateStr: string | null) => {
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                                     <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60">
                                         <div>
-                                            <div class="text-xs font-semibold text-slate-800 dark:text-white">Tự động gửi bảng công tháng</div>
-                                            <div class="text-[11px] text-slate-400 mt-0.5">Tự động nộp công nếu nhân viên quên gửi</div>
+                                            <div class="text-xs font-semibold text-slate-800 dark:text-white">{{ $t('policy.label_auto_submit_enable') }}</div>
+                                            <div class="text-[11px] text-slate-400 mt-0.5">{{ $t('policy.label_auto_submit_enable_hint') }}</div>
                                         </div>
                                         <el-switch
                                             v-model="attendanceConfigForm.enable_auto_submit_timesheet"
@@ -1033,7 +1036,7 @@ const formatDate = (dateStr: string | null) => {
                                     </div>
 
                                     <div class="space-y-1.5">
-                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót nhân viên rà soát & nộp đơn (Ngày):</label>
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">{{ $t('policy.label_emp_review_deadline') }}</label>
                                         <el-input-number
                                             v-model="attendanceConfigForm.emp_review_deadline_day"
                                             :min="1"
@@ -1041,11 +1044,11 @@ const formatDate = (dateStr: string | null) => {
                                             class="w-full"
                                             :disabled="!canEdit || isLocked"
                                         />
-                                        <div class="text-[11px] text-slate-400">Khoảng thời gian cho phép nhân viên nộp bổ sung đơn từ (Mặc định: Ngày 3)</div>
+                                        <div class="text-[11px] text-slate-400">{{ $t('policy.label_emp_review_deadline_hint') }}</div>
                                     </div>
 
                                     <div class="space-y-1.5">
-                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Ngày hệ thống tự động gửi bảng công:</label>
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">{{ $t('policy.label_auto_submit_day') }}</label>
                                         <el-input-number
                                             v-model="attendanceConfigForm.auto_submit_day"
                                             :min="2"
@@ -1053,11 +1056,11 @@ const formatDate = (dateStr: string | null) => {
                                             class="w-full"
                                             :disabled="!canEdit || isLocked"
                                         />
-                                        <div class="text-[11px] text-slate-400">Đến ngày này, các bảng công chưa nộp sẽ tự động submit (Mặc định: Ngày 4)</div>
+                                        <div class="text-[11px] text-slate-400">{{ $t('policy.label_auto_submit_day_hint') }}</div>
                                     </div>
 
                                     <div class="space-y-1.5">
-                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót Quản lý trực tiếp duyệt (Ngày):</label>
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">{{ $t('policy.label_manager_deadline') }}</label>
                                         <el-input-number
                                             v-model="attendanceConfigForm.manager_approval_deadline_day"
                                             :min="2"
@@ -1065,11 +1068,11 @@ const formatDate = (dateStr: string | null) => {
                                             class="w-full"
                                             :disabled="!canEdit || isLocked"
                                         />
-                                        <div class="text-[11px] text-slate-400">Quản lý trực tiếp duyệt hoặc reject yêu cầu giải trình (Mặc định: Ngày 5)</div>
+                                        <div class="text-[11px] text-slate-400">{{ $t('policy.label_manager_deadline_hint') }}</div>
                                     </div>
 
                                     <div class="space-y-1.5">
-                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót Quản lý cấp cao / Khối rà soát (Ngày):</label>
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">{{ $t('policy.label_higher_manager_deadline') }}</label>
                                         <el-input-number
                                             v-model="attendanceConfigForm.higher_manager_deadline_day"
                                             :min="3"
@@ -1077,11 +1080,11 @@ const formatDate = (dateStr: string | null) => {
                                             class="w-full"
                                             :disabled="!canEdit || isLocked"
                                         />
-                                        <div class="text-[11px] text-slate-400">Lãnh đạo bộ phận/khối rà soát công (Mặc định: Ngày 6)</div>
+                                        <div class="text-[11px] text-slate-400">{{ $t('policy.label_higher_manager_deadline_hint') }}</div>
                                     </div>
 
                                     <div class="space-y-1.5">
-                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">Hạn chót HR chốt & Khóa bảng công (Ngày):</label>
+                                        <label class="text-xs font-medium text-slate-700 dark:text-slate-300">{{ $t('policy.label_hr_lock_deadline') }}</label>
                                         <el-input-number
                                             v-model="attendanceConfigForm.hr_lock_deadline_day"
                                             :min="4"
@@ -1089,27 +1092,27 @@ const formatDate = (dateStr: string | null) => {
                                             class="w-full"
                                             :disabled="!canEdit || isLocked"
                                         />
-                                        <div class="text-[11px] text-slate-400">Trưởng phòng HR chốt công và khóa bất biến (Mặc định: Ngày 7)</div>
+                                        <div class="text-[11px] text-slate-400">{{ $t('policy.label_hr_lock_deadline_hint') }}</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </el-tab-pane>
 
-                    <!-- Tab 2: Lương, Thuế & Bảo hiểm (Payroll & Insurances - Chuẩn theo timekeeper2) -->
-                    <el-tab-pane label="Lương, Thuế & Bảo hiểm" name="payroll">
+                    <!-- Tab 2: Lương, Thuế & Bảo hiểm -->
+                    <el-tab-pane :label="$t('policy.tab_payroll')" name="payroll">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Wallet class="w-4 h-4" />
-                                <span>Lương, Thuế & Bảo hiểm</span>
+                                <span>{{ $t('policy.tab_payroll') }}</span>
                             </span>
                         </template>
 
                         <div class="space-y-6 pt-2">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-base font-bold text-slate-800 dark:text-white">Cấu hình Tiền lương, Thuế TNCN & Mức trích nộp Bảo hiểm</h3>
-                                    <p class="text-xs text-slate-400">Tham số cốt lõi làm tiền đề tính toán công lương cho từng ngày làm việc theo luật hiện hành</p>
+                                    <h3 class="text-base font-bold text-slate-800 dark:text-white">{{ $t('policy.payroll_section_title') }}</h3>
+                                    <p class="text-xs text-slate-400">{{ $t('policy.payroll_section_desc') }}</p>
                                 </div>
                                 <el-button
                                     v-if="canEditPayroll"
@@ -1118,7 +1121,7 @@ const formatDate = (dateStr: string | null) => {
                                     @click="handleSavePayrollConfig"
                                     class="!rounded-xl shadow-xs"
                                 >
-                                    Lưu Cấu hình Lương
+                                    {{ $t('policy.btn_save_payroll') }}
                                 </el-button>
                             </div>
 
@@ -1126,33 +1129,33 @@ const formatDate = (dateStr: string | null) => {
                                 <!-- Nhóm 1: Ngày công & Chi trả -->
                                 <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
-                                        <Clock class="w-4 h-4" /> Định mức Ngày công & Chi trả
+                                        <Clock class="w-4 h-4" /> {{ $t('policy.group_workdays_title') }}
                                     </h4>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chế độ Ngày công chuẩn</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_std_days_mode') }}</label>
                                         <el-select v-model="payrollForm.standard_working_days_mode" class="w-full" :disabled="!canEditPayroll">
-                                            <el-option label="Cố định (Fixed Working Days)" value="FIXED" />
-                                            <el-option label="Theo lịch thực tế (Trừ T7/CN)" value="CALENDAR_BASED" />
+                                            <el-option :label="$t('policy.mode_fixed')" value="FIXED" />
+                                            <el-option :label="$t('policy.mode_calendar')" value="CALENDAR_BASED" />
                                         </el-select>
                                     </div>
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Công chuẩn (ngày)</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_std_days') }}</label>
                                             <el-input-number v-model="payrollForm.fixed_standard_working_days" :min="1" :max="31" :step="0.5" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giờ chuẩn/ngày</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_std_hours') }}</label>
                                             <el-input-number v-model="payrollForm.standard_working_hours_per_day" :min="1" :max="12" :step="0.5" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày trả lương</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_payment_day') }}</label>
                                             <el-input-number v-model="payrollForm.payment_day" :min="1" :max="31" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                         <div class="flex items-center pt-5">
                                             <el-checkbox v-model="payrollForm.pay_early_on_holiday_weekend" :disabled="!canEditPayroll">
-                                                <span class="text-xs text-slate-600 dark:text-slate-300">Trả sớm nếu nghỉ</span>
+                                                <span class="text-xs text-slate-600 dark:text-slate-300">{{ $t('policy.label_pay_early') }}</span>
                                             </el-checkbox>
                                         </div>
                                     </div>
@@ -1161,54 +1164,54 @@ const formatDate = (dateStr: string | null) => {
                                 <!-- Nhóm 2: Giảm trừ gia cảnh & Lương cơ sở -->
                                 <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                        <Money class="w-4 h-4" /> Giảm trừ Thuế & Lương Cơ sở
+                                        <Money class="w-4 h-4" /> {{ $t('policy.group_deduction_title') }}
                                     </h4>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giảm trừ gia cảnh bản thân (VNĐ)</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_personal_deduction') }}</label>
                                         <el-input-number v-model="payrollForm.personal_deduction" :step="1000000" :min="0" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giảm trừ người phụ thuộc (VNĐ/người)</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_dependent_deduction') }}</label>
                                         <el-input-number v-model="payrollForm.dependent_deduction" :step="500000" :min="0" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Lương cơ sở (VNĐ)</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_base_salary') }}</label>
                                             <el-input-number v-model="payrollForm.base_salary" :step="100000" :min="0" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trợ cấp con nhỏ (đ/th)</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_child_allowance') }}</label>
                                             <el-input-number v-model="payrollForm.default_child_allowance" :step="50000" :min="0" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Nhóm 3: Thuế Thử việc, Lương Thử việc & Trần Bảo hiểm (Zero-hardcode) -->
+                                <!-- Nhóm 3: Thuế Thử việc, Lương Thử việc & Trần Bảo hiểm -->
                                 <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                                        <User class="w-4 h-4" /> Thử việc & Trần Bảo hiểm Bắt buộc
+                                        <User class="w-4 h-4" /> {{ $t('policy.group_probation_title') }}
                                     </h4>
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thuế TNCN thử việc (%)</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_probation_pit_rate') }}</label>
                                             <el-input-number v-model="payrollForm.probation_pit_rate" :step="1" :min="0" :max="100" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngưỡng khấu trừ (VNĐ)</label>
+                                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_probation_threshold') }}</label>
                                             <el-input-number v-model="payrollForm.probation_pit_threshold" :step="500000" :min="0" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tỷ lệ hưởng lương thử việc (% Điều 26 BLLĐ)</label>
+                                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_probation_salary') }}</label>
                                         <el-input-number v-model="payrollForm.probation_salary_percentage" :step="1" :min="85" :max="100" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Trần lương BHXH (VNĐ)</label>
+                                            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_max_bhxh') }}</label>
                                             <el-input-number v-model="payrollForm.max_salary_bhxh" :step="1000000" :min="0" size="small" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">Trần lương BHTN (VNĐ)</label>
+                                            <label class="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('policy.label_max_bhtn') }}</label>
                                             <el-input-number v-model="payrollForm.max_salary_bhtn" :step="1000000" :min="0" size="small" class="w-full" :disabled="!canEditPayroll" />
                                         </div>
                                     </div>
@@ -1217,10 +1220,10 @@ const formatDate = (dateStr: string | null) => {
                                 <!-- Nhóm 4: Tỷ lệ Trích nộp Bảo hiểm -->
                                 <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                                        <Document class="w-4 h-4" /> Tỷ lệ Trích nộp Bảo hiểm (%)
+                                        <Document class="w-4 h-4" /> {{ $t('policy.group_insurance_title') }}
                                     </h4>
                                     <div class="space-y-2">
-                                        <div class="text-[11px] font-bold text-slate-500">Doanh nghiệp đóng (Tổng 21.5%):</div>
+                                        <div class="text-[11px] font-bold text-slate-500">{{ $t('policy.employer_pays') }}</div>
                                         <div class="grid grid-cols-3 gap-2">
                                             <div>
                                                 <span class="text-[10px] text-slate-400">BHXH (%)</span>
@@ -1237,7 +1240,7 @@ const formatDate = (dateStr: string | null) => {
                                         </div>
                                     </div>
                                     <div class="space-y-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                                        <div class="text-[11px] font-bold text-slate-500">Người lao động đóng (Tổng 10.5%):</div>
+                                        <div class="text-[11px] font-bold text-slate-500">{{ $t('policy.employee_pays') }}</div>
                                         <div class="grid grid-cols-3 gap-2">
                                             <div>
                                                 <span class="text-[10px] text-slate-400">BHXH (%)</span>
@@ -1260,72 +1263,72 @@ const formatDate = (dateStr: string | null) => {
                             <div class="p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-4">
                                 <div class="flex items-center justify-between">
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                                        <Cpu class="w-4 h-4" /> Hệ số Làm thêm giờ (OT) & 3 Tầng trần Bóc tách Miễn thuế (Điều 107 & NĐ 145/2020)
+                                        <Cpu class="w-4 h-4" /> {{ $t('policy.ot_section_title') }}
                                     </h4>
-                                    <span class="text-xs text-slate-400">Khoán theo giờ làm chuẩn</span>
+                                    <span class="text-xs text-slate-400">{{ $t('policy.ot_section_sub') }}</span>
                                 </div>
                                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                                     <div>
-                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">Ngày thường (Ngày)</label>
+                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">{{ $t('policy.ot_weekday_day') }}</label>
                                         <el-input-number v-model="payrollForm.ot_weekday_day_rate" :step="0.1" :min="1" size="small" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">Ngày thường (Đêm)</label>
+                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">{{ $t('policy.ot_weekday_night') }}</label>
                                         <el-input-number v-model="payrollForm.ot_weekday_night_rate" :step="0.1" :min="1" size="small" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">Cuối tuần (Ngày)</label>
+                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">{{ $t('policy.ot_weekend_day') }}</label>
                                         <el-input-number v-model="payrollForm.ot_weekend_day_rate" :step="0.1" :min="1" size="small" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">Cuối tuần (Đêm)</label>
+                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">{{ $t('policy.ot_weekend_night') }}</label>
                                         <el-input-number v-model="payrollForm.ot_weekend_night_rate" :step="0.1" :min="1" size="small" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">Ngày lễ (Ngày)</label>
+                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">{{ $t('policy.ot_holiday_day') }}</label>
                                         <el-input-number v-model="payrollForm.ot_holiday_day_rate" :step="0.1" :min="1" size="small" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                     <div>
-                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">Ngày lễ (Đêm)</label>
+                                        <label class="block text-[11px] font-medium text-slate-500 mb-1">{{ $t('policy.ot_holiday_night') }}</label>
                                         <el-input-number v-model="payrollForm.ot_holiday_night_rate" :step="0.1" :min="1" size="small" class="w-full" :disabled="!canEditPayroll" />
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-slate-500">Trần ngày:</span>
+                                        <span class="text-slate-500">{{ $t('policy.cap_daily_label') }}</span>
                                         <el-input-number v-model="payrollForm.ot_tax_exempt_daily_limit_percent" :min="0" :max="100" size="small" :disabled="!canEditPayroll" />
-                                        <span class="text-slate-400">% giờ chuẩn ca</span>
+                                        <span class="text-slate-400">{{ $t('policy.cap_daily_unit') }}</span>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-slate-500">Trần tháng:</span>
+                                        <span class="text-slate-500">{{ $t('policy.cap_monthly_label') }}</span>
                                         <el-input-number v-model="payrollForm.ot_tax_exempt_monthly_limit_hours" :min="0" :max="100" size="small" :disabled="!canEditPayroll" />
-                                        <span class="text-slate-400">giờ/tháng</span>
+                                        <span class="text-slate-400">{{ $t('policy.cap_monthly_unit') }}</span>
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <span class="text-slate-500">Trần năm:</span>
+                                        <span class="text-slate-500">{{ $t('policy.cap_yearly_label') }}</span>
                                         <el-input-number v-model="payrollForm.ot_tax_exempt_yearly_limit_hours" :min="0" :max="500" size="small" :disabled="!canEditPayroll" />
-                                        <span class="text-slate-400">giờ/năm</span>
+                                        <span class="text-slate-400">{{ $t('policy.cap_yearly_unit') }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </el-tab-pane>
 
-                    <!-- Tab 3: Phúc lợi Con nhỏ & Gia đình (Bật/Tắt Visible/Hidden) -->
-                    <el-tab-pane label="Phúc lợi Con nhỏ" name="child_welfare">
+                    <!-- Tab 3: Phúc lợi Con nhỏ & Gia đình -->
+                    <el-tab-pane :label="$t('policy.tab_child_welfare')" name="child_welfare">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Present class="w-4 h-4" />
-                                <span>Phúc lợi Con nhỏ</span>
+                                <span>{{ $t('policy.tab_child_welfare') }}</span>
                             </span>
                         </template>
 
                         <div class="space-y-4 pt-2">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">Quy chế Hỗ trợ Con nhỏ & Người lao động Gia đình</h3>
-                                    <p class="text-xs text-slate-400">Bật/tắt trạng thái Ẩn/Hiện (visible/hidden) áp dụng cho động cơ tính công và hiển thị nhân sự</p>
+                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">{{ $t('policy.welfare_heading') }}</h3>
+                                    <p class="text-xs text-slate-400">{{ $t('policy.welfare_subtitle') }}</p>
                                 </div>
                                 <el-button
                                     v-if="canEdit"
@@ -1335,52 +1338,52 @@ const formatDate = (dateStr: string | null) => {
                                     @click="isChildPolicyDialogVisible = true"
                                     class="!rounded-xl"
                                 >
-                                    Thêm Chính sách
+                                    {{ $t('policy.btn_add_child_policy') }}
                                 </el-button>
                             </div>
 
                             <el-table :data="activeVersion?.child_welfare_policies || []" stripe style="width: 100%" size="small">
-                                <el-table-column label="Tên chính sách" prop="name" min-width="240">
+                                <el-table-column :label="$t('policy.col_child_policy_name')" prop="name" min-width="240">
                                     <template #default="{ row }">
                                         <div class="flex items-center gap-2">
                                             <span class="font-semibold text-slate-800 dark:text-slate-200 text-xs">{{ row.name }}</span>
-                                            <el-tag v-if="row.is_statutory" size="small" type="danger" round effect="plain">Bắt buộc (Đ.137)</el-tag>
-                                            <el-tag v-else size="small" type="success" round effect="plain">Quy chế DN</el-tag>
+                                            <el-tag v-if="row.is_statutory" size="small" type="danger" round effect="plain">{{ $t('policy.tag_statutory_137') }}</el-tag>
+                                            <el-tag v-else size="small" type="success" round effect="plain">{{ $t('policy.tag_company_policy') }}</el-tag>
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Độ tuổi áp dụng" width="160">
+                                <el-table-column :label="$t('policy.col_child_age')" width="160">
                                     <template #default="{ row }">
-                                        <span class="font-mono text-xs">{{ row.min_age_months }} - {{ row.max_age_months }} tháng tuổi</span>
+                                        <span class="font-mono text-xs">{{ $t('policy.child_age_months', { min: row.min_age_months, max: row.max_age_months }) }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Miễn trừ mỗi ngày" width="150">
+                                <el-table-column :label="$t('policy.col_child_daily_exempt')" width="150">
                                     <template #default="{ row }">
-                                        <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ row.daily_exemption_minutes }} phút/ngày</span>
+                                        <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ $t('policy.child_exempt_minutes', { value: row.daily_exemption_minutes }) }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Hưởng lương" width="120">
+                                <el-table-column :label="$t('policy.col_child_pay_type')" width="120">
                                     <template #default="{ row }">
                                         <el-tag :type="row.pay_type === 'PAID' ? 'success' : 'info'" size="small" round>
-                                            {{ row.pay_type === 'PAID' ? 'Có hưởng lương' : 'Không lương' }}
+                                            {{ row.pay_type === 'PAID' ? $t('policy.pay_paid') : $t('policy.pay_unpaid') }}
                                         </el-tag>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Trạng thái Ẩn/Hiện" width="180">
+                                <el-table-column :label="$t('policy.col_child_visibility')" width="180">
                                     <template #default="{ row }">
                                         <div class="flex items-center gap-2">
                                             <el-switch
                                                 :model-value="row.visibility === 'VISIBLE'"
                                                 :disabled="!canEdit || row.is_statutory"
-                                                active-text="Hiện (Visible)"
-                                                inactive-text="Ẩn (Hidden)"
+                                                :active-text="$t('policy.visible_on')"
+                                                :inactive-text="$t('policy.visible_off')"
                                                 inline-prompt
                                                 @change="handleToggleChildPolicyVisibility(row.id)"
                                             />
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thao tác" width="110" align="center">
+                                <el-table-column :label="$t('policy.col_child_actions')" width="110" align="center">
                                     <template #default="{ row }">
                                         <div class="flex items-center justify-center gap-1">
                                             <el-button
@@ -1389,7 +1392,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Edit"
                                                 circle
                                                 @click="openEditChildPolicy(row)"
-                                                title="Chỉnh sửa chính sách"
+                                                :title="$t('policy.btn_edit_policy')"
                                             />
                                             <el-button
                                                 v-if="!row.is_statutory && canEdit"
@@ -1398,7 +1401,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Delete"
                                                 circle
                                                 @click="handleDeleteChildPolicy(row.id, row.name)"
-                                                title="Xóa chính sách"
+                                                :title="$t('policy.btn_delete_policy')"
                                             />
                                         </div>
                                     </template>
@@ -1408,19 +1411,19 @@ const formatDate = (dateStr: string | null) => {
                     </el-tab-pane>
 
                     <!-- Tab 4: Chế độ Phúc lợi Doanh nghiệp Đa năng -->
-                    <el-tab-pane label="Chế độ Phúc lợi Đa năng" name="welfare_schemes">
+                    <el-tab-pane :label="$t('policy.tab_welfare_schemes')" name="welfare_schemes">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <CollectionTag class="w-4 h-4" />
-                                <span>Chế độ Phúc lợi Doanh nghiệp</span>
+                                <span>{{ $t('policy.tab_welfare_schemes') }}</span>
                             </span>
                         </template>
 
                         <div class="space-y-4 pt-2">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">Danh mục Chế độ Phúc lợi Toàn diện</h3>
-                                    <p class="text-xs text-slate-400">Doanh nghiệp tự do thiết lập các chế độ liên quan đến Chấm công và Tiền lương / Trợ cấp</p>
+                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">{{ $t('policy.welfare_schemes_heading') }}</h3>
+                                    <p class="text-xs text-slate-400">{{ $t('policy.welfare_schemes_subtitle') }}</p>
                                 </div>
                                 <el-button
                                     v-if="canEdit"
@@ -1430,12 +1433,12 @@ const formatDate = (dateStr: string | null) => {
                                     @click="isWelfareDialogVisible = true"
                                     class="!rounded-xl"
                                 >
-                                    Tạo Chế độ Mới
+                                    {{ $t('policy.btn_create_scheme') }}
                                 </el-button>
                             </div>
 
                             <el-table :data="allWelfareSchemes" stripe style="width: 100%" size="small">
-                                <el-table-column label="Mã & Tên chế độ" min-width="220">
+                                <el-table-column :label="$t('policy.col_scheme_name')" min-width="220">
                                     <template #default="{ row }">
                                         <div class="space-y-0.5">
                                             <div class="font-semibold text-slate-800 dark:text-slate-200 text-xs">{{ row.name }}</div>
@@ -1443,43 +1446,43 @@ const formatDate = (dateStr: string | null) => {
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Phân loại" width="150">
+                                <el-table-column :label="$t('policy.col_scheme_category')" width="150">
                                     <template #default="{ row }">
                                         <el-tag size="small" round effect="light">{{ row.category }}</el-tag>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Tác động Chấm công" width="160">
+                                <el-table-column :label="$t('policy.col_scheme_attendance')" width="160">
                                     <template #default="{ row }">
                                         <div class="text-[11px]">
-                                            <div v-if="row.daily_exemption_minutes > 0" class="font-semibold text-emerald-600">Miễn trừ {{ row.daily_exemption_minutes }}p/ngày</div>
-                                            <div v-if="row.prohibit_night_shift" class="text-rose-500 font-medium">Cấm ca đêm</div>
-                                            <div v-if="row.prohibit_overtime" class="text-amber-500 font-medium">Cấm OT</div>
-                                            <div v-if="row.daily_exemption_minutes === 0 && !row.prohibit_night_shift">Không tác động</div>
+                                            <div v-if="row.daily_exemption_minutes > 0" class="font-semibold text-emerald-600">{{ $t('policy.scheme_exempt_minutes', { value: row.daily_exemption_minutes }) }}</div>
+                                            <div v-if="row.prohibit_night_shift" class="text-rose-500 font-medium">{{ $t('policy.scheme_no_night') }}</div>
+                                            <div v-if="row.prohibit_overtime" class="text-amber-500 font-medium">{{ $t('policy.scheme_no_ot') }}</div>
+                                            <div v-if="row.daily_exemption_minutes === 0 && !row.prohibit_night_shift" class="text-slate-400">{{ $t('policy.scheme_no_impact') }}</div>
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Trợ cấp tài chính" width="160">
+                                <el-table-column :label="$t('policy.col_scheme_finance')" width="160">
                                     <template #default="{ row }">
                                         <div class="text-[11px]">
-                                            <div v-if="row.monthly_allowance_amount > 0" class="font-mono font-bold text-indigo-600">{{ formatVND(row.monthly_allowance_amount) }}/th</div>
-                                            <div v-if="row.one_time_bonus_amount > 0" class="font-mono text-emerald-600">Thưởng {{ formatVND(row.one_time_bonus_amount) }}</div>
+                                            <div v-if="row.monthly_allowance_amount > 0" class="font-mono font-bold text-indigo-600">{{ $t('policy.scheme_monthly', { value: formatVND(row.monthly_allowance_amount) }) }}</div>
+                                            <div v-if="row.one_time_bonus_amount > 0" class="font-mono text-emerald-600">{{ $t('policy.scheme_bonus', { value: formatVND(row.one_time_bonus_amount) }) }}</div>
                                             <div v-if="row.monthly_allowance_amount === 0 && row.one_time_bonus_amount === 0" class="text-slate-400">---</div>
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Trạng thái" width="140">
+                                <el-table-column :label="$t('policy.col_scheme_visibility')" width="140">
                                     <template #default="{ row }">
                                         <el-switch
                                             :model-value="row.visibility === 'VISIBLE'"
                                             :disabled="!canEdit || row.is_statutory"
-                                            active-text="Hiện"
-                                            inactive-text="Ẩn"
+                                            :active-text="$t('policy.visible_on')"
+                                            :inactive-text="$t('policy.visible_off')"
                                             inline-prompt
                                             @change="handleToggleWelfareScheme(row.id)"
                                         />
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thao tác" width="110" align="center">
+                                <el-table-column :label="$t('policy.col_child_actions')" width="110" align="center">
                                     <template #default="{ row }">
                                         <div class="flex items-center justify-center gap-1">
                                             <el-button
@@ -1488,7 +1491,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Edit"
                                                 circle
                                                 @click="openEditWelfare(row)"
-                                                title="Sửa chế độ"
+                                                :title="$t('policy.btn_edit_scheme')"
                                             />
                                             <el-button
                                                 v-if="!row.is_statutory && canEdit"
@@ -1497,7 +1500,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Delete"
                                                 circle
                                                 @click="handleDeleteWelfareScheme(row.id, row.name)"
-                                                title="Xóa chế độ"
+                                                :title="$t('policy.btn_delete_scheme')"
                                             />
                                         </div>
                                     </template>
@@ -1506,20 +1509,20 @@ const formatDate = (dateStr: string | null) => {
                         </div>
                     </el-tab-pane>
 
-                    <!-- Tab 5: Danh mục Phụ cấp Doanh nghiệp (Kế thừa từ timekeeper2) -->
-                    <el-tab-pane label="Danh mục Phụ cấp" name="allowances">
+                    <!-- Tab 5: Danh mục Phụ cấp Doanh nghiệp -->
+                    <el-tab-pane :label="$t('policy.tab_allowances')" name="allowances">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Money class="w-4 h-4" />
-                                <span>Danh mục Phụ cấp</span>
+                                <span>{{ $t('policy.tab_allowances') }}</span>
                             </span>
                         </template>
 
                         <div class="space-y-4 pt-2">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">Danh mục Phụ cấp & Trợ cấp Doanh nghiệp (Kế thừa timekeeper2)</h3>
-                                    <p class="text-xs text-slate-400">Quản lý các khoản phụ cấp cố định công ty, theo cá nhân hoặc biến động kèm quy định thuế TNCN & BHXH</p>
+                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">{{ $t('policy.allowances_heading') }}</h3>
+                                    <p class="text-xs text-slate-400">{{ $t('policy.allowances_subtitle') }}</p>
                                 </div>
                                 <el-button
                                     v-if="canEditPayroll"
@@ -1529,12 +1532,12 @@ const formatDate = (dateStr: string | null) => {
                                     @click="isAllowanceDialogVisible = true"
                                     class="!rounded-xl"
                                 >
-                                    Thêm Phụ cấp Mới
+                                    {{ $t('policy.btn_add_allowance') }}
                                 </el-button>
                             </div>
 
                             <el-table :data="allowances" stripe style="width: 100%" size="small">
-                                <el-table-column label="Mã & Tên phụ cấp" min-width="220">
+                                <el-table-column :label="$t('policy.col_allowance_name')" min-width="220">
                                     <template #default="{ row }">
                                         <div class="space-y-0.5">
                                             <div class="font-semibold text-slate-800 dark:text-slate-200 text-xs">{{ row.name }}</div>
@@ -1542,40 +1545,40 @@ const formatDate = (dateStr: string | null) => {
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Hình thức áp dụng" width="160">
+                                <el-table-column :label="$t('policy.col_allowance_apply')" width="160">
                                     <template #default="{ row }">
-                                        <el-tag v-if="row.apply_type === 'COMPANY_FIXED'" size="small" type="primary" round>Cố định Công ty</el-tag>
-                                        <el-tag v-else-if="row.apply_type === 'INDIVIDUAL_FIXED'" size="small" type="warning" round>Cố định Cá nhân</el-tag>
-                                        <el-tag v-else size="small" type="info" round>Biến động theo tháng</el-tag>
+                                        <el-tag v-if="row.apply_type === 'COMPANY_FIXED'" size="small" type="primary" round>{{ $t('policy.allowance_company') }}</el-tag>
+                                        <el-tag v-else-if="row.apply_type === 'INDIVIDUAL_FIXED'" size="small" type="warning" round>{{ $t('policy.allowance_individual') }}</el-tag>
+                                        <el-tag v-else size="small" type="info" round>{{ $t('policy.allowance_irregular') }}</el-tag>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Mức mặc định" width="150">
+                                <el-table-column :label="$t('policy.col_allowance_default')" width="150">
                                     <template #default="{ row }">
                                         <span class="font-mono font-bold text-slate-800 dark:text-white">{{ formatVND(row.default_amount) }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thuế & BHXH" width="180">
+                                <el-table-column :label="$t('policy.col_allowance_tax')" width="180">
                                     <template #default="{ row }">
                                         <div class="text-[11px] space-y-0.5">
-                                            <div>BHXH: <span :class="row.is_insurance_taxable ? 'text-rose-500 font-medium' : 'text-emerald-500'">{{ row.is_insurance_taxable ? 'Có đóng' : 'Miễn đóng' }}</span></div>
-                                            <div>Thuế TNCN: <span :class="row.is_pit_taxable ? 'text-amber-500' : 'text-emerald-500 font-medium'">{{ row.is_pit_taxable ? 'Chịu thuế' : 'Miễn thuế' }}</span></div>
-                                            <div v-if="row.tax_exemption_limit > 0" class="text-indigo-500 text-[10px]">Trần miễn: {{ formatVND(row.tax_exemption_limit) }}</div>
+                                            <div>{{ $t('policy.allowance_bhxh') }} <span :class="row.is_insurance_taxable ? 'text-rose-500 font-medium' : 'text-emerald-500'">{{ row.is_insurance_taxable ? $t('policy.allowance_ins_taxable') : $t('policy.allowance_ins_exempt') }}</span></div>
+                                            <div>{{ $t('policy.allowance_pit') }} <span :class="row.is_pit_taxable ? 'text-amber-500' : 'text-emerald-500 font-medium'">{{ row.is_pit_taxable ? $t('policy.allowance_pit_taxable') : $t('policy.allowance_pit_exempt') }}</span></div>
+                                            <div v-if="row.tax_exemption_limit > 0" class="text-indigo-500 text-[10px]">{{ $t('policy.allowance_tax_cap', { value: formatVND(row.tax_exemption_limit) }) }}</div>
                                         </div>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Trạng thái" width="130">
+                                <el-table-column :label="$t('policy.col_allowance_visibility')" width="130">
                                     <template #default="{ row }">
                                         <el-switch
                                             :model-value="row.visibility === 'VISIBLE'"
                                             :disabled="!canEditPayroll"
-                                            active-text="Hiện"
-                                            inactive-text="Ẩn"
+                                            :active-text="$t('policy.visible_on')"
+                                            :inactive-text="$t('policy.visible_off')"
                                             inline-prompt
                                             @change="handleToggleAllowance(row.id)"
                                         />
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thao tác" width="110" align="center">
+                                <el-table-column :label="$t('policy.col_child_actions')" width="110" align="center">
                                     <template #default="{ row }">
                                         <div class="flex items-center justify-center gap-1">
                                             <el-button
@@ -1584,7 +1587,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Edit"
                                                 circle
                                                 @click="openEditAllowance(row)"
-                                                title="Sửa phụ cấp"
+                                                :title="$t('policy.btn_edit_allowance')"
                                             />
                                             <el-button
                                                 v-if="canEditPayroll"
@@ -1593,7 +1596,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Delete"
                                                 circle
                                                 @click="handleDeleteAllowance(row.id, row.name)"
-                                                title="Xóa phụ cấp"
+                                                :title="$t('policy.btn_delete_allowance')"
                                             />
                                         </div>
                                     </template>
@@ -1603,18 +1606,18 @@ const formatDate = (dateStr: string | null) => {
                     </el-tab-pane>
 
                     <!-- Tab 6: Biểu thuế TNCN 5 Bậc Động (CRUD) -->
-                    <el-tab-pane label="Biểu thuế TNCN 5 Bậc" name="pit">
+                    <el-tab-pane :label="$t('policy.tab_pit')" name="pit">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Money class="w-4 h-4" />
-                                <span>Biểu thuế TNCN 5 Bậc</span>
+                                <span>{{ $t('policy.tab_pit') }}</span>
                             </span>
                         </template>
 
                         <div class="space-y-4 pt-2">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
                                 <div class="text-xs text-indigo-800 dark:text-indigo-200">
-                                    <strong>Căn cứ Pháp lý:</strong> Biểu thuế thu nhập cá nhân 5 bậc lũy tiến từng phần áp dụng từ kỳ quyết toán thuế năm 2026. Doanh nghiệp có thể cấu hình linh hoạt nấc và thuế suất theo quy định.
+                                    <strong>{{ $t('policy.pit_legal_basis_prefix') }}</strong> {{ $t('policy.pit_legal_desc') }}
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
                                     <el-button
@@ -1622,9 +1625,9 @@ const formatDate = (dateStr: string | null) => {
                                         size="small"
                                         :icon="RefreshRight"
                                         @click="handleResetPitBrackets"
-                                        title="Khôi phục 5 bậc chuẩn luật định 2026"
+                                        :title="$t('policy.btn_reset_tooltip')"
                                     >
-                                        Mặc định 2026
+                                        {{ $t('policy.btn_reset_defaults_2026') }}
                                     </el-button>
                                     <el-button
                                         v-if="canEditPayroll"
@@ -1633,34 +1636,34 @@ const formatDate = (dateStr: string | null) => {
                                         :icon="Plus"
                                         @click="openCreatePitBracket"
                                     >
-                                        Thêm Bậc Thuế
+                                        {{ $t('policy.btn_add_pit_bracket') }}
                                     </el-button>
                                 </div>
                             </div>
 
                             <el-table :data="activeVersion?.pit_tax_brackets || []" stripe style="width: 100%">
-                                <el-table-column label="Bậc thuế" prop="tier" width="100">
+                                <el-table-column :label="$t('policy.col_pit_tier')" prop="tier" width="100">
                                     <template #default="{ row }">
-                                        <el-tag type="info" round size="small" class="font-bold">Bậc {{ row.tier }}</el-tag>
+                                        <el-tag type="info" round size="small" class="font-bold">{{ $t('policy.pit_tier_tag', { tier: row.tier }) }}</el-tag>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thu nhập tính thuế Từ (VNĐ)" prop="min_income">
+                                <el-table-column :label="$t('policy.col_pit_from')" prop="min_income">
                                     <template #default="{ row }"><span class="font-mono">{{ formatVND(row.min_income) }}</span></template>
                                 </el-table-column>
-                                <el-table-column label="Thu nhập tính thuế Đến (VNĐ)" prop="max_income">
+                                <el-table-column :label="$t('policy.col_pit_to')" prop="max_income">
                                     <template #default="{ row }"><span class="font-mono">{{ formatVND(row.max_income) }}</span></template>
                                 </el-table-column>
-                                <el-table-column label="Thuế suất" prop="tax_rate" width="120">
+                                <el-table-column :label="$t('policy.col_pit_rate')" prop="tax_rate" width="120">
                                     <template #default="{ row }">
                                         <span class="font-bold text-rose-600 dark:text-rose-400">{{ row.tax_rate }}%</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Số trừ nhanh (VNĐ)" prop="quick_subtraction">
+                                <el-table-column :label="$t('policy.col_pit_quick')" prop="quick_subtraction">
                                     <template #default="{ row }">
                                         <span class="font-mono text-slate-600 dark:text-slate-400">{{ formatVND(row.quick_subtraction) }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Thao tác" width="110" align="center">
+                                <el-table-column :label="$t('policy.col_child_actions')" width="110" align="center">
                                     <template #default="{ row }">
                                         <div class="flex items-center justify-center gap-1">
                                             <el-button
@@ -1669,7 +1672,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Edit"
                                                 circle
                                                 @click="openEditPitBracket(row)"
-                                                title="Sửa bậc thuế"
+                                                :title="$t('policy.btn_edit_bracket')"
                                             />
                                             <el-button
                                                 v-if="canEditPayroll"
@@ -1678,7 +1681,7 @@ const formatDate = (dateStr: string | null) => {
                                                 :icon="Delete"
                                                 circle
                                                 @click="handleDeletePitBracket(row.id, row.tier)"
-                                                title="Xóa bậc thuế"
+                                                :title="$t('policy.btn_delete_bracket')"
                                             />
                                         </div>
                                     </template>
@@ -1688,71 +1691,71 @@ const formatDate = (dateStr: string | null) => {
                     </el-tab-pane>
 
                     <!-- Tab 7: Lịch Nghỉ Lễ Tết -->
-                    <el-tab-pane label="Lịch Nghỉ Lễ Tết" name="holidays">
+                    <el-tab-pane :label="$t('policy.tab_holidays')" name="holidays">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Calendar class="w-4 h-4" />
-                                <span>Lịch Nghỉ Lễ Tết</span>
+                                <span>{{ $t('policy.tab_holidays') }}</span>
                             </span>
                         </template>
 
                         <div class="space-y-4 pt-2">
                             <el-table :data="holidays" stripe style="width: 100%">
-                                <el-table-column label="Tên ngày lễ / Tết" prop="name" />
-                                <el-table-column label="Ngày nghỉ" prop="holiday_date" width="160">
+                                <el-table-column :label="$t('policy.col_holiday_name')" prop="name" />
+                                <el-table-column :label="$t('policy.col_holiday_date')" prop="holiday_date" width="160">
                                     <template #default="{ row }">
                                         <span class="font-mono font-medium">{{ formatDate(row.holiday_date) }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Phân loại" width="160">
+                                <el-table-column :label="$t('policy.col_holiday_type')" width="160">
                                     <template #default="{ row }">
-                                        <el-tag v-if="row.is_statutory" type="success" size="small" round>Luật định (Hưởng 100% lương)</el-tag>
-                                        <el-tag v-else type="info" size="small" round>Nghỉ bù / Doanh nghiệp</el-tag>
+                                        <el-tag v-if="row.is_statutory" type="success" size="small" round>{{ $t('policy.holiday_statutory') }}</el-tag>
+                                        <el-tag v-else type="info" size="small" round>{{ $t('policy.holiday_company') }}</el-tag>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Ghi chú" prop="notes" />
+                                <el-table-column :label="$t('policy.col_holiday_notes')" prop="notes" />
                             </el-table>
                         </div>
                     </el-tab-pane>
 
                     <!-- Tab 8: Sandbox Tính toán Thử nghiệm -->
-                    <el-tab-pane label="Sandbox Thử nghiệm" name="sandbox">
+                    <el-tab-pane :label="$t('policy.tab_sandbox')" name="sandbox">
                         <template #label>
                             <span class="flex items-center gap-1.5">
                                 <Cpu class="w-4 h-4" />
-                                <span>Sandbox Thử nghiệm</span>
+                                <span>{{ $t('policy.tab_sandbox') }}</span>
                             </span>
                         </template>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                             <!-- Box 1: Test phạt đi muộn -->
                             <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4">
-                                <h4 class="font-bold text-sm text-slate-800 dark:text-white">Thử nghiệm Tính phạt Đi muộn / Về sớm</h4>
+                                <h4 class="font-bold text-sm text-slate-800 dark:text-white">{{ $t('policy.sandbox_late_title') }}</h4>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-semibold mb-1">Số phút đi muộn</label>
+                                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_late_minutes') }}</label>
                                         <el-input-number v-model="lateTest.late_minutes" :min="0" :max="300" class="w-full" />
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold mb-1">Số lần vi phạm trong tháng</label>
+                                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_violation_count') }}</label>
                                         <el-input-number v-model="lateTest.violation_count" :min="1" :max="30" class="w-full" />
                                     </div>
                                 </div>
                                 <el-button type="primary" :loading="lateTest.loading" @click="runLatePenaltyTest" class="!rounded-xl w-full">
-                                    Chạy Thử nghiệm Tính Phạt
+                                    {{ $t('policy.btn_run_late_test') }}
                                 </el-button>
 
                                 <div v-if="lateTest.result" class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5">
                                     <div class="flex justify-between">
-                                        <span class="text-slate-500">Mức phạt gốc nấc phút:</span>
+                                        <span class="text-slate-500">{{ $t('policy.late_base_fine') }}</span>
                                         <span class="font-mono font-bold">{{ formatVND(lateTest.result.base_fine) }}</span>
                                     </div>
                                     <div class="flex justify-between">
-                                        <span class="text-slate-500">Hệ số nhân tần suất:</span>
+                                        <span class="text-slate-500">{{ $t('policy.late_freq_multiplier') }}</span>
                                         <span class="font-mono font-bold text-amber-600">{{ lateTest.result.frequency_multiplier }}x</span>
                                     </div>
                                     <div class="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <span class="font-bold text-slate-800 dark:text-white">Tổng tiền phạt thực tế:</span>
+                                        <span class="font-bold text-slate-800 dark:text-white">{{ $t('policy.late_total_fine') }}</span>
                                         <span class="font-mono font-bold text-rose-600 text-sm">{{ formatVND(lateTest.result.total_fine) }}</span>
                                     </div>
                                 </div>
@@ -1760,26 +1763,26 @@ const formatDate = (dateStr: string | null) => {
 
                             <!-- Box 2: Test Thuế TNCN -->
                             <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-4">
-                                <h4 class="font-bold text-sm text-slate-800 dark:text-white">Thử nghiệm Thuế TNCN 5 Bậc (2026)</h4>
+                                <h4 class="font-bold text-sm text-slate-800 dark:text-white">{{ $t('policy.sandbox_pit_title') }}</h4>
                                 <div>
-                                    <label class="block text-xs font-semibold mb-1">Thu nhập tính thuế sau giảm trừ (VNĐ/tháng)</label>
+                                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_taxable_income') }}</label>
                                     <el-input-number v-model="taxTest.taxable_income" :min="0" :step="1000000" class="w-full" />
                                 </div>
                                 <el-button type="success" :loading="taxTest.loading" @click="runPitTaxTest" class="!rounded-xl w-full">
-                                    Chạy Thử nghiệm Tính Thuế
+                                    {{ $t('policy.btn_run_pit_test') }}
                                 </el-button>
 
                                 <div v-if="taxTest.result" class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5">
                                     <div class="flex justify-between">
-                                        <span class="text-slate-500">Bậc thuế áp dụng:</span>
-                                        <span class="font-bold text-indigo-600">Bậc {{ taxTest.result.matched_tier }} (Thuế suất {{ taxTest.result.tax_rate }}%)</span>
+                                        <span class="text-slate-500">{{ $t('policy.pit_matched_tier') }}</span>
+                                        <span class="font-bold text-indigo-600">{{ $t('policy.pit_matched_value', { tier: taxTest.result.matched_tier, rate: taxTest.result.tax_rate }) }}</span>
                                     </div>
                                     <div class="flex justify-between">
-                                        <span class="text-slate-500">Số trừ nhanh:</span>
+                                        <span class="text-slate-500">{{ $t('policy.pit_quick_subtraction') }}</span>
                                         <span class="font-mono font-bold">{{ formatVND(taxTest.result.quick_subtraction) }}</span>
                                     </div>
                                     <div class="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <span class="font-bold text-slate-800 dark:text-white">Thuế TNCN phải nộp:</span>
+                                        <span class="font-bold text-slate-800 dark:text-white">{{ $t('policy.pit_total_tax') }}</span>
                                         <span class="font-mono font-bold text-rose-600 text-sm">{{ formatVND(taxTest.result.tax_amount) }}</span>
                                     </div>
                                 </div>
@@ -1791,379 +1794,379 @@ const formatDate = (dateStr: string | null) => {
         </div>
 
         <!-- Dialog Tạo phiên bản quy chế mới -->
-        <el-dialog v-model="isCreateVersionDialogVisible" title="Tạo Phiên bản Quy chế Mới (Effective Dating)" width="520px">
+        <el-dialog v-model="isCreateVersionDialogVisible" :title="$t('policy.dialog_create_version_title')" width="520px">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Mã phiên bản (VD: POLICY_2027_V1)</label>
-                    <el-input v-model="versionForm.code" placeholder="POLICY_2026_V2" />
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_version_code') }}</label>
+                    <el-input v-model="versionForm.code" :placeholder="$t('policy.ph_version_code')" />
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên phiên bản quy chế</label>
-                    <el-input v-model="versionForm.name" placeholder="Quy chế Áp dụng Mới từ Quý 4" />
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_version_name') }}</label>
+                    <el-input v-model="versionForm.name" :placeholder="$t('policy.ph_version_name')" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Ngày bắt đầu hiệu lực</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_effective_from') }}</label>
                         <el-date-picker v-model="versionForm.effective_from" type="date" value-format="YYYY-MM-DD" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Ngày kết thúc (Tùy chọn)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_effective_to') }}</label>
                         <el-date-picker v-model="versionForm.effective_to" type="date" value-format="YYYY-MM-DD" class="w-full" />
                     </div>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isCreateVersionDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="versionForm.processing" @click="handleCreateVersion">Khởi tạo</el-button>
+                    <el-button @click="isCreateVersionDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="versionForm.processing" @click="handleCreateVersion">{{ $t('policy.btn_initialize') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
         <!-- Dialog Tạo Chế độ Phúc lợi Doanh nghiệp Mới -->
-        <el-dialog v-model="isWelfareDialogVisible" title="Tạo Chế độ Phúc lợi Doanh nghiệp Mới" width="580px">
+        <el-dialog v-model="isWelfareDialogVisible" :title="$t('policy.dialog_create_welfare_title')" width="580px">
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Mã chế độ (VD: SCHEME_CON_NHO_11T)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_scheme_code') }}</label>
                         <el-input v-model="welfareForm.code" placeholder="SCHEME_ANTRUA_500K" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Phân loại danh mục</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_scheme_category') }}</label>
                         <el-select v-model="welfareForm.category" class="w-full">
-                            <el-option label="Chăm sóc con nhỏ & gia đình" value="CHILD_CARE" />
-                            <el-option label="Thai sản & sức khỏe phụ nữ" value="MATERNITY_FEMALE" />
-                            <el-option label="Sức khỏe & y tế doanh nghiệp" value="HEALTH_WELLNESS" />
-                            <el-option label="Điều kiện làm việc" value="WORKING_COND" />
-                            <el-option label="Hỗ trợ tài chính & hiếu hỉ" value="FINANCIAL_SUPPORT" />
-                            <el-option label="Phụ cấp chuyên biệt" value="SPECIAL_ALLOWANCE" />
+                            <el-option :label="$t('policy.category_child_care')" value="CHILD_CARE" />
+                            <el-option :label="$t('policy.category_maternity')" value="MATERNITY_FEMALE" />
+                            <el-option :label="$t('policy.category_health')" value="HEALTH_WELLNESS" />
+                            <el-option :label="$t('policy.category_working_cond')" value="WORKING_COND" />
+                            <el-option :label="$t('policy.category_financial')" value="FINANCIAL_SUPPORT" />
+                            <el-option :label="$t('policy.category_special')" value="SPECIAL_ALLOWANCE" />
                         </el-select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên chế độ phúc lợi</label>
-                    <el-input v-model="welfareForm.name" placeholder="Chế độ Hỗ trợ Con từ 1 - 11 tuổi" />
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_scheme_name') }}</label>
+                    <el-input v-model="welfareForm.name" :placeholder="$t('policy.ph_scheme_name')" />
                 </div>
                 <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-3">
-                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Tác động Chấm công & Phân ca</div>
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('policy.impact_attendance_title') }}</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Phút miễn trừ/ngày</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_exempt_minutes') }}</label>
                             <el-input-number v-model="welfareForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" size="small" />
                         </div>
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Loại lương</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_pay_type') }}</label>
                             <el-select v-model="welfareForm.pay_type" size="small" class="w-full">
-                                <el-option label="Có hưởng lương" value="PAID" />
-                                <el-option label="Không hưởng lương" value="UNPAID" />
+                                <el-option :label="$t('policy.pay_type_paid')" value="PAID" />
+                                <el-option :label="$t('policy.pay_type_unpaid')" value="UNPAID" />
                             </el-select>
                         </div>
                     </div>
                     <div class="flex gap-4">
-                        <el-checkbox v-model="welfareForm.prohibit_night_shift"><span class="text-xs">Cấm ca đêm</span></el-checkbox>
-                        <el-checkbox v-model="welfareForm.prohibit_overtime"><span class="text-xs">Cấm OT</span></el-checkbox>
+                        <el-checkbox v-model="welfareForm.prohibit_night_shift"><span class="text-xs">{{ $t('policy.cb_no_night') }}</span></el-checkbox>
+                        <el-checkbox v-model="welfareForm.prohibit_overtime"><span class="text-xs">{{ $t('policy.cb_no_ot') }}</span></el-checkbox>
                     </div>
                 </div>
                 <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-3">
-                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Tác động Tiền lương & Trợ cấp</div>
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('policy.impact_salary_title') }}</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Trợ cấp hàng tháng (VNĐ)</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_monthly_amount') }}</label>
                             <el-input-number v-model="welfareForm.monthly_allowance_amount" :step="50000" :min="0" class="w-full" size="small" />
                         </div>
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Thưởng 1 lần (VNĐ)</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_one_time_bonus') }}</label>
                             <el-input-number v-model="welfareForm.one_time_bonus_amount" :step="100000" :min="0" class="w-full" size="small" />
                         </div>
                     </div>
-                    <el-checkbox v-model="welfareForm.is_tax_exempt"><span class="text-xs">Miễn thuế TNCN khoản này</span></el-checkbox>
+                    <el-checkbox v-model="welfareForm.is_tax_exempt"><span class="text-xs">{{ $t('policy.cb_tax_exempt') }}</span></el-checkbox>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isWelfareDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="welfareForm.processing" @click="handleAddWelfareScheme">Lưu Chế độ</el-button>
+                    <el-button @click="isWelfareDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="welfareForm.processing" @click="handleAddWelfareScheme">{{ $t('policy.btn_save_scheme') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
         <!-- Dialog Thêm Khoản Phụ cấp Mới -->
-        <el-dialog v-model="isAllowanceDialogVisible" title="Thêm Khoản Phụ cấp Mới (Theo timekeeper2)" width="520px">
+        <el-dialog v-model="isAllowanceDialogVisible" :title="$t('policy.dialog_create_allowance_title')" width="520px">
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Mã phụ cấp (VD: PC_ANTRUA)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_allowance_code') }}</label>
                         <el-input v-model="allowanceForm.code" placeholder="PC_DIENTHOAI" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Hình thức áp dụng</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_allowance_apply_type') }}</label>
                         <el-select v-model="allowanceForm.apply_type" class="w-full">
-                            <el-option label="Cố định toàn công ty" value="COMPANY_FIXED" />
-                            <el-option label="Cố định theo cá nhân" value="INDIVIDUAL_FIXED" />
-                            <el-option label="Biến động theo tháng" value="IRREGULAR" />
+                            <el-option :label="$t('policy.apply_company')" value="COMPANY_FIXED" />
+                            <el-option :label="$t('policy.apply_individual')" value="INDIVIDUAL_FIXED" />
+                            <el-option :label="$t('policy.apply_irregular')" value="IRREGULAR" />
                         </el-select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên khoản phụ cấp</label>
-                    <el-input v-model="allowanceForm.name" placeholder="Phụ cấp Tiền ăn ca trưa" />
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_allowance_name') }}</label>
+                    <el-input v-model="allowanceForm.name" :placeholder="$t('policy.ph_allowance_name')" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Mức tiền mặc định (VNĐ)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_default_amount') }}</label>
                         <el-input-number v-model="allowanceForm.default_amount" :step="50000" :min="0" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Trần miễn thuế TNCN (VNĐ)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_tax_exempt_limit') }}</label>
                         <el-input-number v-model="allowanceForm.tax_exemption_limit" :step="50000" :min="0" class="w-full" />
                     </div>
                 </div>
                 <div class="flex gap-4 pt-2">
-                    <el-checkbox v-model="allowanceForm.is_insurance_taxable"><span class="text-xs">Tính đóng BHXH</span></el-checkbox>
-                    <el-checkbox v-model="allowanceForm.is_pit_taxable"><span class="text-xs">Chịu thuế TNCN</span></el-checkbox>
-                    <el-checkbox v-model="allowanceForm.is_included_in_ot_wage"><span class="text-xs">Tính vào lương OT</span></el-checkbox>
+                    <el-checkbox v-model="allowanceForm.is_insurance_taxable"><span class="text-xs">{{ $t('policy.cb_ins_taxable') }}</span></el-checkbox>
+                    <el-checkbox v-model="allowanceForm.is_pit_taxable"><span class="text-xs">{{ $t('policy.cb_pit_taxable') }}</span></el-checkbox>
+                    <el-checkbox v-model="allowanceForm.is_included_in_ot_wage"><span class="text-xs">{{ $t('policy.cb_in_ot_wage') }}</span></el-checkbox>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isAllowanceDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="allowanceForm.processing" @click="handleAddAllowance">Lưu Phụ cấp</el-button>
+                    <el-button @click="isAllowanceDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="allowanceForm.processing" @click="handleAddAllowance">{{ $t('policy.btn_save_allowance') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
-        <!-- Dialog 1: Thêm Chính sách Phúc lợi Con nhỏ Mới (Đã bổ sung) -->
-        <el-dialog v-model="isChildPolicyDialogVisible" title="Thêm Chính sách Phúc lợi Con nhỏ Mới" width="560px">
+        <!-- Dialog 1: Thêm Chính sách Phúc lợi Con nhỏ Mới -->
+        <el-dialog v-model="isChildPolicyDialogVisible" :title="$t('policy.dialog_create_child_title')" width="560px">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên chính sách *</label>
-                    <el-input v-model="childPolicyForm.name" placeholder="VD: Hỗ trợ mẹ nuôi con từ 1 - 3 tuổi" />
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_child_name_req') }}</label>
+                    <el-input v-model="childPolicyForm.name" :placeholder="$t('policy.ph_child_policy_name')" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Độ tuổi từ (tháng)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_age_from_months') }}</label>
                         <el-input-number v-model="childPolicyForm.min_age_months" :min="0" :max="216" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Đến độ tuổi (tháng)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_age_to_months') }}</label>
                         <el-input-number v-model="childPolicyForm.max_age_months" :min="1" :max="216" class="w-full" />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Thời gian miễn trừ (phút/ngày)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_exempt_time') }}</label>
                         <el-input-number v-model="childPolicyForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Chế độ hưởng lương</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pay_regime') }}</label>
                         <el-select v-model="childPolicyForm.pay_type" class="w-full">
-                            <el-option label="Có hưởng lương" value="PAID" />
-                            <el-option label="Không hưởng lương" value="UNPAID" />
-                            <el-option label="Hưởng một phần" value="PARTIAL" />
+                            <el-option :label="$t('policy.pay_paid')" value="PAID" />
+                            <el-option :label="$t('policy.pay_unpaid')" value="UNPAID" />
+                            <el-option :label="$t('policy.pay_partial')" value="PARTIAL" />
                         </el-select>
                     </div>
                 </div>
                 <div class="flex gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                    <el-checkbox v-model="childPolicyForm.prohibit_night_shift"><span class="text-xs">Cấm phân ca đêm</span></el-checkbox>
-                    <el-checkbox v-model="childPolicyForm.prohibit_overtime"><span class="text-xs">Cấm làm thêm giờ (OT)</span></el-checkbox>
+                    <el-checkbox v-model="childPolicyForm.prohibit_night_shift"><span class="text-xs">{{ $t('policy.cb_prohibit_night') }}</span></el-checkbox>
+                    <el-checkbox v-model="childPolicyForm.prohibit_overtime"><span class="text-xs">{{ $t('policy.cb_prohibit_ot') }}</span></el-checkbox>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isChildPolicyDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="childPolicyForm.processing" @click="handleAddChildPolicy">Lưu Chính sách</el-button>
+                    <el-button @click="isChildPolicyDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="childPolicyForm.processing" @click="handleAddChildPolicy">{{ $t('policy.btn_save_child_policy') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
         <!-- Dialog 2: Sửa Chính sách Phúc lợi Con nhỏ -->
-        <el-dialog v-model="isEditChildPolicyDialogVisible" title="Chỉnh sửa Chính sách Con nhỏ" width="560px">
+        <el-dialog v-model="isEditChildPolicyDialogVisible" :title="$t('policy.dialog_edit_child_title')" width="560px">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên chính sách *</label>
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_child_name_req') }}</label>
                     <el-input v-model="editChildPolicyForm.name" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Độ tuổi từ (tháng)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_age_from_months') }}</label>
                         <el-input-number v-model="editChildPolicyForm.min_age_months" :min="0" :max="216" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Đến độ tuổi (tháng)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_age_to_months') }}</label>
                         <el-input-number v-model="editChildPolicyForm.max_age_months" :min="1" :max="216" class="w-full" />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Thời gian miễn trừ (phút/ngày)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_exempt_time') }}</label>
                         <el-input-number v-model="editChildPolicyForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Chế độ hưởng lương</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pay_regime') }}</label>
                         <el-select v-model="editChildPolicyForm.pay_type" class="w-full">
-                            <el-option label="Có hưởng lương" value="PAID" />
-                            <el-option label="Không hưởng lương" value="UNPAID" />
-                            <el-option label="Hưởng một phần" value="PARTIAL" />
+                            <el-option :label="$t('policy.pay_paid')" value="PAID" />
+                            <el-option :label="$t('policy.pay_unpaid')" value="UNPAID" />
+                            <el-option :label="$t('policy.pay_partial')" value="PARTIAL" />
                         </el-select>
                     </div>
                 </div>
                 <div class="flex gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                    <el-checkbox v-model="editChildPolicyForm.prohibit_night_shift"><span class="text-xs">Cấm phân ca đêm</span></el-checkbox>
-                    <el-checkbox v-model="editChildPolicyForm.prohibit_overtime"><span class="text-xs">Cấm làm thêm giờ (OT)</span></el-checkbox>
+                    <el-checkbox v-model="editChildPolicyForm.prohibit_night_shift"><span class="text-xs">{{ $t('policy.cb_prohibit_night') }}</span></el-checkbox>
+                    <el-checkbox v-model="editChildPolicyForm.prohibit_overtime"><span class="text-xs">{{ $t('policy.cb_prohibit_ot') }}</span></el-checkbox>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isEditChildPolicyDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="editChildPolicyForm.processing" @click="handleUpdateChildPolicy">Cập nhật Chính sách</el-button>
+                    <el-button @click="isEditChildPolicyDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="editChildPolicyForm.processing" @click="handleUpdateChildPolicy">{{ $t('policy.btn_update_child_policy') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
         <!-- Dialog 3: Thêm / Sửa Bậc Thuế TNCN (PIT Brackets) -->
-        <el-dialog v-model="isPitBracketDialogVisible" :title="isEditingPitBracket ? 'Chỉnh sửa Bậc thuế TNCN' : 'Thêm Bậc thuế TNCN Mới'" width="520px">
+        <el-dialog v-model="isPitBracketDialogVisible" :title="isEditingPitBracket ? $t('policy.dialog_edit_pit_title') : $t('policy.dialog_create_pit_title')" width="520px">
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Bậc thuế (Thứ tự)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pit_tier') }}</label>
                         <el-input-number v-model="pitBracketForm.tier" :min="1" :max="20" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Thuế suất (%)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pit_rate') }}</label>
                         <el-input-number v-model="pitBracketForm.tax_rate" :step="1" :min="0" :max="100" class="w-full" />
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Thu nhập tính thuế Từ (VNĐ)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pit_income_from') }}</label>
                         <el-input-number v-model="pitBracketForm.min_income" :step="1000000" :min="0" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Thu nhập tính thuế Đến (VNĐ, để trống nếu vô cực)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pit_income_to') }}</label>
                         <el-input-number v-model="pitBracketForm.max_income" :step="1000000" :min="0" class="w-full" />
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Số trừ nhanh (VNĐ)</label>
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_pit_quick') }}</label>
                     <el-input-number v-model="pitBracketForm.quick_subtraction" :step="500000" :min="0" class="w-full" />
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isPitBracketDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="pitBracketForm.processing" @click="handleSavePitBracket">Lưu Bậc thuế</el-button>
+                    <el-button @click="isPitBracketDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="pitBracketForm.processing" @click="handleSavePitBracket">{{ $t('policy.btn_save_bracket') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
         <!-- Dialog 4: Sửa Chế độ Phúc lợi Doanh nghiệp -->
-        <el-dialog v-model="isEditWelfareDialogVisible" title="Chỉnh sửa Chế độ Phúc lợi Doanh nghiệp" width="580px">
+        <el-dialog v-model="isEditWelfareDialogVisible" :title="$t('policy.dialog_edit_welfare_title')" width="580px">
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Mã chế độ *</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_scheme_code_req') }}</label>
                         <el-input v-model="editWelfareForm.code" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Phân loại danh mục</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_scheme_category') }}</label>
                         <el-select v-model="editWelfareForm.category" class="w-full">
-                            <el-option label="Chăm sóc con nhỏ & gia đình" value="CHILD_CARE" />
-                            <el-option label="Thai sản & sức khỏe phụ nữ" value="MATERNITY_FEMALE" />
-                            <el-option label="Sức khỏe & y tế doanh nghiệp" value="HEALTH_WELLNESS" />
-                            <el-option label="Điều kiện làm việc" value="WORKING_COND" />
-                            <el-option label="Hỗ trợ tài chính & hiếu hỉ" value="FINANCIAL_SUPPORT" />
-                            <el-option label="Phụ cấp chuyên biệt" value="SPECIAL_ALLOWANCE" />
+                            <el-option :label="$t('policy.category_child_care')" value="CHILD_CARE" />
+                            <el-option :label="$t('policy.category_maternity')" value="MATERNITY_FEMALE" />
+                            <el-option :label="$t('policy.category_health')" value="HEALTH_WELLNESS" />
+                            <el-option :label="$t('policy.category_working_cond')" value="WORKING_COND" />
+                            <el-option :label="$t('policy.category_financial')" value="FINANCIAL_SUPPORT" />
+                            <el-option :label="$t('policy.category_special')" value="SPECIAL_ALLOWANCE" />
                         </el-select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên chế độ phúc lợi *</label>
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_scheme_name_req') }}</label>
                     <el-input v-model="editWelfareForm.name" />
                 </div>
                 <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-3">
-                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Tác động Chấm công & Phân ca</div>
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('policy.impact_attendance_title') }}</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Phút miễn trừ/ngày</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_exempt_minutes') }}</label>
                             <el-input-number v-model="editWelfareForm.daily_exemption_minutes" :min="0" :max="480" class="w-full" size="small" />
                         </div>
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Loại lương</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_pay_type') }}</label>
                             <el-select v-model="editWelfareForm.pay_type" size="small" class="w-full">
-                                <el-option label="Có hưởng lương" value="PAID" />
-                                <el-option label="Không hưởng lương" value="UNPAID" />
+                                <el-option :label="$t('policy.pay_type_paid')" value="PAID" />
+                                <el-option :label="$t('policy.pay_type_unpaid')" value="UNPAID" />
                             </el-select>
                         </div>
                     </div>
                     <div class="flex gap-4">
-                        <el-checkbox v-model="editWelfareForm.prohibit_night_shift"><span class="text-xs">Cấm ca đêm</span></el-checkbox>
-                        <el-checkbox v-model="editWelfareForm.prohibit_overtime"><span class="text-xs">Cấm OT</span></el-checkbox>
+                        <el-checkbox v-model="editWelfareForm.prohibit_night_shift"><span class="text-xs">{{ $t('policy.cb_no_night') }}</span></el-checkbox>
+                        <el-checkbox v-model="editWelfareForm.prohibit_overtime"><span class="text-xs">{{ $t('policy.cb_no_ot') }}</span></el-checkbox>
                     </div>
                 </div>
                 <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl space-y-3">
-                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Tác động Tiền lương & Trợ cấp</div>
+                    <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('policy.impact_salary_title') }}</div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Trợ cấp hàng tháng (VNĐ)</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_monthly_amount') }}</label>
                             <el-input-number v-model="editWelfareForm.monthly_allowance_amount" :step="50000" :min="0" class="w-full" size="small" />
                         </div>
                         <div>
-                            <label class="block text-[11px] text-slate-500 mb-1">Thưởng 1 lần (VNĐ)</label>
+                            <label class="block text-[11px] text-slate-500 mb-1">{{ $t('policy.label_one_time_bonus') }}</label>
                             <el-input-number v-model="editWelfareForm.one_time_bonus_amount" :step="100000" :min="0" class="w-full" size="small" />
                         </div>
                     </div>
-                    <el-checkbox v-model="editWelfareForm.is_tax_exempt"><span class="text-xs">Miễn thuế TNCN khoản này</span></el-checkbox>
+                    <el-checkbox v-model="editWelfareForm.is_tax_exempt"><span class="text-xs">{{ $t('policy.cb_tax_exempt') }}</span></el-checkbox>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isEditWelfareDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="editWelfareForm.processing" @click="handleUpdateWelfareScheme">Lưu Thay Đổi</el-button>
+                    <el-button @click="isEditWelfareDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="editWelfareForm.processing" @click="handleUpdateWelfareScheme">{{ $t('policy.btn_save_changes') }}</el-button>
                 </div>
             </template>
         </el-dialog>
 
         <!-- Dialog 5: Sửa Khoản Phụ cấp -->
-        <el-dialog v-model="isEditAllowanceDialogVisible" title="Chỉnh sửa Khoản Phụ cấp" width="520px">
+        <el-dialog v-model="isEditAllowanceDialogVisible" :title="$t('policy.dialog_edit_allowance_title')" width="520px">
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Mã phụ cấp *</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_allowance_code_req') }}</label>
                         <el-input v-model="editAllowanceForm.code" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Hình thức áp dụng</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_allowance_apply_type') }}</label>
                         <el-select v-model="editAllowanceForm.apply_type" class="w-full">
-                            <el-option label="Cố định toàn công ty" value="COMPANY_FIXED" />
-                            <el-option label="Cố định theo cá nhân" value="INDIVIDUAL_FIXED" />
-                            <el-option label="Biến động theo tháng" value="IRREGULAR" />
+                            <el-option :label="$t('policy.apply_company')" value="COMPANY_FIXED" />
+                            <el-option :label="$t('policy.apply_individual')" value="INDIVIDUAL_FIXED" />
+                            <el-option :label="$t('policy.apply_irregular')" value="IRREGULAR" />
                         </el-select>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold mb-1">Tên khoản phụ cấp *</label>
+                    <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_allowance_name_req') }}</label>
                     <el-input v-model="editAllowanceForm.name" />
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Mức tiền mặc định (VNĐ)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_default_amount') }}</label>
                         <el-input-number v-model="editAllowanceForm.default_amount" :step="50000" :min="0" class="w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Trần miễn thuế TNCN (VNĐ)</label>
+                        <label class="block text-xs font-semibold mb-1">{{ $t('policy.label_tax_exempt_limit') }}</label>
                         <el-input-number v-model="editAllowanceForm.tax_exemption_limit" :step="50000" :min="0" class="w-full" />
                     </div>
                 </div>
                 <div class="flex gap-4 pt-2">
-                    <el-checkbox v-model="editAllowanceForm.is_insurance_taxable"><span class="text-xs">Tính đóng BHXH</span></el-checkbox>
-                    <el-checkbox v-model="editAllowanceForm.is_pit_taxable"><span class="text-xs">Chịu thuế TNCN</span></el-checkbox>
-                    <el-checkbox v-model="editAllowanceForm.is_included_in_ot_wage"><span class="text-xs">Tính vào lương OT</span></el-checkbox>
+                    <el-checkbox v-model="editAllowanceForm.is_insurance_taxable"><span class="text-xs">{{ $t('policy.cb_ins_taxable') }}</span></el-checkbox>
+                    <el-checkbox v-model="editAllowanceForm.is_pit_taxable"><span class="text-xs">{{ $t('policy.cb_pit_taxable') }}</span></el-checkbox>
+                    <el-checkbox v-model="editAllowanceForm.is_included_in_ot_wage"><span class="text-xs">{{ $t('policy.cb_in_ot_wage') }}</span></el-checkbox>
                 </div>
             </div>
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="isEditAllowanceDialogVisible = false">Hủy</el-button>
-                    <el-button type="primary" :loading="editAllowanceForm.processing" @click="handleUpdateAllowance">Lưu Thay Đổi</el-button>
+                    <el-button @click="isEditAllowanceDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+                    <el-button type="primary" :loading="editAllowanceForm.processing" @click="handleUpdateAllowance">{{ $t('policy.btn_save_changes') }}</el-button>
                 </div>
             </template>
         </el-dialog>

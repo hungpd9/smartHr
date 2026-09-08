@@ -9,7 +9,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import ElementPlus from 'element-plus';
 import vi from 'element-plus/es/locale/lang/vi';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
-import { initTheme } from './Composables/useThemeAndLocale';
+import { initTheme, t } from './Composables/useThemeAndLocale';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Smart-HR';
 
@@ -30,6 +30,9 @@ createInertiaApp({
         for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
             app.component(key, component);
         }
+
+        // Đăng ký $t toàn cục cho mọi Vue template
+        app.config.globalProperties.$t = t;
 
         app.use(plugin)
             .use(ElementPlus, {

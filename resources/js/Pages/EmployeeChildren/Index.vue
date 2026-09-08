@@ -21,6 +21,7 @@ import {
     Setting,
 } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface EmployeeOption {
     id: number;
@@ -88,6 +89,8 @@ const props = defineProps<{
     };
 }>();
 
+const { t } = useThemeAndLocale();
+
 // Filter States
 const searchQuery = ref(props.filters.search || '');
 const selectedEmployeeId = ref(props.filters.employee_id ? Number(props.filters.employee_id) : undefined);
@@ -147,27 +150,27 @@ const smartDetection = computed(() => {
     if (diffMonths < 0) {
         return {
             type: 'warning',
-            title: 'Dự sinh trong tương lai',
-            message: 'Ngày sinh đang được đặt trong tương lai (kế hoạch thai sản).',
+            title: t('employee_children.sd_future_title'),
+            message: t('employee_children.sd_future_msg'),
         };
     } else if (diffMonths < 12) {
         return {
             type: 'danger',
-            title: 'Chế độ Điều 137 BLLĐ 2019 (Con dưới 12 tháng)',
-            message: `Bé hiện tại ${diffMonths} tháng tuổi. Lao động nữ sẽ tự động được hưởng chế độ miễn trừ 60 phút/ngày có hưởng lương và tuyệt đối cấm làm ca đêm / làm thêm giờ!`,
+            title: t('employee_children.sd_under12_title'),
+            message: t('employee_children.sd_under12_msg', { months: diffMonths }),
         };
     } else if (diffMonths <= 132) {
         const years = Math.floor(diffMonths / 12);
         return {
             type: 'warning',
-            title: 'Chế độ Con nhỏ Mở rộng (1 - 11 tuổi)',
-            message: `Bé hiện tại ${years} tuổi. Nhân sự được áp dụng chế độ hỗ trợ con nhỏ mở rộng (miễn trừ 30 phút/ngày có hưởng lương) theo quy chế công ty.`,
+            title: t('employee_children.sd_1to11_title'),
+            message: t('employee_children.sd_1to11_msg', { years }),
         };
     } else {
         return {
             type: 'info',
-            title: 'Trẻ trên 11 tuổi',
-            message: 'Bé đã trên 11 tuổi. Vẫn được tiếp tục đăng ký giảm trừ gia cảnh thuế TNCN theo quy định pháp luật thuế.',
+            title: t('employee_children.sd_over11_title'),
+            message: t('employee_children.sd_over11_msg'),
         };
     }
 });
@@ -216,7 +219,7 @@ const openEditModal = (child: ChildItem) => {
 
 const submitForm = () => {
     if (!form.value.employee_id || !form.value.full_name || !form.value.birth_date) {
-        ElMessage.warning('Vui lòng điền đầy đủ các trường bắt buộc: Nhân viên phụ huynh, Họ tên bé và Ngày sinh!');
+        ElMessage.warning(t('employee_children.validation_required_msg'));
         return;
     }
 
@@ -225,7 +228,7 @@ const submitForm = () => {
         router.put(`/employee-children/${currentChildId.value}`, form.value, {
             onSuccess: () => {
                 dialogVisible.value = false;
-                ElMessage.success('Cập nhật hồ sơ con nhỏ thành công!');
+                ElMessage.success(t('employee_children.update_success_msg'));
             },
             onFinish: () => {
                 submitting.value = false;
@@ -235,7 +238,7 @@ const submitForm = () => {
         router.post('/employee-children', form.value, {
             onSuccess: () => {
                 dialogVisible.value = false;
-                ElMessage.success('Thêm mới hồ sơ con nhỏ thành công!');
+                ElMessage.success(t('employee_children.create_success_msg'));
             },
             onFinish: () => {
                 submitting.value = false;
@@ -247,7 +250,7 @@ const submitForm = () => {
 const deleteChild = (child: ChildItem) => {
     router.delete(`/employee-children/${child.id}`, {
         onSuccess: () => {
-            ElMessage.success(`Đã xóa hồ sơ bé ${child.full_name}`);
+            ElMessage.success(t('employee_children.delete_success_msg', { name: child.full_name }));
         },
     });
 };
@@ -269,7 +272,7 @@ const handlePageChange = (page: number) => {
 
 <template>
     <AppLayout>
-        <Head title="Quản lý Con nhỏ & Chế độ Phúc lợi Gia đình - Smart-HR" />
+        <Head :title="$t('employee_children.page_title')" />
 
         <div class="space-y-6 pb-12">
             <!-- Header Banner -->
@@ -280,19 +283,19 @@ const handlePageChange = (page: number) => {
                             <el-icon :size="20"><Female /></el-icon>
                         </div>
                         <h1 class="text-xl font-bold text-slate-900 dark:text-white">
-                            Quản lý Con nhỏ & Chế độ Phúc lợi Gia đình
+                            {{ $t('employee_children.page_heading') }}
                         </h1>
                     </div>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Bảo vệ quyền lợi thai sản Điều 137 BLLĐ 2019, chế độ đi muộn về sớm có lương, trợ cấp con nhỏ hàng tháng và giảm trừ gia cảnh thuế TNCN.
+                        {{ $t('employee_children.page_subtitle') }}
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
                     <el-button :icon="Setting" class="!rounded-xl font-medium" @click="router.visit('/policies?tab=child_welfare')">
-                        Cấu hình Quy chế Con nhỏ
+                        {{ $t('employee_children.btn_configure_policy') }}
                     </el-button>
                     <el-button type="primary" :icon="Plus" class="!rounded-xl font-medium" @click="openCreateModal">
-                        Thêm Con nhỏ Mới
+                        {{ $t('employee_children.btn_add_child') }}
                     </el-button>
                 </div>
             </div>
@@ -301,12 +304,12 @@ const handlePageChange = (page: number) => {
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <!-- Card 1: Tổng số trẻ -->
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
-                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Tổng Trẻ em Bảo trợ</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('employee_children.kpi_total_children') }}</span>
                     <div class="mt-2 flex items-baseline justify-between">
                         <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ kpis.totalChildrenCount }}</span>
-                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-medium">Bé</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-medium">{{ $t('employee_children.unit_child') }}</span>
                     </div>
-                    <span class="text-[10px] text-slate-400 mt-1">Thuộc nhân sự tập đoàn</span>
+                    <span class="text-[10px] text-slate-400 mt-1">{{ $t('employee_children.kpi_total_children_sub') }}</span>
                 </div>
 
                 <!-- Card 2: Điều 137 (<12 tháng) -->
@@ -314,45 +317,45 @@ const handlePageChange = (page: number) => {
                     <div class="absolute top-0 right-0 w-12 h-12 bg-rose-500/10 rounded-bl-full pointer-events-none"></div>
                     <span class="text-xs text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                        Chế độ Điều 137 (&lt; 12T)
+                        {{ $t('employee_children.kpi_article137') }}
                     </span>
                     <div class="mt-2 flex items-baseline justify-between">
                         <span class="text-2xl font-bold text-rose-600 dark:text-rose-400">{{ kpis.under12mCount }}</span>
-                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-medium">Bé</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-medium">{{ $t('employee_children.unit_child') }}</span>
                     </div>
-                    <span class="text-[10px] text-rose-500 mt-1">Miễn trừ 60p/ngày, cấm ca đêm</span>
+                    <span class="text-[10px] text-rose-500 mt-1">{{ $t('employee_children.kpi_article137_sub') }}</span>
                 </div>
 
                 <!-- Card 3: Con 1 - 11 tuổi -->
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-amber-200 dark:border-amber-900/60 shadow-xs flex flex-col justify-between">
-                    <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Con nhỏ Mở rộng (1-11T)</span>
+                    <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">{{ $t('employee_children.kpi_extended_welfare') }}</span>
                     <div class="mt-2 flex items-baseline justify-between">
                         <span class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ kpis.range1to11Count }}</span>
-                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 font-medium">Bé</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 font-medium">{{ $t('employee_children.unit_child') }}</span>
                     </div>
-                    <span class="text-[10px] text-amber-500 mt-1">Miễn trừ 30p/ngày có lương</span>
+                    <span class="text-[10px] text-amber-500 mt-1">{{ $t('employee_children.kpi_extended_welfare_sub') }}</span>
                 </div>
 
                 <!-- Card 4: Giảm trừ thuế TNCN -->
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-blue-200 dark:border-blue-900/60 shadow-xs flex flex-col justify-between">
-                    <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">Giảm trừ Thuế TNCN</span>
+                    <span class="text-xs text-blue-600 dark:text-blue-400 font-medium">{{ $t('employee_children.kpi_tax_dependent') }}</span>
                     <div class="mt-2 flex items-baseline justify-between">
                         <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ kpis.taxDependentCount }}</span>
-                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-medium">Người</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-medium">{{ $t('employee_children.unit_person') }}</span>
                     </div>
-                    <span class="text-[10px] text-blue-500 mt-1">4.400.000 đ/người/tháng</span>
+                    <span class="text-[10px] text-blue-500 mt-1">{{ $t('employee_children.kpi_tax_dependent_sub') }}</span>
                 </div>
 
                 <!-- Card 5: Quỹ trợ cấp hàng tháng -->
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 shadow-xs flex flex-col justify-between col-span-2 md:col-span-1">
-                    <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Quỹ Trợ cấp Hàng tháng</span>
+                    <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{{ $t('employee_children.kpi_monthly_fund') }}</span>
                     <div class="mt-2 flex items-baseline justify-between">
                         <span class="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                             {{ Number(kpis.totalMonthlyAllowance).toLocaleString('vi-VN') }}
                         </span>
-                        <span class="text-[11px] text-emerald-600 font-medium">đ</span>
+                        <span class="text-[11px] text-emerald-600 font-medium">{{ $t('common.currency_vnd') }}</span>
                     </div>
-                    <span class="text-[10px] text-emerald-500 mt-1">300.000 đ/bạn nhỏ/tháng</span>
+                    <span class="text-[10px] text-emerald-500 mt-1">{{ $t('employee_children.kpi_monthly_fund_sub') }}</span>
                 </div>
             </div>
 
@@ -362,7 +365,7 @@ const handlePageChange = (page: number) => {
                     <!-- Search Input -->
                     <el-input
                         v-model="searchQuery"
-                        placeholder="Tìm tên bé, số GKS, tên cha mẹ, mã NV..."
+                        :placeholder="$t('employee_children.search_placeholder')"
                         clearable
                         class="!w-72"
                         :prefix-icon="Search"
@@ -373,7 +376,7 @@ const handlePageChange = (page: number) => {
                     <!-- Filter Employee -->
                     <el-select
                         v-model="selectedEmployeeId"
-                        placeholder="Chọn nhân viên (Cha/Mẹ)"
+                        :placeholder="$t('employee_children.filter_employee_placeholder')"
                         clearable
                         filterable
                         class="!w-64"
@@ -390,47 +393,47 @@ const handlePageChange = (page: number) => {
                     <!-- Filter Age Group -->
                     <el-select
                         v-model="selectedAgeGroup"
-                        placeholder="Nhóm độ tuổi"
+                        :placeholder="$t('employee_children.filter_age_placeholder')"
                         clearable
                         class="!w-48"
                         @change="applyFilters"
                     >
-                        <el-option label="Tất cả độ tuổi" value="" />
-                        <el-option label="< 12 tháng (Điều 137)" value="UNDER_12M" />
-                        <el-option label="1 - 6 tuổi" value="1_TO_6Y" />
-                        <el-option label="6 - 11 tuổi" value="6_TO_11Y" />
-                        <el-option label="Trên 11 tuổi" value="OVER_11Y" />
+                        <el-option :label="$t('employee_children.age_all')" value="" />
+                        <el-option :label="$t('employee_children.age_under_12m')" value="UNDER_12M" />
+                        <el-option :label="$t('employee_children.age_1_to_6y')" value="1_TO_6Y" />
+                        <el-option :label="$t('employee_children.age_6_to_11y')" value="6_TO_11Y" />
+                        <el-option :label="$t('employee_children.age_over_11y')" value="OVER_11Y" />
                     </el-select>
 
                     <!-- Filter Tax Dependent -->
                     <el-select
                         v-model="selectedTaxDependent"
-                        placeholder="Giảm trừ thuế"
+                        :placeholder="$t('employee_children.filter_tax_placeholder')"
                         clearable
                         class="!w-40"
                         @change="applyFilters"
                     >
-                        <el-option label="Tất cả" value="" />
-                        <el-option label="Có giảm trừ thuế" value="1" />
-                        <el-option label="Không giảm trừ" value="0" />
+                        <el-option :label="$t('common.all')" value="" />
+                        <el-option :label="$t('employee_children.tax_yes')" value="1" />
+                        <el-option :label="$t('employee_children.tax_no')" value="0" />
                     </el-select>
                 </div>
 
                 <div class="flex items-center gap-2 w-full md:w-auto justify-end">
                     <el-button type="primary" :icon="Search" class="!rounded-xl font-medium" @click="applyFilters">
-                        Tìm kiếm
+                        {{ $t('common.search') }}
                     </el-button>
                     <el-button :icon="Refresh" class="!rounded-xl" @click="resetFilters">
-                        Làm mới
+                        {{ $t('common.refresh') }}
                     </el-button>
                 </div>
             </div>
 
             <!-- Children Data Table -->
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-                <el-table :data="children.data" stripe class="w-full" empty-text="Không có hồ sơ con nhỏ nào">
+                <el-table :data="children.data" stripe class="w-full" :empty-text="$t('employee_children.empty_records')">
                     <!-- Bé & Độ tuổi -->
-                    <el-table-column label="Thông tin Bé" min-width="190">
+                    <el-table-column :label="$t('employee_children.col_child_info')" min-width="190">
                         <template #default="{ row }">
                             <div class="flex items-center gap-3">
                                 <div
@@ -454,7 +457,7 @@ const handlePageChange = (page: number) => {
                     </el-table-column>
 
                     <!-- Phụ huynh (Nhân viên) -->
-                    <el-table-column label="Phụ huynh (Nhân viên)" min-width="180">
+                    <el-table-column :label="$t('employee_children.col_parent_employee')" min-width="180">
                         <template #default="{ row }">
                             <div v-if="row.employee" class="flex flex-col">
                                 <div class="flex items-center gap-1.5">
@@ -463,29 +466,29 @@ const handlePageChange = (page: number) => {
                                 </div>
                                 <span class="text-[11px] text-slate-400">{{ row.employee.department_name }}</span>
                             </div>
-                            <span v-else class="text-xs text-slate-400">Chưa liên kết</span>
+                            <span v-else class="text-xs text-slate-400">{{ $t('employee_children.empty_no_parent') }}</span>
                         </template>
                     </el-table-column>
 
                     <!-- Giấy khai sinh & Mã số thuế -->
-                    <el-table-column label="Giấy tờ & MST" min-width="160">
+                    <el-table-column :label="$t('employee_children.col_docs_mst')" min-width="160">
                         <template #default="{ row }">
                             <div class="flex flex-col text-xs space-y-1">
                                 <div v-if="row.birth_certificate_number" class="flex items-center gap-1 text-slate-600 dark:text-slate-300">
-                                    <span class="text-slate-400">GKS:</span>
+                                    <span class="text-slate-400">{{ $t('employee_children.gks_abbr') }}</span>
                                     <span class="font-mono">{{ row.birth_certificate_number }}</span>
                                 </div>
                                 <div v-if="row.is_tax_dependent" class="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-medium">
-                                    <span class="text-slate-400">MST:</span>
-                                    <span class="font-mono">{{ row.tax_dependent_code || 'Chưa cấp' }}</span>
+                                    <span class="text-slate-400">{{ $t('employee_children.mst_abbr') }}</span>
+                                    <span class="font-mono">{{ row.tax_dependent_code || $t('employee_children.not_yet_issued') }}</span>
                                 </div>
-                                <span v-if="!row.birth_certificate_number && !row.is_tax_dependent" class="text-slate-400">Chưa cập nhật</span>
+                                <span v-if="!row.birth_certificate_number && !row.is_tax_dependent" class="text-slate-400">{{ $t('common.not_updated') }}</span>
                             </div>
                         </template>
                     </el-table-column>
 
                     <!-- Chế độ Chính sách Áp dụng -->
-                    <el-table-column label="Chế độ Chính sách Áp dụng" min-width="260">
+                    <el-table-column :label="$t('employee_children.col_policies')" min-width="260">
                         <template #default="{ row }">
                             <div class="flex flex-wrap gap-1.5">
                                 <el-tag
@@ -499,37 +502,37 @@ const handlePageChange = (page: number) => {
                                     {{ policy.name }}
                                 </el-tag>
                                 <span v-if="!row.applicable_policies || row.applicable_policies.length === 0" class="text-xs text-slate-400">
-                                    Không áp dụng chính sách
+                                    {{ $t('employee_children.no_applicable_policy') }}
                                 </span>
                             </div>
                         </template>
                     </el-table-column>
 
                     <!-- Trợ cấp hàng tháng -->
-                    <el-table-column label="Trợ cấp Tháng" min-width="120" align="right">
+                    <el-table-column :label="$t('employee_children.col_monthly_allowance')" min-width="120" align="right">
                         <template #default="{ row }">
                             <span v-if="row.has_monthly_allowance" class="font-semibold text-emerald-600 dark:text-emerald-400 text-sm font-mono">
-                                {{ Number(row.monthly_allowance_amount).toLocaleString('vi-VN') }} đ
+                                {{ Number(row.monthly_allowance_amount).toLocaleString('vi-VN') }} {{ $t('common.currency_vnd') }}
                             </span>
-                            <span v-else class="text-xs text-slate-400">0 đ</span>
+                            <span v-else class="text-xs text-slate-400">0 {{ $t('common.currency_vnd') }}</span>
                         </template>
                     </el-table-column>
 
                     <!-- Thao tác -->
-                    <el-table-column label="Thao tác" width="110" align="center" fixed="right">
+                    <el-table-column :label="$t('common.actions')" width="110" align="center" fixed="right">
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-1">
                                 <el-button
                                     type="primary"
                                     link
                                     :icon="Edit"
-                                    title="Sửa hồ sơ"
+                                    :title="$t('employee_children.edit_title')"
                                     @click="openEditModal(row)"
                                 />
                                 <el-popconfirm
-                                    title="Bạn có chắc chắn muốn xóa hồ sơ con nhỏ này?"
-                                    confirm-button-text="Xóa"
-                                    cancel-button-text="Hủy"
+                                    :title="$t('employee_children.popconfirm_delete_msg')"
+                                    :confirm-button-text="$t('common.delete')"
+                                    :cancel-button-text="$t('common.cancel')"
                                     confirm-button-type="danger"
                                     @confirm="deleteChild(row)"
                                 >
@@ -538,7 +541,7 @@ const handlePageChange = (page: number) => {
                                             type="danger"
                                             link
                                             :icon="Delete"
-                                            title="Xóa hồ sơ"
+                                            :title="$t('employee_children.delete_title')"
                                         />
                                     </template>
                                 </el-popconfirm>
@@ -563,24 +566,24 @@ const handlePageChange = (page: number) => {
             <!-- Modal Thêm / Sửa Con nhỏ -->
             <el-dialog
                 v-model="dialogVisible"
-                :title="isEditing ? 'Cập nhật Hồ sơ Con nhỏ' : 'Thêm mới Con nhỏ & Đăng ký Phúc lợi'"
+                :title="isEditing ? $t('employee_children.dialog_title_edit') : $t('employee_children.dialog_title_create')"
                 width="640px"
                 class="!rounded-2xl"
                 destroy-on-close
             >
                 <el-form label-position="top" class="space-y-4">
                     <!-- Chọn phụ huynh -->
-                    <el-form-item label="Nhân sự Phụ huynh (Cha / Mẹ) *" required>
+                    <el-form-item :label="$t('employee_children.label_parent_employee')" required>
                         <el-select
                             v-model="form.employee_id"
-                            placeholder="Chọn nhân viên"
+                            :placeholder="$t('employee_children.select_employee_placeholder')"
                             filterable
                             class="w-full"
                         >
                             <el-option
                                 v-for="emp in employees"
                                 :key="emp.id"
-                                :label="`${emp.user_code} - ${emp.full_name} (${emp.gender === 'FEMALE' ? 'Mẹ' : 'Cha'})`"
+                                :label="`${emp.user_code} - ${emp.full_name} (${emp.gender === 'FEMALE' ? $t('employee_children.parent_gender_mother') : $t('employee_children.parent_gender_father')})`"
                                 :value="emp.id"
                             />
                         </el-select>
@@ -588,26 +591,26 @@ const handlePageChange = (page: number) => {
 
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Họ tên bé -->
-                        <el-form-item label="Họ và tên con *" required>
-                            <el-input v-model="form.full_name" placeholder="VD: Nguyễn Tuệ Minh" />
+                        <el-form-item :label="$t('employee_children.label_child_full_name')" required>
+                            <el-input v-model="form.full_name" :placeholder="$t('employee_children.ph_child_full_name')" />
                         </el-form-item>
 
                         <!-- Giới tính -->
-                        <el-form-item label="Giới tính" required>
+                        <el-form-item :label="$t('employee_children.label_gender')" required>
                             <el-radio-group v-model="form.gender">
-                                <el-radio-button value="MALE">Bé Trai</el-radio-button>
-                                <el-radio-button value="FEMALE">Bé Gái</el-radio-button>
+                                <el-radio-button value="MALE">{{ $t('employee_children.gender_boy') }}</el-radio-button>
+                                <el-radio-button value="FEMALE">{{ $t('employee_children.gender_girl') }}</el-radio-button>
                             </el-radio-group>
                         </el-form-item>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Ngày sinh -->
-                        <el-form-item label="Ngày sinh của bé *" required>
+                        <el-form-item :label="$t('employee_children.label_birth_date')" required>
                             <el-date-picker
                                 v-model="form.birth_date"
                                 type="date"
-                                placeholder="Chọn ngày sinh"
+                                :placeholder="$t('employee_children.ph_birth_date')"
                                 format="YYYY-MM-DD"
                                 value-format="YYYY-MM-DD"
                                 class="!w-full"
@@ -615,8 +618,8 @@ const handlePageChange = (page: number) => {
                         </el-form-item>
 
                         <!-- Số giấy khai sinh -->
-                        <el-form-item label="Số Giấy khai sinh">
-                            <el-input v-model="form.birth_certificate_number" placeholder="VD: GKS-HN-2026-001" />
+                        <el-form-item :label="$t('employee_children.label_birth_cert_no')">
+                            <el-input v-model="form.birth_certificate_number" :placeholder="$t('employee_children.ph_birth_cert_no')" />
                         </el-form-item>
                     </div>
 
@@ -638,13 +641,13 @@ const handlePageChange = (page: number) => {
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <el-switch v-model="form.has_monthly_allowance" />
-                                <span class="font-semibold text-sm text-slate-800 dark:text-slate-200">Trợ cấp con nhỏ hàng tháng</span>
+                                <span class="font-semibold text-sm text-slate-800 dark:text-slate-200">{{ $t('employee_children.label_monthly_allowance') }}</span>
                             </div>
-                            <span class="text-xs text-slate-400">Chi trả cùng kỳ lương</span>
+                            <span class="text-xs text-slate-400">{{ $t('employee_children.allowance_pay_note') }}</span>
                         </div>
                         <div v-if="form.has_monthly_allowance" class="grid grid-cols-2 gap-3 pt-2">
                             <div>
-                                <span class="text-xs text-slate-500 mb-1 block">Mức trợ cấp (VND/tháng)</span>
+                                <span class="text-xs text-slate-500 mb-1 block">{{ $t('employee_children.label_allowance_amount') }}</span>
                                 <el-input-number
                                     v-model="form.monthly_allowance_amount"
                                     :min="0"
@@ -653,7 +656,7 @@ const handlePageChange = (page: number) => {
                                 />
                             </div>
                             <div class="text-xs text-slate-400 flex items-center">
-                                Mức tiêu chuẩn công ty: 300.000 đ/tháng cho mỗi con nhỏ.
+                                {{ $t('employee_children.allowance_standard_note') }}
                             </div>
                         </div>
                     </div>
@@ -663,21 +666,21 @@ const handlePageChange = (page: number) => {
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <el-switch v-model="form.is_tax_dependent" />
-                                <span class="font-semibold text-sm text-slate-800 dark:text-slate-200">Đăng ký người phụ thuộc giảm trừ gia cảnh</span>
+                                <span class="font-semibold text-sm text-slate-800 dark:text-slate-200">{{ $t('employee_children.label_tax_dependent') }}</span>
                             </div>
-                            <span class="text-xs text-blue-600 dark:text-blue-400 font-semibold">-4.400.000 đ/tháng</span>
+                            <span class="text-xs text-blue-600 dark:text-blue-400 font-semibold">{{ $t('employee_children.tax_amount_note') }}</span>
                         </div>
                         <div v-if="form.is_tax_dependent" class="grid grid-cols-2 gap-3 pt-2">
                             <div>
-                                <span class="text-xs text-slate-500 mb-1 block">Mã số thuế người phụ thuộc</span>
-                                <el-input v-model="form.tax_dependent_code" placeholder="VD: MST_DEP_0123" />
+                                <span class="text-xs text-slate-500 mb-1 block">{{ $t('employee_children.label_tax_code') }}</span>
+                                <el-input v-model="form.tax_dependent_code" :placeholder="$t('employee_children.ph_tax_code')" />
                             </div>
                             <div>
-                                <span class="text-xs text-slate-500 mb-1 block">Ngày bắt đầu giảm trừ</span>
+                                <span class="text-xs text-slate-500 mb-1 block">{{ $t('employee_children.label_tax_start_date') }}</span>
                                 <el-date-picker
                                     v-model="form.tax_dependent_start_date"
                                     type="date"
-                                    placeholder="Chọn ngày"
+                                    :placeholder="$t('employee_children.ph_pick_date')"
                                     format="YYYY-MM-DD"
                                     value-format="YYYY-MM-DD"
                                     class="!w-full"
@@ -687,21 +690,21 @@ const handlePageChange = (page: number) => {
                     </div>
 
                     <!-- Ghi chú -->
-                    <el-form-item label="Ghi chú">
+                    <el-form-item :label="$t('common.notes')">
                         <el-input
                             v-model="form.notes"
                             type="textarea"
                             :rows="2"
-                            placeholder="Ghi chú về sức khỏe, hoàn cảnh hoặc chế độ riêng..."
+                            :placeholder="$t('employee_children.ph_notes')"
                         />
                     </el-form-item>
                 </el-form>
 
                 <template #footer>
                     <div class="flex justify-end gap-2">
-                        <el-button @click="dialogVisible = false">Hủy</el-button>
+                        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
                         <el-button type="primary" :loading="submitting" @click="submitForm">
-                            {{ isEditing ? 'Cập nhật' : 'Thêm mới' }}
+                            {{ isEditing ? $t('employee_children.btn_submit_update') : $t('employee_children.btn_submit_create') }}
                         </el-button>
                     </div>
                 </template>

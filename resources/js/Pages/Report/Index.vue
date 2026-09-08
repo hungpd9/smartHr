@@ -20,6 +20,7 @@ import {
     DocumentCopy,
 } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface ReportTypeItem {
     value: string;
@@ -76,6 +77,8 @@ const props = defineProps<{
     initialPreview: PreviewResponse;
     recentExports: ExportHistoryItem[];
 }>();
+
+const { t } = useThemeAndLocale();
 
 // Active Tab
 const activeTab = ref<'preview' | 'history'>('preview');
@@ -137,7 +140,7 @@ const fetchPreviewData = async () => {
         });
         previewData.value = response.data;
     } catch (error) {
-        ElMessage.error('Không thể tải dữ liệu xem trước. Vui lòng thử lại!');
+        ElMessage.error(t('reports.preview_load_error'));
     } finally {
         isLoading.value = false;
     }
@@ -174,7 +177,7 @@ const handleExport = (format: 'CSV' | 'EXCEL_TSV') => {
         is_tax_dependent: filterForm.is_tax_dependent || 'ALL',
     });
 
-    ElMessage.success(`Đang khởi tạo tệp ${format}... Quá trình tải sẽ bắt đầu ngay.`);
+    ElMessage.success(t('reports.export_starting', { format }));
 
     // Mở URL download trực tiếp
     window.location.href = `/reports/export?${params.toString()}`;
@@ -199,7 +202,7 @@ const fetchHistoryData = async () => {
                 file_format: item.file_format,
                 row_count: item.row_count,
                 execution_time_ms: item.execution_time_ms,
-                user_name: item.user?.name ?? 'Hệ thống',
+                user_name: item.user?.name ?? t('reports.system_user'),
                 created_at: new Date(item.created_at).toLocaleString('vi-VN'),
             }));
         }
@@ -233,46 +236,46 @@ const summaryCards = computed(() => {
 
     if (type === 'TIMESHEET_SUMMARY') {
         return [
-            { label: 'Tổng nhân sự', value: s.total_employees ?? 0, unit: 'người', color: 'indigo' },
-            { label: 'Tổng công thực tế', value: s.total_actual_days ?? 0, unit: 'công', color: 'emerald' },
-            { label: 'Tổng giờ OT', value: s.total_ot_hours ?? 0, unit: 'giờ', color: 'amber' },
-            { label: 'Tổng phút đi muộn', value: s.total_late_minutes ?? 0, unit: 'phút', color: 'rose' },
+            { label: t('reports.kpi_total_employees'), value: s.total_employees ?? 0, unit: t('reports.unit_people'), color: 'indigo' },
+            { label: t('reports.kpi_total_actual_days'), value: s.total_actual_days ?? 0, unit: t('reports.unit_workdays'), color: 'emerald' },
+            { label: t('reports.kpi_total_ot_hours'), value: s.total_ot_hours ?? 0, unit: t('reports.unit_hours'), color: 'amber' },
+            { label: t('reports.kpi_total_late_minutes'), value: s.total_late_minutes ?? 0, unit: t('reports.unit_minutes'), color: 'rose' },
         ];
     }
 
     if (type === 'PAYROLL_ANALYSIS') {
         return [
-            { label: 'Tổng thu nhập Gross', value: formatCurrency(s.total_gross ?? 0), unit: '', color: 'indigo' },
-            { label: 'Tổng thực nhận (Net)', value: formatCurrency(s.total_net ?? 0), unit: '', color: 'emerald' },
-            { label: 'Thuế TNCN khấu trừ', value: formatCurrency(s.total_tax ?? 0), unit: '', color: 'amber' },
-            { label: 'Bảo hiểm NSDLĐ đóng', value: formatCurrency(s.total_employer_cost ?? 0), unit: '', color: 'blue' },
+            { label: t('reports.kpi_total_gross'), value: formatCurrency(s.total_gross ?? 0), unit: '', color: 'indigo' },
+            { label: t('reports.kpi_total_net'), value: formatCurrency(s.total_net ?? 0), unit: '', color: 'emerald' },
+            { label: t('reports.kpi_total_pit_tax'), value: formatCurrency(s.total_tax ?? 0), unit: '', color: 'amber' },
+            { label: t('reports.kpi_employer_insurance'), value: formatCurrency(s.total_employer_cost ?? 0), unit: '', color: 'blue' },
         ];
     }
 
     if (type === 'HEADCOUNT_TURNOVER') {
         return [
-            { label: 'Quy mô hiện tại', value: s.total_headcount ?? 0, unit: 'nhân sự', color: 'indigo' },
-            { label: 'Tuyển mới (Onboard)', value: s.total_onboard ?? 0, unit: 'nhân sự', color: 'emerald' },
-            { label: 'Nghỉ việc (Offboard)', value: s.total_offboard ?? 0, unit: 'nhân sự', color: 'rose' },
-            { label: 'Tăng trưởng ròng', value: s.net_growth ?? 0, unit: 'nhân sự', color: 'cyan' },
+            { label: t('reports.kpi_current_headcount'), value: s.total_headcount ?? 0, unit: t('reports.unit_staff'), color: 'indigo' },
+            { label: t('reports.kpi_onboard'), value: s.total_onboard ?? 0, unit: t('reports.unit_staff'), color: 'emerald' },
+            { label: t('reports.kpi_offboard'), value: s.total_offboard ?? 0, unit: t('reports.unit_staff'), color: 'rose' },
+            { label: t('reports.kpi_net_growth'), value: s.net_growth ?? 0, unit: t('reports.unit_staff'), color: 'cyan' },
         ];
     }
 
     if (type === 'COMPLIANCE_AUDIT') {
         return [
-            { label: 'Tổng cảnh báo', value: s.total_alerts ?? 0, unit: 'vụ việc', color: 'indigo' },
-            { label: 'Vi phạm nghiêm trọng', value: s.critical_count ?? 0, unit: 'Critical', color: 'rose' },
-            { label: 'Cảnh báo tuân thủ', value: s.warning_count ?? 0, unit: 'Warning', color: 'amber' },
-            { label: 'Đã khắc phục xong', value: s.resolved_count ?? 0, unit: 'Resolved', color: 'emerald' },
+            { label: t('reports.kpi_total_alerts'), value: s.total_alerts ?? 0, unit: t('reports.unit_cases'), color: 'indigo' },
+            { label: t('reports.kpi_critical_violations'), value: s.critical_count ?? 0, unit: t('reports.unit_critical'), color: 'rose' },
+            { label: t('reports.kpi_compliance_warnings'), value: s.warning_count ?? 0, unit: t('reports.unit_warning'), color: 'amber' },
+            { label: t('reports.kpi_resolved_count'), value: s.resolved_count ?? 0, unit: t('reports.unit_resolved'), color: 'emerald' },
         ];
     }
 
     if (type === 'CHILD_WELFARE') {
         return [
-            { label: 'Tổng số con nhỏ', value: s.total_children ?? 0, unit: 'cháu', color: 'indigo' },
-            { label: 'Con dưới 12 tháng (Đ.137)', value: s.under_12m_count ?? 0, unit: 'cháu', color: 'rose' },
-            { label: 'Đăng ký giảm trừ NPT', value: s.tax_dependent_count ?? 0, unit: 'người', color: 'emerald' },
-            { label: 'Tổng trợ cấp hàng tháng', value: formatCurrency(s.total_monthly_allowance ?? 0), unit: '', color: 'amber' },
+            { label: t('reports.kpi_total_children'), value: s.total_children ?? 0, unit: t('reports.unit_children'), color: 'indigo' },
+            { label: t('reports.kpi_under_12m'), value: s.under_12m_count ?? 0, unit: t('reports.unit_children'), color: 'rose' },
+            { label: t('reports.kpi_tax_dependents'), value: s.tax_dependent_count ?? 0, unit: t('reports.unit_people'), color: 'emerald' },
+            { label: t('reports.kpi_monthly_allowance'), value: formatCurrency(s.total_monthly_allowance ?? 0), unit: '', color: 'amber' },
         ];
     }
 
@@ -282,7 +285,7 @@ const summaryCards = computed(() => {
 
 <template>
     <AppLayout>
-        <Head title="Trung Tâm Báo Cáo Phân Tích & Xuất Dữ Liệu" />
+        <Head :title="$t('reports.page_title')" />
 
         <div class="space-y-6 pb-12">
             <!-- Banner Header Điều Hành -->
@@ -293,13 +296,13 @@ const summaryCards = computed(() => {
                     <div class="space-y-2">
                         <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-400/30">
                             <el-icon><Document /></el-icon>
-                            <span>Executive Reporting & High-Performance Export Engine</span>
+                            <span>{{ $t('reports.hero_badge') }}</span>
                         </div>
                         <h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-white">
-                            Trung Tâm Báo Cáo Phân Tích & Xuất Dữ Liệu
+                            {{ $t('reports.page_title') }}
                         </h1>
                         <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                            Khung phân tích dữ liệu đa chiều hỗ trợ quản trị nhân lực, giám sát chi phí quỹ lương, kỷ luật công tác và kiểm toán tuân thủ Bộ luật Lao động 2019. Kỹ thuật xuất dữ liệu Streaming bảo đảm tốc độ tức thì và font tiếng Việt chuẩn xác 100%.
+                            {{ $t('reports.hero_subtitle') }}
                         </p>
                     </div>
 
@@ -312,7 +315,7 @@ const summaryCards = computed(() => {
                             @click="handleExport('CSV')"
                         >
                             <el-icon class="mr-1.5"><Download /></el-icon>
-                            Xuất Excel (CSV)
+                            {{ $t('reports.export_excel_csv') }}
                         </el-button>
 
                         <el-button
@@ -321,7 +324,7 @@ const summaryCards = computed(() => {
                             @click="handleExport('EXCEL_TSV')"
                         >
                             <el-icon class="mr-1.5"><DocumentCopy /></el-icon>
-                            Xuất Excel (TSV)
+                            {{ $t('reports.export_excel_tsv') }}
                         </el-button>
                     </div>
                 </div>
@@ -340,7 +343,7 @@ const summaryCards = computed(() => {
                     >
                         <span class="flex items-center space-x-2">
                             <el-icon><Document /></el-icon>
-                            <span>Danh Mục Báo Cáo & Xem Trước</span>
+                            <span>{{ $t('reports.tab_preview') }}</span>
                         </span>
                     </button>
 
@@ -354,7 +357,7 @@ const summaryCards = computed(() => {
                     >
                         <span class="flex items-center space-x-2">
                             <el-icon><Clock /></el-icon>
-                            <span>Nhật Ký Xuất Dữ Liệu (Audit Trail)</span>
+                            <span>{{ $t('reports.tab_history') }}</span>
                             <span v-if="historyList.length" class="text-xs bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
                                 {{ historyList.length }}
                             </span>
@@ -364,7 +367,7 @@ const summaryCards = computed(() => {
 
                 <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center space-x-1.5">
                     <el-icon class="text-emerald-500"><Check /></el-icon>
-                    <span>Chuẩn UTF-8 BOM • Tiêu thụ RAM &lt; 15MB</span>
+                    <span>{{ $t('reports.utf8_bom_badge') }}</span>
                 </div>
             </div>
 
@@ -417,7 +420,7 @@ const summaryCards = computed(() => {
 
                         <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
                             <span :class="selectedType === item.value ? 'text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-slate-400'">
-                                {{ selectedType === item.value ? 'Đang chọn' : 'Nhấp để xem' }}
+                                {{ selectedType === item.value ? $t('reports.selected') : $t('reports.click_to_view') }}
                             </span>
                             <span v-if="selectedType === item.value" class="w-2 h-2 rounded-full bg-indigo-600"></span>
                         </div>
@@ -429,18 +432,18 @@ const summaryCards = computed(() => {
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2 text-sm font-bold text-slate-800 dark:text-slate-200">
                             <el-icon class="text-indigo-600"><Filter /></el-icon>
-                            <span>Bộ Lọc Tham Số Báo Cáo</span>
+                            <span>{{ $t('reports.filter_title') }}</span>
                             <span class="text-xs font-normal text-slate-400">• {{ previewData.report_label }}</span>
                         </div>
 
                         <div class="flex items-center space-x-2">
                             <el-button size="small" @click="handleResetFilters">
                                 <el-icon class="mr-1"><RefreshRight /></el-icon>
-                                Đặt lại
+                                {{ $t('reports.reset_filters') }}
                             </el-button>
                             <el-button type="primary" size="small" color="#4f46e5" @click="fetchPreviewData">
                                 <el-icon class="mr-1"><Search /></el-icon>
-                                Áp dụng bộ lọc
+                                {{ $t('reports.apply_filters') }}
                             </el-button>
                         </div>
                     </div>
@@ -449,12 +452,12 @@ const summaryCards = computed(() => {
                         <!-- Tháng báo cáo -->
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                Tháng áp dụng
+                                {{ $t('reports.month_applied') }}
                             </label>
                             <el-date-picker
                                 v-model="filterForm.month_year"
                                 type="month"
-                                placeholder="Chọn tháng"
+                                :placeholder="$t('reports.select_month')"
                                 format="MM/YYYY"
                                 value-format="YYYY-MM"
                                 class="!w-full"
@@ -465,11 +468,11 @@ const summaryCards = computed(() => {
                         <!-- Chi nhánh -->
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                Chi nhánh
+                                {{ $t('common.branch') }}
                             </label>
                             <el-select
                                 v-model="filterForm.branch_id"
-                                placeholder="Tất cả chi nhánh"
+                                :placeholder="$t('reports.all_branches')"
                                 clearable
                                 class="!w-full"
                                 @change="fetchPreviewData"
@@ -486,11 +489,11 @@ const summaryCards = computed(() => {
                         <!-- Phòng ban -->
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                Khối / Phòng ban
+                                {{ $t('reports.department_block') }}
                             </label>
                             <el-select
                                 v-model="filterForm.department_id"
-                                placeholder="Tất cả phòng ban"
+                                :placeholder="$t('reports.all_departments')"
                                 clearable
                                 class="!w-full"
                                 @change="fetchPreviewData"
@@ -507,11 +510,11 @@ const summaryCards = computed(() => {
                         <!-- Tìm kiếm tên/mã -->
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                                Tìm kiếm nhân viên
+                                {{ $t('reports.search_employee') }}
                             </label>
                             <el-input
                                 v-model="filterForm.search"
-                                placeholder="Mã NV hoặc họ tên..."
+                                :placeholder="$t('reports.search_employee_placeholder')"
                                 clearable
                                 :prefix-icon="Search"
                                 @keyup.enter="fetchPreviewData"
@@ -563,13 +566,13 @@ const summaryCards = computed(() => {
                     <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                         <div class="space-y-0.5">
                             <h2 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                <span>Bản Xem Trước Dữ Liệu</span>
+                                <span>{{ $t('reports.preview_table_title') }}</span>
                                 <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-normal">
-                                    {{ previewData.total }} bản ghi tìm thấy
+                                    {{ $t('reports.records_found', { total: previewData.total }) }}
                                 </span>
                             </h2>
                             <p class="text-xs text-slate-400">
-                                Hiển thị trang {{ currentPage }} / {{ Math.ceil(previewData.total / pageSize) || 1 }}
+                                {{ $t('reports.showing_page', { page: currentPage, pages: Math.ceil(previewData.total / pageSize) || 1 }) }}
                             </p>
                         </div>
 
@@ -582,7 +585,7 @@ const summaryCards = computed(() => {
                                 @click="handleExport('CSV')"
                             >
                                 <el-icon class="mr-1.5"><Download /></el-icon>
-                                Tải file CSV
+                                {{ $t('reports.download_csv') }}
                             </el-button>
                         </div>
                     </div>
@@ -595,7 +598,7 @@ const summaryCards = computed(() => {
                         border
                         style="width: 100%"
                         class="rounded-xl overflow-hidden"
-                        empty-text="Không tìm thấy dữ liệu phù hợp với bộ lọc đã chọn"
+                        :empty-text="$t('reports.preview_empty')"
                     >
                         <el-table-column
                             v-for="col in previewData.columns"
@@ -652,7 +655,7 @@ const summaryCards = computed(() => {
                     <!-- Pagination -->
                     <div class="flex items-center justify-between pt-2">
                         <span class="text-xs text-slate-400">
-                            Số dòng trên mỗi trang: {{ pageSize }}
+                            {{ $t('reports.rows_per_page', { size: pageSize }) }}
                         </span>
                         <el-pagination
                             v-model:current-page="currentPage"
@@ -672,16 +675,16 @@ const summaryCards = computed(() => {
                     <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                         <div>
                             <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">
-                                Nhật Ký Kiểm Toán Xuất Báo Cáo
+                                {{ $t('reports.audit_log_title') }}
                             </h2>
                             <p class="text-xs text-slate-400">
-                                Lưu vết minh bạch thông tin người xuất, loại báo cáo, thời gian xử lý và số dòng dữ liệu.
+                                {{ $t('reports.audit_log_subtitle') }}
                             </p>
                         </div>
 
                         <el-button size="small" @click="fetchHistoryData" :loading="isHistoryLoading">
                             <el-icon class="mr-1"><RefreshRight /></el-icon>
-                            Làm mới
+                            {{ $t('common.refresh') }}
                         </el-button>
                     </div>
 
@@ -691,33 +694,33 @@ const summaryCards = computed(() => {
                         stripe
                         border
                         style="width: 100%"
-                        empty-text="Chưa có nhật ký xuất báo cáo nào được ghi nhận"
+                        :empty-text="$t('reports.history_empty')"
                     >
-                        <el-table-column prop="created_at" label="Thời điểm xuất" min-width="150" />
-                        <el-table-column prop="user_name" label="Người thực hiện" min-width="150" />
-                        <el-table-column prop="report_label" label="Loại báo cáo" min-width="220" />
-                        <el-table-column prop="file_format" label="Định dạng" width="110" align="center">
+                        <el-table-column prop="created_at" :label="$t('reports.col_exported_at')" min-width="150" />
+                        <el-table-column prop="user_name" :label="$t('reports.col_user')" min-width="150" />
+                        <el-table-column prop="report_label" :label="$t('reports.col_report_type')" min-width="220" />
+                        <el-table-column prop="file_format" :label="$t('reports.col_format')" width="110" align="center">
                             <template #default="{ row }">
                                 <span class="px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400">
                                     {{ row.file_format }}
                                 </span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="row_count" label="Số dòng" width="110" align="right">
+                        <el-table-column prop="row_count" :label="$t('reports.col_row_count')" width="110" align="right">
                             <template #default="{ row }">
                                 <span class="font-semibold text-slate-700 dark:text-slate-300">
                                     {{ Number(row.row_count).toLocaleString('vi-VN') }}
                                 </span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="execution_time_ms" label="Thời gian xử lý" width="140" align="right">
+                        <el-table-column prop="execution_time_ms" :label="$t('reports.col_execution_time')" width="140" align="right">
                             <template #default="{ row }">
                                 <span class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                                     {{ row.execution_time_ms }} ms
                                 </span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="file_name" label="Tên file đã tạo" min-width="260" show-overflow-tooltip />
+                        <el-table-column prop="file_name" :label="$t('reports.col_file_name')" min-width="260" show-overflow-tooltip />
                     </el-table>
                 </div>
             </div>

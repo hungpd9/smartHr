@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import { marked } from 'marked';
 import {
     QuestionFilled,
@@ -42,6 +43,7 @@ const props = defineProps<{
     activeGuide: ActiveGuide | null;
     currentRole: string;
 }>();
+const { t } = useThemeAndLocale();
 
 const searchQuery = ref('');
 const currentActiveGuide = ref<ActiveGuide | null>(props.activeGuide);
@@ -85,23 +87,23 @@ const formatMarkdownAlerts = (html: string): string => {
     return html
         .replace(
             /<blockquote>\s*<p>\[!NOTE\]/g,
-            '<blockquote class="markdown-alert alert-note"><p class="alert-title font-bold flex items-center gap-1.5 text-blue-600 dark:text-blue-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Thông tin Nghiệp vụ</p>'
+            '<blockquote class="markdown-alert alert-note"><p class="alert-title font-bold flex items-center gap-1.5 text-blue-600 dark:text-blue-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ' + t('help.alert_note') + '</p>'
         )
         .replace(
             /<blockquote>\s*<p>\[!IMPORTANT\]/g,
-            '<blockquote class="markdown-alert alert-important"><p class="alert-title font-bold flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Quy định Bắt buộc</p>'
+            '<blockquote class="markdown-alert alert-important"><p class="alert-title font-bold flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> ' + t('help.alert_important') + '</p>'
         )
         .replace(
             /<blockquote>\s*<p>\[!TIP\]/g,
-            '<blockquote class="markdown-alert alert-tip"><p class="alert-title font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg> Mẹo Tối ưu Trải nghiệm</p>'
+            '<blockquote class="markdown-alert alert-tip"><p class="alert-title font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg> ' + t('help.alert_tip') + '</p>'
         )
         .replace(
             /<blockquote>\s*<p>\[!WARNING\]/g,
-            '<blockquote class="markdown-alert alert-warning"><p class="alert-title font-bold flex items-center gap-1.5 text-amber-600 dark:text-amber-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Cảnh báo Ràng buộc</p>'
+            '<blockquote class="markdown-alert alert-warning"><p class="alert-title font-bold flex items-center gap-1.5 text-amber-600 dark:text-amber-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ' + t('help.alert_warning') + '</p>'
         )
         .replace(
             /<blockquote>\s*<p>\[!CAUTION\]/g,
-            '<blockquote class="markdown-alert alert-caution"><p class="alert-title font-bold flex items-center gap-1.5 text-rose-600 dark:text-rose-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg> Lưu ý Nghiêm ngặt</p>'
+            '<blockquote class="markdown-alert alert-caution"><p class="alert-title font-bold flex items-center gap-1.5 text-rose-600 dark:text-rose-400"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg> ' + t('help.alert_caution') + '</p>'
         );
 };
 
@@ -112,7 +114,7 @@ const renderedMarkdown = computed(() => {
         const rawHtml = marked.parse(props.activeGuide.content) as string;
         return formatMarkdownAlerts(rawHtml);
     } catch {
-        return '<p class="text-rose-500">Lỗi biên dịch tài liệu hướng dẫn.</p>';
+        return '<p class="text-rose-500">' + t('help.markdown_compile_error') + '</p>';
     }
 });
 
@@ -143,7 +145,7 @@ const nextGuide = computed(() => {
 
 <template>
     <AppLayout>
-        <Head :title="`${activeGuide?.title || 'Hướng dẫn Sử dụng'} - Smart-HR`" />
+        <Head :title="`${activeGuide?.title || $t('help.title_fallback')} - Smart-HR`" />
 
         <div class="space-y-6 pb-12">
             <!-- Header Banner -->
@@ -154,16 +156,16 @@ const nextGuide = computed(() => {
                             <el-icon :size="20"><Reading /></el-icon>
                         </span>
                         <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-                            Trung tâm Trợ giúp & Hướng dẫn Sử dụng Hệ thống
+                            {{ $t('help.header_title') }}
                         </h1>
                     </div>
                     <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                        Hệ thống tài liệu nghiệp vụ phân tầng theo vai trò, giải thích chi tiết quy chế chấm công, phân ca tự động và tính lương bám sát Bộ luật Lao động 2019.
+                        {{ $t('help.header_subtitle') }}
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
                     <el-tag type="primary" effect="dark" size="small" class="font-mono">
-                        Vai trò: {{ currentRole }}
+                        {{ $t('help.role_label') }} {{ currentRole }}
                     </el-tag>
                 </div>
             </div>
@@ -176,7 +178,7 @@ const nextGuide = computed(() => {
                         <div class="mb-4">
                             <el-input
                                 v-model="searchQuery"
-                                placeholder="Tìm kiếm bài viết hướng dẫn..."
+                                :placeholder="$t('help.search_placeholder')"
                                 :prefix-icon="Search"
                                 clearable
                                 class="w-full"
@@ -209,7 +211,7 @@ const nextGuide = computed(() => {
                             </div>
 
                             <div v-if="filteredCatalog.length === 0" class="py-8 text-center text-slate-400 text-xs">
-                                Không tìm thấy bài viết nào phù hợp với từ khóa.
+                                {{ $t('help.no_results') }}
                             </div>
                         </div>
                     </div>
@@ -225,7 +227,7 @@ const nextGuide = computed(() => {
                                 <span>•</span>
                                 <span class="flex items-center gap-1">
                                     <el-icon><Clock /></el-icon>
-                                    Cập nhật: {{ activeGuide.updated_at }}
+                                    {{ $t('help.updated_label') }} {{ activeGuide.updated_at }}
                                 </span>
                             </div>
                             <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">
@@ -266,7 +268,7 @@ const nextGuide = computed(() => {
 
                     <div v-else class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-16 text-center text-slate-400 space-y-3">
                         <el-icon class="text-5xl text-slate-300 dark:text-slate-600"><Reading /></el-icon>
-                        <p class="text-sm font-medium">Vui lòng chọn một bài viết trong danh mục bên trái để xem hướng dẫn.</p>
+                        <p class="text-sm font-medium">{{ $t('help.empty_state_title') }}</p>
                     </div>
                 </div>
             </div>

@@ -45,7 +45,6 @@ const authUser = computed(() => page.props.auth?.user);
 
 interface SubNavigationItem {
     key: string;
-    label: string;
     route: string;
 }
 
@@ -62,17 +61,17 @@ const navigationItems: NavigationItem[] = [
         key: 'core_hr',
         icon: User,
         children: [
-            { key: 'core_hr_tree', label: 'Sơ đồ Tổ chức & Nhân sự', route: '/core-hr' },
-            { key: 'employee_children', label: 'Con nhỏ & Phúc lợi Gia đình', route: '/employee-children' },
+            { key: 'core_hr_tree', route: '/core-hr' },
+            { key: 'employee_children', route: '/employee-children' },
         ],
     },
     {
         key: 'policy',
         icon: Operation,
         children: [
-            { key: 'policy_rules', label: 'Quy chế Chấm công & Lương', route: '/policies' },
-            { key: 'welfare_schemes', label: 'Chế độ Phúc lợi Doanh nghiệp', route: '/policies?tab=welfare_schemes' },
-            { key: 'allowance_catalog', label: 'Danh mục Phụ cấp & Trợ cấp', route: '/policies?tab=allowances' },
+            { key: 'policy_rules', route: '/policies' },
+            { key: 'welfare_schemes', route: '/policies?tab=welfare_schemes' },
+            { key: 'allowance_catalog', route: '/policies?tab=allowances' },
         ],
     },
     { key: 'attendance', icon: Clock, route: '/attendance' },
@@ -81,26 +80,26 @@ const navigationItems: NavigationItem[] = [
         key: 'rostering',
         icon: Calendar,
         children: [
-            { key: 'rostering_matrix', label: 'Ma trận Phân ca Tuần/Tháng', route: '/rosters' },
-            { key: 'rostering_shifts', label: 'Danh mục Ca làm việc', route: '/rosters/shifts' },
-            { key: 'rostering_swaps', label: 'Yêu cầu Đổi ca & Bắt ca thay', route: '/rosters/swaps' },
+            { key: 'rostering_matrix', route: '/rosters' },
+            { key: 'rostering_shifts', route: '/rosters/shifts' },
+            { key: 'rostering_swaps', route: '/rosters/swaps' },
         ],
     },
     {
         key: 'leaves',
         icon: Briefcase,
         children: [
-            { key: 'leave_balances', label: 'Quỹ Phép & Nghỉ Bù', route: '/leave/balances' },
-            { key: 'leave_ot_caps', label: 'Giám Sát Trần OT (40h/200h)', route: '/leave/ot-accumulations' },
+            { key: 'leave_balances', route: '/leave/balances' },
+            { key: 'leave_ot_caps', route: '/leave/ot-accumulations' },
         ],
     },
     {
         key: 'workflow',
         icon: CircleCheck,
         children: [
-            { key: 'workflow_to_approve', label: 'Đơn cần tôi duyệt', route: '/workflow/requests?tab=to_approve' },
-            { key: 'workflow_my_requests', label: 'Đơn từ của tôi', route: '/workflow/requests?tab=my_requests' },
-            { key: 'workflow_configs', label: 'Cấu hình quy trình', route: '/workflow/requests?tab=configs' },
+            { key: 'workflow_to_approve', route: '/workflow/requests?tab=to_approve' },
+            { key: 'workflow_my_requests', route: '/workflow/requests?tab=my_requests' },
+            { key: 'workflow_configs', route: '/workflow/requests?tab=configs' },
         ],
     },
     { key: 'payroll', icon: Wallet, route: '/payroll' },
@@ -180,13 +179,13 @@ const visibleNavigationItems = computed(() => {
 });
 
 // Demo Roles Switcher
-const demoRoles = [
-    { role: 'SUPER_ADMIN', label: 'Super Admin', desc: 'Quản trị viên Hệ thống' },
-    { role: 'HR_ADMIN', label: 'HR Admin', desc: 'Chuyên viên HR Cấp cao' },
-    { role: 'ACCOUNTANT', label: 'Kế toán Lương', desc: 'Tính lương & Thuế TNCN' },
-    { role: 'DEPARTMENT_MANAGER', label: 'Trưởng bộ phận', desc: 'Duyệt đơn & Phân ca' },
-    { role: 'EMPLOYEE', label: 'Nhân viên', desc: 'Chấm công & Đơn từ' },
-];
+const demoRoles = computed(() => [
+    { role: 'SUPER_ADMIN', label: t('header.role_super_admin'), desc: t('header.role_super_admin_desc') },
+    { role: 'HR_ADMIN', label: t('header.role_hr_admin'), desc: t('header.role_hr_admin_desc') },
+    { role: 'ACCOUNTANT', label: t('header.role_accountant'), desc: t('header.role_accountant_desc') },
+    { role: 'DEPARTMENT_MANAGER', label: t('header.role_manager'), desc: t('header.role_manager_desc') },
+    { role: 'EMPLOYEE', label: t('header.role_employee'), desc: t('header.role_employee_desc') },
+]);
 
 const handleSwitchRole = (role: string) => {
     router.get(`/auth/switch-role/${role}`);
@@ -326,7 +325,7 @@ const markAllNotificationsAsRead = () => {
                                             class="w-1.5 h-1.5 rounded-full shrink-0"
                                             :class="isSubItemActive(sub.route) ? 'bg-indigo-600 dark:bg-indigo-400' : 'bg-slate-300 dark:bg-slate-700'"
                                         ></span>
-                                        <span class="truncate">{{ sub.label }}</span>
+                                        <span class="truncate">{{ t(sub.key) }}</span>
                                     </Link>
                                 </div>
                             </div>
@@ -355,7 +354,7 @@ const markAllNotificationsAsRead = () => {
                     <div class="p-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                         <div
                             class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 flex items-center space-x-2.5"
-                            title="Hệ thống đã xác thực bản quyền Ed25519 & Mã hóa dữ liệu CSDL"
+                            :title="t('footer.system_verified_tooltip')"
                         >
                             <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                                 <el-icon :size="16"><Lock /></el-icon>
@@ -382,8 +381,8 @@ const markAllNotificationsAsRead = () => {
                                     @click="goBack"
                                     type="button"
                                     class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-xs transition active:scale-95"
-                                    title="Quay lại trang trước (Alt + ←)"
-                                    aria-label="Quay lại trang trước"
+                                    :title="t('header.go_back')"
+                                    :aria-label="t('header.go_back')"
                                 >
                                     <el-icon :size="14"><ArrowLeft /></el-icon>
                                 </button>
@@ -391,8 +390,8 @@ const markAllNotificationsAsRead = () => {
                                     @click="goForward"
                                     type="button"
                                     class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-xs transition active:scale-95"
-                                    title="Tiến tới trang sau (Alt + →)"
-                                    aria-label="Tiến tới trang sau"
+                                    :title="t('header.go_forward')"
+                                    :aria-label="t('header.go_forward')"
                                 >
                                     <el-icon :size="14"><ArrowRight /></el-icon>
                                 </button>
@@ -412,14 +411,14 @@ const markAllNotificationsAsRead = () => {
                             <el-dropdown trigger="click" @command="handleSwitchRole">
                                 <button class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition border border-indigo-200 dark:border-indigo-800/60">
                                     <el-icon :size="13"><Switch /></el-icon>
-                                    <span class="hidden md:inline">Vai trò:</span>
-                                    <span class="font-bold">{{ authUser?.role_label || 'Quản trị viên' }}</span>
+                                    <span class="hidden md:inline">{{ t('header.role') }}</span>
+                                    <span class="font-bold">{{ authUser?.role_label || t('header.role_super_admin') }}</span>
                                     <el-icon :size="11" class="ml-0.5"><ArrowDown /></el-icon>
                                 </button>
                                 <template #dropdown>
                                     <el-dropdown-menu>
                                         <div class="px-3 py-1.5 text-[11px] font-semibold text-slate-400 border-b border-slate-100 dark:border-slate-800">
-                                            Chuyển vai trò thử nghiệm (Demo)
+                                            {{ t('header.demo_role_title') }}
                                         </div>
                                         <el-dropdown-item
                                             v-for="item in demoRoles"
@@ -442,21 +441,21 @@ const markAllNotificationsAsRead = () => {
 
                             <!-- Multi-language Switcher (i18n) -->
                             <el-dropdown trigger="click" @command="(lang: SupportedLocale) => setLanguage(lang)">
-                                <button class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-slate-200/80 dark:border-slate-700/60">
-                                    <span>{{ currentLang === 'vi' ? 'Tiếng Việt' : 'Tiếng Anh' }}</span>
+                                <button class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition border border-slate-200/80 dark:border-slate-700/60" :title="t('header.switch_language')">
+                                    <span>{{ currentLang === 'vi' ? t('header.vietnamese') : t('header.english') }}</span>
                                     <el-icon :size="11" class="text-slate-400 ml-0.5"><ArrowDown /></el-icon>
                                 </button>
                                 <template #dropdown>
                                     <el-dropdown-menu>
                                         <el-dropdown-item command="vi">
                                             <div class="flex items-center justify-between w-full min-w-[110px]">
-                                                <span :class="currentLang === 'vi' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">Tiếng Việt</span>
+                                                <span :class="currentLang === 'vi' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">{{ t('header.vietnamese') }}</span>
                                                 <el-icon v-if="currentLang === 'vi'" :size="14" class="text-indigo-600 dark:text-indigo-400 ml-2"><Check /></el-icon>
                                             </div>
                                         </el-dropdown-item>
                                         <el-dropdown-item command="en">
                                             <div class="flex items-center justify-between w-full min-w-[110px]">
-                                                <span :class="currentLang === 'en' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">Tiếng Anh</span>
+                                                <span :class="currentLang === 'en' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'">{{ t('header.english') }}</span>
                                                 <el-icon v-if="currentLang === 'en'" :size="14" class="text-indigo-600 dark:text-indigo-400 ml-2"><Check /></el-icon>
                                             </div>
                                         </el-dropdown-item>
@@ -479,7 +478,7 @@ const markAllNotificationsAsRead = () => {
                             <Link
                                 href="/help"
                                 class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:text-slate-400 dark:hover:text-indigo-400 dark:hover:bg-slate-800 transition flex items-center justify-center"
-                                title="Hướng dẫn sử dụng & Trung tâm trợ giúp"
+                                :title="t('header.help_guide')"
                             >
                                 <el-icon :size="18"><QuestionFilled /></el-icon>
                             </Link>
@@ -550,7 +549,7 @@ const markAllNotificationsAsRead = () => {
 
                                     <div class="pt-2 border-t border-slate-100 dark:border-slate-800 text-center">
                                         <Link href="/notifications" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
-                                            Xem tất cả trong Trung tâm thông báo &rarr;
+                                            {{ t('header.view_all_notifications') }}
                                         </Link>
                                     </div>
                                 </div>
@@ -564,10 +563,10 @@ const markAllNotificationsAsRead = () => {
                                     </div>
                                     <div class="hidden md:flex flex-col text-left">
                                         <span class="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">
-                                            {{ authUser?.name || 'Admin Quản trị' }}
+                                            {{ authUser?.name || t('header.default_user_name') }}
                                         </span>
                                         <span class="text-[11px] text-slate-400 truncate max-w-[140px]">
-                                            {{ authUser?.role_label || 'Quản trị viên' }}
+                                            {{ authUser?.role_label || t('header.default_role_label') }}
                                         </span>
                                     </div>
                                     <el-icon :size="12" class="text-slate-400"><ArrowDown /></el-icon>
@@ -584,7 +583,7 @@ const markAllNotificationsAsRead = () => {
                                         <el-dropdown-item @click="handleLogout" divided>
                                             <div class="flex items-center space-x-2 text-rose-600 dark:text-rose-400 font-medium py-0.5">
                                                 <el-icon :size="14"><SwitchButton /></el-icon>
-                                                <span>Đăng xuất hệ thống</span>
+                                                <span>{{ t('header.logout') }}</span>
                                             </div>
                                         </el-dropdown-item>
                                     </el-dropdown-menu>

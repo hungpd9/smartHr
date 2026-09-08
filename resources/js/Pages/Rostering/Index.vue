@@ -26,6 +26,7 @@ import {
     Money,
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface DateColumn {
     date: string;
@@ -88,6 +89,8 @@ const props = defineProps<{
     selectedDepartmentId: number | null;
 }>();
 
+const { t } = useThemeAndLocale();
+
 // Bộ lọc
 const selectedDept = ref<number | null>(props.selectedDepartmentId);
 
@@ -102,6 +105,11 @@ const handleDepartmentChange = (val: number | null) => {
         end_date: props.endDate,
         department_id: val,
     }, { preserveState: true, preserveScroll: true });
+};
+
+const formatShiftOptionLabel = (shift: ShiftOption) => {
+    const parts = `${shift.name} (${shift.start_time.substring(0, 5)} - ${shift.end_time.substring(0, 5)}`;
+    return `${parts}${shift.is_night_shift ? t('rostering.night_suffix') : ''})`;
 };
 
 // Điều hướng Tuần (Trước / Sau)
@@ -160,17 +168,17 @@ const handleSaveAssignment = () => {
         preserveScroll: true,
         onSuccess: () => {
             assignDialogVisible.value = false;
-            ElMessage.success('Đã cập nhật ca làm việc thành công.');
+            ElMessage.success(t('rostering.assign_update_success'));
         },
         onError: (err: any) => {
             if (err.shift_id) {
                 // Vi phạm ràng buộc BLLĐ
                 ElMessageBox.confirm(
-                    `Phát hiện cảnh báo tuân thủ pháp luật lao động:\n\n${Array.isArray(err.shift_id) ? err.shift_id.join('\n') : err.shift_id}\n\nBạn có muốn CƯỠNG CHẾ gán ca này không?`,
-                    'Cảnh báo Ràng buộc BLLĐ 2019',
+                    t('rostering.force_assign_confirm_msg', { details: Array.isArray(err.shift_id) ? err.shift_id.join('\n') : err.shift_id }),
+                    t('rostering.force_assign_warning_title'),
                     {
-                        confirmButtonText: 'Cưỡng chế gán',
-                        cancelButtonText: 'Hủy bỏ',
+                        confirmButtonText: t('rostering.btn_force_assign'),
+                        cancelButtonText: t('common.cancel'),
                         type: 'warning',
                     }
                 ).then(() => {
@@ -212,7 +220,7 @@ const openSolverDialog = () => {
 // Chạy mô phỏng đối soát không ghi CSDL
 const runSimulation = async () => {
     if (solverForm.shift_ids.length === 0) {
-        ElMessage.warning('Vui lòng chọn ít nhất một ca làm việc.');
+        ElMessage.warning(t('rostering.toast_select_min_shift'));
         return;
     }
 
@@ -230,10 +238,10 @@ const runSimulation = async () => {
 
         if (res.data?.status === 'success') {
             simulationResult.value = res.data.data;
-            ElMessage.success('Đã hoàn thành phân tích mô phỏng đối soát phân ca!');
+            ElMessage.success(t('rostering.simulation_done_success'));
         }
     } catch (err: any) {
-        ElMessage.error(err.response?.data?.message || 'Có lỗi xảy ra khi thực hiện mô phỏng.');
+        ElMessage.error(err.response?.data?.message || t('rostering.simulation_error_fallback'));
     } finally {
         isSimulating.value = false;
     }
@@ -252,11 +260,11 @@ const handleRunSolver = () => {
 // Công bố lịch phân ca
 const handlePublishRoster = () => {
     ElMessageBox.confirm(
-        `Bạn có chắc chắn muốn CÔNG BỐ lịch phân ca từ ngày ${props.startDate} đến ${props.endDate} cho toàn bộ nhân viên xem trên cổng Portal?`,
-        'Xác nhận Công bố Lịch',
+        t('rostering.publish_confirm_msg', { start: props.startDate, end: props.endDate }),
+        t('rostering.publish_confirm_title'),
         {
-            confirmButtonText: 'Công bố ngay',
-            cancelButtonText: 'Xem lại',
+            confirmButtonText: t('rostering.btn_publish_now'),
+            cancelButtonText: t('rostering.btn_review'),
             type: 'success',
         }
     ).then(() => {
@@ -267,7 +275,7 @@ const handlePublishRoster = () => {
         }, {
             preserveScroll: true,
             onSuccess: () => {
-                ElMessage.success('Đã công bố lịch phân ca thành công.');
+                ElMessage.success(t('rostering.publish_success'));
             },
         });
     }).catch(() => {});
@@ -276,7 +284,7 @@ const handlePublishRoster = () => {
 
 <template>
     <AppLayout>
-        <Head title="Ma trận Phân ca Thông minh - Smart-HR" />
+        <Head :title="t('rostering.page_title')" />
 
         <div class="p-6 max-w-7xl mx-auto space-y-6">
             <!-- Header Card -->
@@ -287,10 +295,10 @@ const handlePublishRoster = () => {
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-slate-900 dark:text-white">
-                            Ma Trận Phân Ca Thông Minh (Auto Rostering Matrix)
+                            {{ $t('rostering.title') }}
                         </h1>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Quản lý lịch làm việc tuần/tháng, kiểm soát tự động luật nghỉ 12h, 24h và bảo vệ thai sản/con nhỏ theo BLLĐ 2019
+                            {{ $t('rostering.subtitle') }}
                         </p>
                     </div>
                 </div>
@@ -299,17 +307,17 @@ const handlePublishRoster = () => {
                 <div class="flex flex-wrap items-center gap-3">
                     <!-- Điều hướng tuần -->
                     <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                        <el-button size="small" :icon="ArrowLeft" circle @click="navigateWeek(-7)" title="Tuần trước" />
+                        <el-button size="small" :icon="ArrowLeft" circle @click="navigateWeek(-7)" :title="$t('rostering.nav_prev_week')" />
                         <span class="text-xs font-mono font-bold px-2 text-slate-700 dark:text-slate-300">
                             {{ startDate }} ⟶ {{ endDate }}
                         </span>
-                        <el-button size="small" :icon="ArrowRight" circle @click="navigateWeek(7)" title="Tuần sau" />
+                        <el-button size="small" :icon="ArrowRight" circle @click="navigateWeek(7)" :title="$t('rostering.nav_next_week')" />
                     </div>
 
                     <!-- Lọc phòng ban -->
                     <el-select
                         v-model="selectedDept"
-                        placeholder="Tất cả phòng ban"
+                        :placeholder="$t('rostering.filter_all_departments')"
                         clearable
                         style="width: 180px"
                         @change="handleDepartmentChange"
@@ -324,12 +332,12 @@ const handlePublishRoster = () => {
 
                     <!-- Nút Chạy Solver Phân Ca -->
                     <el-button type="primary" :icon="RefreshRight" class="!rounded-xl !font-semibold" @click="openSolverDialog">
-                        Phân Ca Tự Động
+                        {{ $t('rostering.btn_auto_roster') }}
                     </el-button>
 
                     <!-- Nút Công bố -->
                     <el-button type="success" :icon="Promotion" class="!rounded-xl !font-semibold" @click="handlePublishRoster">
-                        Công Bố Lịch
+                        {{ $t('rostering.btn_publish') }}
                     </el-button>
                 </div>
             </div>
@@ -342,7 +350,7 @@ const handlePublishRoster = () => {
                     </div>
                     <div>
                         <div class="flex items-center space-x-2">
-                            <span class="font-bold text-slate-900 dark:text-white text-sm">Ca Tiêu Chuẩn Áp Dụng Toàn Công Ty:</span>
+                            <span class="font-bold text-slate-900 dark:text-white text-sm">{{ $t('rostering.default_shift_label') }}</span>
                             <span class="font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded text-xs">
                                 {{ defaultShift.code }}
                             </span>
@@ -351,13 +359,13 @@ const handlePublishRoster = () => {
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Các ngày chưa phân ca riêng sẽ tự động kế thừa ca này (hiển thị nhãn <strong>[Mặc định]</strong>). Người quản lý không cần phải phân ca thủ công cho từng nhân viên.
+                            {{ $t('rostering.default_shift_banner_prefix') }}<strong>{{ $t('rostering.tag_default') }}</strong>{{ $t('rostering.default_shift_banner_suffix') }}
                         </p>
                     </div>
                 </div>
                 <div class="shrink-0 flex items-center space-x-2">
                     <Link href="/rosters/shifts" class="el-button el-button--small is-plain">
-                        Quản Lý Ca Làm Việc
+                        {{ $t('rostering.manage_shifts') }}
                     </Link>
                 </div>
             </div>
@@ -370,7 +378,7 @@ const handlePublishRoster = () => {
                             <tr class="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
                                 <!-- Fixed Column Nhân viên -->
                                 <th class="p-3 w-56 sticky left-0 bg-slate-50 dark:bg-slate-800 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                                    Nhân Viên / Phòng Ban
+                                    {{ $t('rostering.col_employee_dept') }}
                                 </th>
 
                                 <!-- Các cột ngày trong tuần -->
@@ -411,10 +419,10 @@ const handlePublishRoster = () => {
                                     <!-- Badges ưu tiên thai sản / con nhỏ -->
                                     <div class="flex flex-wrap gap-1 mt-1.5">
                                         <el-tag v-if="row.has_child_under_12m" type="danger" size="small" effect="plain" class="!text-[10px] !h-4 !px-1">
-                                            Con &lt; 12T (Đ.137)
+                                            {{ $t('rostering.badge_child_under_12m') }}
                                         </el-tag>
                                         <el-tag v-if="row.is_pregnant" type="warning" size="small" effect="plain" class="!text-[10px] !h-4 !px-1">
-                                            Thai sản
+                                            {{ $t('rostering.badge_pregnant') }}
                                         </el-tag>
                                     </div>
                                 </td>
@@ -446,7 +454,7 @@ const handlePublishRoster = () => {
                                             </span>
                                             <div class="flex items-center space-x-1">
                                                 <el-tag v-if="row.days[col.date]?.is_default_inherited" type="success" size="small" class="!text-[9px] !h-4 !px-1">
-                                                    Mặc định
+                                                    {{ $t('rostering.tag_default') }}
                                                 </el-tag>
                                                 <el-icon v-if="row.days[col.date]?.is_night_shift" :size="12"><Moon /></el-icon>
                                                 <el-icon v-else-if="!row.days[col.date]?.is_default_inherited" :size="12"><Sunny /></el-icon>
@@ -460,19 +468,19 @@ const handlePublishRoster = () => {
                                         <!-- Cảnh báo vi phạm nếu có -->
                                         <div v-if="row.days[col.date]?.violation_flags?.length > 0" class="mt-1 flex items-center justify-center space-x-1 text-[10px] font-bold text-red-600 dark:text-red-400">
                                             <el-icon :size="12"><WarningFilled /></el-icon>
-                                            <span class="truncate" :title="row.days[col.date]?.violation_flags?.join('; ')">Cảnh báo luật</span>
+                                            <span class="truncate" :title="row.days[col.date]?.violation_flags?.join('; ')">{{ $t('rostering.label_violation_warning') }}</span>
                                         </div>
 
                                         <!-- Badge đã công bố -->
                                         <div v-if="row.days[col.date]?.is_published && !row.days[col.date]?.is_default_inherited" class="mt-1 text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center justify-center">
-                                            <el-icon :size="10" class="mr-0.5"><Check /></el-icon> Đã công bố
+                                            <el-icon :size="10" class="mr-0.5"><Check /></el-icon> {{ $t('rostering.badge_published') }}
                                         </div>
                                     </div>
 
                                     <!-- Ô ngày nghỉ (OFF) -->
                                     <div v-else class="h-14 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 group-hover:border-indigo-300 dark:group-hover:border-indigo-700 group-hover:text-indigo-500 transition">
-                                        <span class="text-[10px] font-medium">Nghỉ (OFF)</span>
-                                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition">+ Gán ca</span>
+                                        <span class="text-[10px] font-medium">{{ $t('rostering.cell_off_rest') }}</span>
+                                        <span class="text-[9px] opacity-0 group-hover:opacity-100 transition">{{ $t('rostering.cell_assign_hint') }}</span>
                                     </div>
                                 </td>
                             </tr>
@@ -485,7 +493,7 @@ const handlePublishRoster = () => {
         <!-- Dialog Gán Ca Nhanh -->
         <el-dialog
             v-model="assignDialogVisible"
-            title="Gán Ca Làm Việc Cho Nhân Viên"
+            :title="$t('rostering.dialog_assign_title')"
             width="460px"
             destroy-on-close
             class="!rounded-2xl"
@@ -493,44 +501,44 @@ const handlePublishRoster = () => {
             <div v-if="selectedCell" class="space-y-4">
                 <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-between text-xs">
                     <div>
-                        <div class="text-slate-400">Nhân viên:</div>
+                        <div class="text-slate-400">{{ $t('common.employee') }}:</div>
                         <div class="font-bold text-slate-800 dark:text-white mt-0.5">{{ selectedCell.employeeName }}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-slate-400">Ngày làm việc:</div>
+                        <div class="text-slate-400">{{ $t('rostering.label_work_date') }}</div>
                         <div class="font-mono font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">{{ selectedCell.date }}</div>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                        Chọn Ca Làm Việc:
+                        {{ $t('rostering.select_shift_label') }}
                     </label>
                     <el-select
                         v-model="assignForm.shift_id"
-                        placeholder="Chọn ca hoặc chọn Nghỉ (OFF)"
+                        :placeholder="$t('rostering.assign_placeholder')"
                         clearable
                         style="width: 100%"
                     >
-                        <el-option :value="null" label="-- Đặt làm Ngày Nghỉ (OFF) --" />
+                        <el-option :value="null" :label="$t('rostering.option_set_off')" />
                         <el-option
                             v-for="shift in shifts"
                             :key="shift.id"
-                            :label="`${shift.name} (${shift.start_time.substring(0, 5)} - ${shift.end_time.substring(0, 5)}${shift.is_night_shift ? ' - Ca Đêm' : ''})`"
+                            :label="formatShiftOptionLabel(shift)"
                             :value="shift.id"
                         />
                     </el-select>
                     <p class="text-[11px] text-slate-500 mt-1">
-                        * Để trống hoặc xóa để nhân viên tự động áp dụng Ca tiêu chuẩn mặc định toàn công ty.
+                        {{ $t('rostering.assign_hint_note') }}
                     </p>
                 </div>
             </div>
 
             <template #footer>
                 <div class="flex justify-end space-x-2">
-                    <el-button @click="assignDialogVisible = false">Hủy</el-button>
+                    <el-button @click="assignDialogVisible = false">{{ $t('common.cancel') }}</el-button>
                     <el-button type="primary" :loading="assignForm.processing" @click="handleSaveAssignment">
-                        Lưu Phân Ca
+                        {{ $t('rostering.btn_save_assignment') }}
                     </el-button>
                 </div>
             </template>
@@ -539,7 +547,7 @@ const handlePublishRoster = () => {
         <!-- Dialog Solver Phân Ca Tự Động & Mô Phỏng Đối Soát -->
         <el-dialog
             v-model="solverDialogVisible"
-            title="Động Cơ Phân Ca Tự Động & Minh Bạch Chi Phí"
+            :title="$t('rostering.dialog_solver_title')"
             width="750px"
             destroy-on-close
             class="!rounded-2xl"
@@ -549,66 +557,66 @@ const handlePublishRoster = () => {
                 <div class="p-3.5 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-xl text-indigo-800 dark:text-indigo-300">
                     <div class="font-bold mb-1 flex items-center space-x-1.5">
                         <el-icon><Check /></el-icon>
-                        <span>Tuân thủ Ràng Buộc Cứng Bộ Luật Lao Động 2019:</span>
+                        <span>{{ $t('rostering.solver_banner_title') }}</span>
                     </div>
-                    Thuật toán toán học tự động bảo vệ:
+                    {{ $t('rostering.solver_banner_lead') }}
                     <div class="grid grid-cols-2 gap-2 mt-1 font-medium">
-                        <div>• Nghỉ tối thiểu 12 giờ giữa 2 ca (Đ.110).</div>
-                        <div>• Nghỉ 24 giờ liên tục mỗi tuần (Đ.111).</div>
-                        <div>• Tối đa 48 giờ làm việc chuẩn/tuần (Đ.105).</div>
-                        <div>• Tuyệt đối cấm ca đêm/OT cho thai sản & con &lt; 12T (Đ.137).</div>
+                        <div>{{ $t('rostering.constraint_12h_rest') }}</div>
+                        <div>{{ $t('rostering.constraint_24h_rest') }}</div>
+                        <div>{{ $t('rostering.constraint_48h_max') }}</div>
+                        <div>{{ $t('rostering.constraint_no_night_preg') }}</div>
                     </div>
                 </div>
 
                 <!-- Cấu hình thời gian & phòng ban -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-semibold mb-1">Từ ngày:</label>
+                        <label class="block font-semibold mb-1">{{ $t('common.from_date') }}:</label>
                         <el-date-picker v-model="solverForm.start_date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
                     </div>
                     <div>
-                        <label class="block font-semibold mb-1">Đến ngày:</label>
+                        <label class="block font-semibold mb-1">{{ $t('common.to_date') }}:</label>
                         <el-date-picker v-model="solverForm.end_date" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
                     </div>
                 </div>
 
                 <!-- Chiến lược cốt lõi -->
                 <div>
-                    <label class="block font-semibold mb-1">Chiến Lược Phân Ca Chủ Đạo:</label>
+                    <label class="block font-semibold mb-1">{{ $t('rostering.strategy_label') }}</label>
                     <el-radio-group v-model="solverForm.strategy" class="w-full">
                         <el-radio-button value="FAIRNESS" class="w-1/2">
-                            Công bằng Nhân sự (Cân bằng số ca đêm & cuối tuần)
+                            {{ $t('rostering.strategy_fairness') }}
                         </el-radio-button>
                         <el-radio-button value="COST_OPTIMIZATION" class="w-1/2">
-                            Tối ưu Chi phí (Hạn chế tối đa phụ cấp ca đêm & OT giá cao)
+                            {{ $t('rostering.strategy_cost') }}
                         </el-radio-button>
                     </el-radio-group>
                 </div>
 
                 <!-- Tiêu chí nâng cao (Configurable Preferences) -->
                 <div class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
-                    <div class="font-bold text-slate-800 dark:text-slate-200">Tiêu Chí Ưu Tiên & Tối Ưu Chi Phí Ca Đêm (Điều 98 BLLĐ):</div>
+                    <div class="font-bold text-slate-800 dark:text-slate-200">{{ $t('rostering.prefs_title') }}</div>
                     
                     <div class="flex items-center justify-between">
                         <div>
-                            <span class="font-semibold text-slate-700 dark:text-slate-300">Tối ưu chi phí phụ cấp 30% lương ca đêm:</span>
-                            <p class="text-[11px] text-slate-400">Ưu tiên phân ca đêm cho nhân sự có mức lương cơ bản thấp hơn hoặc đang thử việc để giảm tổng chi phí phụ cấp cho doanh nghiệp.</p>
+                            <span class="font-semibold text-slate-700 dark:text-slate-300">{{ $t('rostering.pref_low_salary_label') }}</span>
+                            <p class="text-[11px] text-slate-400">{{ $t('rostering.pref_low_salary_desc') }}</p>
                         </div>
                         <el-switch v-model="solverForm.preferences.prioritize_low_base_salary" />
                     </div>
 
                     <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                         <div>
-                            <span class="font-semibold text-slate-700 dark:text-slate-300">Ưu tiên tránh ca đêm cho lao động Nữ:</span>
-                            <p class="text-[11px] text-slate-400">Ưu tiên nam giới làm ca đêm (22h - 6h) vì yếu tố an toàn đi lại đêm muộn.</p>
+                            <span class="font-semibold text-slate-700 dark:text-slate-300">{{ $t('rostering.pref_avoid_female_label') }}</span>
+                            <p class="text-[11px] text-slate-400">{{ $t('rostering.pref_avoid_female_desc') }}</p>
                         </div>
                         <el-switch v-model="solverForm.preferences.avoid_female_night" />
                     </div>
 
                     <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                         <div>
-                            <span class="font-semibold text-slate-700 dark:text-slate-300">Ưu tiên người chưa có con làm ca đêm:</span>
-                            <p class="text-[11px] text-slate-400">Tránh xếp ca đêm cho nhân viên đang có con nhỏ (kể cả trên 12 tháng), ưu tiên nhân sự độc thân.</p>
+                            <span class="font-semibold text-slate-700 dark:text-slate-300">{{ $t('rostering.pref_avoid_child_label') }}</span>
+                            <p class="text-[11px] text-slate-400">{{ $t('rostering.pref_avoid_child_desc') }}</p>
                         </div>
                         <el-switch v-model="solverForm.preferences.avoid_has_child" />
                     </div>
@@ -616,11 +624,11 @@ const handlePublishRoster = () => {
 
                 <!-- Ca làm việc sử dụng -->
                 <div>
-                    <label class="block font-semibold mb-1">Các Ca Mẫu Tham Gia Phân Bổ:</label>
+                    <label class="block font-semibold mb-1">{{ $t('rostering.shifts_included_label') }}</label>
                     <el-checkbox-group v-model="solverForm.shift_ids" class="grid grid-cols-2 gap-1.5">
                         <el-checkbox v-for="shift in shifts" :key="shift.id" :value="shift.id">
                             <span class="font-medium">{{ shift.name }}</span>
-                            <span v-if="shift.is_night_shift" class="text-purple-600 font-bold ml-1">(Ca Đêm +30%)</span>
+                            <span v-if="shift.is_night_shift" class="text-purple-600 font-bold ml-1">{{ $t('rostering.night_plus30') }}</span>
                         </el-checkbox>
                     </el-checkbox-group>
                 </div>
@@ -630,29 +638,29 @@ const handlePublishRoster = () => {
                     <div class="flex items-center justify-between">
                         <div class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center space-x-1">
                             <el-icon><DataAnalysis /></el-icon>
-                            <span>Bảng Đối Soát Mô Phỏng Phân Ca (Chưa lưu CSDL)</span>
+                            <span>{{ $t('rostering.sim_result_title') }}</span>
                         </div>
-                        <el-tag type="success" size="small">Đối Soát Minh Bạch</el-tag>
+                        <el-tag type="success" size="small">{{ $t('rostering.sim_result_tag') }}</el-tag>
                     </div>
 
                     <!-- KPI Cards -->
                     <div class="grid grid-cols-4 gap-2 text-center">
                         <div class="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                            <div class="text-[10px] text-slate-400">Tổng ca xếp</div>
+                            <div class="text-[10px] text-slate-400">{{ $t('rostering.kpi_total_assigned') }}</div>
                             <div class="font-bold text-slate-800 dark:text-white text-base">{{ simulationResult.total_shifts_scheduled }}</div>
                         </div>
                         <div class="p-2 bg-purple-50 dark:bg-purple-950/40 rounded-lg">
-                            <div class="text-[10px] text-purple-600 dark:text-purple-400">Số ca đêm</div>
+                            <div class="text-[10px] text-purple-600 dark:text-purple-400">{{ $t('rostering.kpi_total_night') }}</div>
                             <div class="font-bold text-purple-700 dark:text-purple-300 text-base">{{ simulationResult.total_night_shifts }}</div>
                         </div>
                         <div class="p-2 bg-amber-50 dark:bg-amber-950/40 rounded-lg">
-                            <div class="text-[10px] text-amber-600 dark:text-amber-400">Dự toán phụ cấp ca đêm</div>
+                            <div class="text-[10px] text-amber-600 dark:text-amber-400">{{ $t('rostering.kpi_allowance_est') }}</div>
                             <div class="font-bold text-amber-700 dark:text-amber-300 text-sm">
                                 {{ Number(simulationResult.estimated_night_allowance).toLocaleString('vi-VN') }} đ
                             </div>
                         </div>
                         <div class="p-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg">
-                            <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Vi phạm ngăn chặn</div>
+                            <div class="text-[10px] text-emerald-600 dark:text-emerald-400">{{ $t('rostering.kpi_violations_prevented') }}</div>
                             <div class="font-bold text-emerald-700 dark:text-emerald-300 text-base">{{ simulationResult.violations_prevented }}</div>
                         </div>
                     </div>
@@ -662,21 +670,21 @@ const handlePublishRoster = () => {
                         <table class="w-full text-left text-[11px]">
                             <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0 font-bold text-slate-600 dark:text-slate-300">
                                 <tr>
-                                    <th class="p-2">Nhân viên</th>
-                                    <th class="p-2 text-center">Giới tính</th>
-                                    <th class="p-2 text-center">Ca Ngày</th>
-                                    <th class="p-2 text-center">Ca Đêm</th>
-                                    <th class="p-2 text-center">Nghỉ</th>
-                                    <th class="p-2 text-right">Phụ Cấp Ca Đêm</th>
+                                    <th class="p-2">{{ $t('common.employee') }}</th>
+                                    <th class="p-2 text-center">{{ $t('rostering.sim_col_gender') }}</th>
+                                    <th class="p-2 text-center">{{ $t('rostering.sim_col_day_shifts') }}</th>
+                                    <th class="p-2 text-center">{{ $t('rostering.sim_col_night_shifts') }}</th>
+                                    <th class="p-2 text-center">{{ $t('rostering.sim_col_rest_days') }}</th>
+                                    <th class="p-2 text-right">{{ $t('rostering.sim_col_night_allowance') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                 <tr v-for="emp in simulationResult.employee_breakdown" :key="emp.employee_id">
                                     <td class="p-2 font-medium">
                                         {{ emp.full_name }}
-                                        <span v-if="emp.has_children" class="text-slate-400 text-[10px]">(Có con)</span>
+                                        <span v-if="emp.has_children" class="text-slate-400 text-[10px]">{{ $t('rostering.has_children_suffix') }}</span>
                                     </td>
-                                    <td class="p-2 text-center">{{ emp.gender === 'FEMALE' ? 'Nữ' : 'Nam' }}</td>
+                                    <td class="p-2 text-center">{{ emp.gender === 'FEMALE' ? $t('rostering.gender_female') : $t('rostering.gender_male') }}</td>
                                     <td class="p-2 text-center">{{ emp.day_shifts_count }}</td>
                                     <td class="p-2 text-center font-bold text-purple-600">{{ emp.night_shifts_count }}</td>
                                     <td class="p-2 text-center">{{ emp.rest_days_count }}</td>
@@ -693,12 +701,12 @@ const handlePublishRoster = () => {
             <template #footer>
                 <div class="flex justify-between items-center">
                     <el-button :icon="DataAnalysis" :loading="isSimulating" @click="runSimulation">
-                        Mô Phỏng & Đối Soát Chi Phí
+                        {{ $t('rostering.btn_simulate') }}
                     </el-button>
                     <div class="space-x-2">
-                        <el-button @click="solverDialogVisible = false">Đóng</el-button>
+                        <el-button @click="solverDialogVisible = false">{{ $t('common.close') }}</el-button>
                         <el-button type="primary" :loading="solverForm.processing" @click="handleRunSolver">
-                            {{ simulationResult ? 'Xác Nhận Áp Dụng Lịch Này' : 'Áp Dụng Phân Ca' }}
+                            {{ simulationResult ? $t('rostering.btn_confirm_apply') : $t('rostering.btn_apply_schedule') }}
                         </el-button>
                     </div>
                 </div>

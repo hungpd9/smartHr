@@ -17,6 +17,7 @@ import {
     StarFilled,
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface ShiftItem {
     id: number;
@@ -36,6 +37,8 @@ interface ShiftItem {
 const props = defineProps<{
     shifts: ShiftItem[];
 }>();
+
+const { t } = useThemeAndLocale();
 
 // Thống kê nhanh
 const totalShifts = computed(() => props.shifts.length);
@@ -120,7 +123,7 @@ const openEditDialog = (shift: ShiftItem) => {
 const setDefaultShift = (shift: ShiftItem) => {
     router.post(`/rosters/shifts/${shift.id}/set-default`, {}, {
         onSuccess: () => {
-            ElMessage.success(`Đã thiết lập "${shift.name}" làm ca tiêu chuẩn mặc định.`);
+            ElMessage.success(t('rostering.msg_set_default_success', { name: shift.name }));
         },
     });
 };
@@ -132,14 +135,14 @@ const submitForm = () => {
         form.put(`/rosters/shifts/${editingShiftId.value}`, {
             onSuccess: () => {
                 dialogVisible.value = false;
-                ElMessage.success('Đã cập nhật ca làm việc thành công.');
+                ElMessage.success(t('rostering.msg_update_success'));
             },
         });
     } else {
         form.post('/rosters/shifts', {
             onSuccess: () => {
                 dialogVisible.value = false;
-                ElMessage.success('Đã tạo mới ca làm việc thành công.');
+                ElMessage.success(t('rostering.msg_create_success'));
             },
         });
     }
@@ -147,17 +150,17 @@ const submitForm = () => {
 
 const handleDelete = (shift: ShiftItem) => {
     ElMessageBox.confirm(
-        `Bạn có chắc chắn muốn xóa ca "${shift.name}" (${shift.code})?`,
-        'Xác nhận xóa',
+        t('rostering.delete_confirm_msg', { name: shift.name, code: shift.code }),
+        t('rostering.delete_confirm_title'),
         {
-            confirmButtonText: 'Xóa ca',
-            cancelButtonText: 'Hủy',
+            confirmButtonText: t('rostering.btn_delete_shift'),
+            cancelButtonText: t('common.cancel'),
             type: 'warning',
         }
     ).then(() => {
         router.delete(`/rosters/shifts/${shift.id}`, {
             onSuccess: () => {
-                ElMessage.success('Đã xóa ca làm việc thành công.');
+                ElMessage.success(t('rostering.msg_delete_success'));
             },
         });
     }).catch(() => {});
@@ -166,7 +169,7 @@ const handleDelete = (shift: ShiftItem) => {
 
 <template>
     <AppLayout>
-        <Head title="Danh mục Ca làm việc - Smart-HR" />
+        <Head :title="t('rostering.shifts_page_title')" />
 
         <div class="p-6 max-w-7xl mx-auto space-y-6">
             <!-- Header & Title -->
@@ -178,10 +181,10 @@ const handleDelete = (shift: ShiftItem) => {
                         </div>
                         <div>
                             <h1 class="text-xl font-bold text-slate-900 dark:text-white">
-                                Danh mục Ca Làm Việc (Standard Shifts)
+                                {{ $t('rostering.shifts_heading') }}
                             </h1>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Thiết lập các khung ca hành chính, ca xoay, ca gãy FnB và ca đêm tuân thủ Điều 105, 106 & 137 BLLĐ 2019
+                                {{ $t('rostering.shifts_subtitle') }}
                             </p>
                         </div>
                     </div>
@@ -189,7 +192,7 @@ const handleDelete = (shift: ShiftItem) => {
 
                 <div class="flex items-center space-x-3">
                     <el-button type="primary" :icon="Plus" @click="openCreateDialog" class="!rounded-xl !font-semibold shadow-sm">
-                        Thêm Ca Mới
+                        {{ $t('rostering.btn_add_shift') }}
                     </el-button>
                 </div>
             </div>
@@ -198,7 +201,7 @@ const handleDelete = (shift: ShiftItem) => {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Tổng số ca định nghĩa</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('rostering.kpi_total_defined_shifts') }}</p>
                         <p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">{{ totalShifts }}</p>
                     </div>
                     <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
@@ -208,7 +211,7 @@ const handleDelete = (shift: ShiftItem) => {
 
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Ca làm việc ban đêm (22h - 6h)</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('rostering.kpi_night_shifts') }}</p>
                         <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{{ nightShiftsCount }}</p>
                     </div>
                     <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400">
@@ -218,7 +221,7 @@ const handleDelete = (shift: ShiftItem) => {
 
                 <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Ca đang kích hoạt</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('rostering.kpi_active_shifts') }}</p>
                         <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ activeShiftsCount }}</p>
                     </div>
                     <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -235,7 +238,7 @@ const handleDelete = (shift: ShiftItem) => {
                     </div>
                     <div>
                         <div class="flex items-center space-x-2">
-                            <span class="font-bold text-slate-900 dark:text-white text-sm">Ca Tiêu Chuẩn Toàn Doanh Nghiệp:</span>
+                            <span class="font-bold text-slate-900 dark:text-white text-sm">{{ $t('rostering.default_banner_label') }}</span>
                             <span class="font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded text-xs">
                                 {{ defaultShift.code }}
                             </span>
@@ -244,55 +247,57 @@ const handleDelete = (shift: ShiftItem) => {
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Mọi nhân viên không được xếp ca riêng sẽ tự động kế thừa và tính công theo ca tiêu chuẩn này mà không cần gán lịch thủ công.
+                            {{ $t('rostering.default_banner_note') }}
                         </p>
                     </div>
                 </div>
                 <div class="shrink-0 flex items-center space-x-2">
                     <el-tag type="success" effect="dark" size="small" class="!rounded-md !font-semibold">
-                        Đang Áp Dụng
+                        {{ $t('rostering.tag_in_effect') }}
                     </el-tag>
                     <el-button size="small" :icon="Edit" @click="openEditDialog(defaultShift)">
-                        Sửa Ca Mặc Định
+                        {{ $t('rostering.btn_edit_default_shift') }}
                     </el-button>
                 </div>
             </div>
             <div v-else class="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
                 <div class="flex items-center space-x-2">
                     <el-icon :size="18"><InfoFilled /></el-icon>
-                    <span>Doanh nghiệp chưa chỉ định Ca tiêu chuẩn mặc định. Vui lòng chọn một ca và nhấn <strong>"Đặt làm ca mặc định"</strong> để hệ thống tự động kế thừa cho nhân viên.</span>
+                    <span>
+                        {{ $t('rostering.no_default_shift_prefix') }}<strong>{{ $t('rostering.no_default_shift_action') }}</strong>{{ $t('rostering.no_default_shift_suffix') }}
+                    </span>
                 </div>
             </div>
 
             <!-- Table Card -->
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                 <el-table :data="shifts" stripe style="width: 100%" class="!text-sm">
-                    <el-table-column prop="code" label="Mã Ca" width="150">
+                    <el-table-column prop="code" :label="$t('rostering.col_shift_code')" width="150">
                         <template #default="{ row }">
                             <div class="flex flex-col gap-1 items-start">
                                 <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded text-xs">
                                     {{ row.code }}
                                 </span>
                                 <el-tag v-if="row.is_default" type="success" size="small" effect="plain" class="!text-[10px] !px-1.5 !h-5">
-                                    Mặc Định
+                                    {{ $t('rostering.tag_default') }}
                                 </el-tag>
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column prop="name" label="Tên Ca Làm Việc" min-width="180">
+                    <el-table-column prop="name" :label="$t('rostering.col_shift_name')" min-width="180">
                         <template #default="{ row }">
                             <div class="font-semibold text-slate-800 dark:text-slate-200">
                                 {{ row.name }}
                             </div>
                             <div v-if="row.is_night_shift" class="text-[11px] text-purple-600 dark:text-purple-400 mt-0.5 flex items-center space-x-2">
-                                <span>Phụ cấp: +{{ row.night_allowance_rate }}%</span>
-                                <span v-if="row.night_bonus_amount > 0">• Thưởng: {{ Number(row.night_bonus_amount).toLocaleString('vi-VN') }}đ</span>
+                                <span>{{ $t('rostering.night_allowance_cell', { rate: row.night_allowance_rate }) }}</span>
+                                <span v-if="row.night_bonus_amount > 0">{{ $t('rostering.night_bonus_cell', { amount: Number(row.night_bonus_amount).toLocaleString('vi-VN') }) }}</span>
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Khung Giờ Làm Việc" width="180">
+                    <el-table-column :label="$t('rostering.col_shift_time')" width="180">
                         <template #default="{ row }">
                             <div class="flex items-center space-x-2 font-mono text-xs">
                                 <span class="text-slate-700 dark:text-slate-300 font-semibold">{{ row.start_time.substring(0, 5) }}</span>
@@ -302,49 +307,49 @@ const handleDelete = (shift: ShiftItem) => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Giờ Nghỉ" width="110">
+                    <el-table-column :label="$t('rostering.col_break_time')" width="110">
                         <template #default="{ row }">
                             <span class="text-slate-600 dark:text-slate-400 text-xs">
-                                {{ row.break_minutes }} phút
+                                {{ row.break_minutes }} {{ $t('common.minutes') }}
                             </span>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Thời Lượng" width="120">
+                    <el-table-column :label="$t('rostering.col_total_hours')" width="120">
                         <template #default="{ row }">
                             <el-tag type="info" size="small" effect="plain" class="!font-mono !font-semibold">
-                                {{ row.work_hours }} giờ
+                                {{ row.work_hours }} {{ $t('common.hours') }}
                             </el-tag>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Phân Loại Ca" width="160">
+                    <el-table-column :label="$t('rostering.col_shift_category')" width="160">
                         <template #default="{ row }">
                             <el-tag v-if="row.is_night_shift" type="warning" size="small" class="!rounded-md">
                                 <div class="flex items-center space-x-1">
                                     <el-icon><Moon /></el-icon>
-                                    <span>Ca Đêm (22h-6h)</span>
+                                    <span>{{ $t('rostering.badge_night_shift') }}</span>
                                 </div>
                             </el-tag>
                             <el-tag v-else type="success" size="small" class="!rounded-md">
                                 <div class="flex items-center space-x-1">
                                     <el-icon><Sunny /></el-icon>
-                                    <span>Ca Ngày Chuẩn</span>
+                                    <span>{{ $t('rostering.tag_day_shift') }}</span>
                                 </div>
                             </el-tag>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Trạng Thái" width="120">
+                    <el-table-column :label="$t('common.status')" width="120">
                         <template #default="{ row }">
                             <el-badge is-dot :type="row.is_active ? 'success' : 'danger'" class="mr-2" />
                             <span :class="row.is_active ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-slate-400'">
-                                {{ row.is_active ? 'Kích hoạt' : 'Tạm ẩn' }}
+                                {{ row.is_active ? $t('rostering.tag_shift_active') : $t('rostering.tag_shift_hidden') }}
                             </span>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Thao Tác" width="160" fixed="right">
+                    <el-table-column :label="$t('common.actions')" width="160" fixed="right">
                         <template #default="{ row }">
                             <div class="flex items-center space-x-2">
                                 <el-button
@@ -355,10 +360,10 @@ const handleDelete = (shift: ShiftItem) => {
                                     :icon="Star"
                                     circle
                                     @click="setDefaultShift(row)"
-                                    title="Đặt làm ca tiêu chuẩn mặc định"
+                                    :title="$t('rostering.title_set_default')"
                                 />
-                                <el-button size="small" :icon="Edit" circle @click="openEditDialog(row)" title="Chỉnh sửa" />
-                                <el-button size="small" type="danger" :icon="Delete" circle @click="handleDelete(row)" title="Xóa ca" />
+                                <el-button size="small" :icon="Edit" circle @click="openEditDialog(row)" :title="$t('common.edit')" />
+                                <el-button size="small" type="danger" :icon="Delete" circle @click="handleDelete(row)" :title="$t('rostering.btn_delete_shift')" />
                             </div>
                         </template>
                     </el-table-column>
@@ -369,54 +374,54 @@ const handleDelete = (shift: ShiftItem) => {
         <!-- Modal Thêm / Chỉnh Sửa Ca -->
         <el-dialog
             v-model="dialogVisible"
-            :title="isEditing ? 'Chỉnh Sửa Ca Làm Việc' : 'Thêm Mới Ca Làm Việc'"
+            :title="isEditing ? $t('rostering.dialog_title_edit') : $t('rostering.dialog_title_create')"
             width="580px"
             destroy-on-close
             class="!rounded-2xl"
         >
             <el-form :model="form" label-position="top" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <el-form-item label="Mã Ca Làm Việc" :error="form.errors.code" required>
-                        <el-input v-model="form.code" placeholder="VD: CA_SANG, CA_DEM" :disabled="isEditing" />
+                    <el-form-item :label="$t('rostering.label_shift_code')" :error="form.errors.code" required>
+                        <el-input v-model="form.code" :placeholder="$t('rostering.ph_shift_code')" :disabled="isEditing" />
                     </el-form-item>
 
-                    <el-form-item label="Tên Ca Làm Việc" :error="form.errors.name" required>
-                        <el-input v-model="form.name" placeholder="VD: Ca Sáng 8h - 17h" />
+                    <el-form-item :label="$t('rostering.label_shift_name')" :error="form.errors.name" required>
+                        <el-input v-model="form.name" :placeholder="$t('rostering.ph_shift_name')" />
                     </el-form-item>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <el-form-item label="Giờ Bắt Đầu" :error="form.errors.start_time" required>
+                    <el-form-item :label="$t('rostering.label_start_time')" :error="form.errors.start_time" required>
                         <el-time-select
                             v-model="form.start_time"
                             start="00:00"
                             step="00:15"
                             end="23:45"
-                            placeholder="Chọn giờ bắt đầu"
+                            :placeholder="$t('rostering.ph_start_time')"
                             style="width: 100%"
                         />
                     </el-form-item>
 
-                    <el-form-item label="Giờ Kết Thúc" :error="form.errors.end_time" required>
+                    <el-form-item :label="$t('rostering.label_end_time')" :error="form.errors.end_time" required>
                         <el-time-select
                             v-model="form.end_time"
                             start="00:00"
                             step="00:15"
                             end="23:45"
-                            placeholder="Chọn giờ kết thúc"
+                            :placeholder="$t('rostering.ph_end_time')"
                             style="width: 100%"
                         />
                     </el-form-item>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <el-form-item label="Thời Gian Nghỉ Giữa Ca (Phút)">
+                    <el-form-item :label="$t('rostering.label_break_minutes')">
                         <el-input-number v-model="form.break_minutes" :min="0" :max="300" :step="15" style="width: 100%" />
                     </el-form-item>
 
-                    <el-form-item label="Tổng Giờ Làm Thực Tế">
+                    <el-form-item :label="$t('rostering.label_total_work_hours')">
                         <div class="h-10 px-3 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center font-mono font-bold text-slate-800 dark:text-white">
-                            {{ calculatedWorkHours }} giờ công
+                            {{ calculatedWorkHours }} {{ $t('common.hours') }}
                         </div>
                     </el-form-item>
                 </div>
@@ -424,8 +429,8 @@ const handleDelete = (shift: ShiftItem) => {
                 <!-- Thiết lập ca mặc định -->
                 <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                     <div>
-                        <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">Ca Tiêu Chuẩn Mặc Định</div>
-                        <div class="text-xs text-slate-500 dark:text-slate-400">Tự động áp dụng cho nhân viên chưa xếp ca riêng toàn công ty</div>
+                        <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">{{ $t('rostering.default_setting_title') }}</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400">{{ $t('rostering.default_setting_desc') }}</div>
                     </div>
                     <el-switch v-model="form.is_default" />
                 </div>
@@ -435,34 +440,34 @@ const handleDelete = (shift: ShiftItem) => {
                     <div class="flex items-start space-x-2 text-xs text-purple-700 dark:text-purple-300">
                         <el-icon :size="16" class="mt-0.5 shrink-0"><Moon /></el-icon>
                         <div>
-                            <span class="font-bold">Nhận diện Ca Đêm (22:00 - 06:00):</span>
-                            Ca này tự động kích hoạt phụ cấp làm đêm theo Điều 98 BLLĐ và bị ràng buộc nghiêm ngặt bởi Điều 137 BLLĐ 2019 (cấm phụ nữ mang thai từ tháng thứ 7 & nuôi con nhỏ dưới 12 tháng).
+                            <span class="font-bold">{{ $t('rostering.night_detect_title') }}</span>
+                            {{ $t('rostering.night_detect_desc') }}
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 pt-2 border-t border-purple-200/60 dark:border-purple-800/60">
-                        <el-form-item label="Tỷ Lệ Phụ Cấp Ca Đêm (%)" class="!mb-0">
+                        <el-form-item :label="$t('rostering.label_night_allowance_rate')" class="!mb-0">
                             <el-input-number v-model="form.night_allowance_rate" :min="30" :max="100" :step="5" style="width: 100%" />
-                            <span class="text-[10px] text-slate-500">Tối thiểu 30% lương theo Điều 98 BLLĐ</span>
+                            <span class="text-[10px] text-slate-500">{{ $t('rostering.night_allowance_min_hint') }}</span>
                         </el-form-item>
-                        <el-form-item label="Thưởng Suất Ăn Đêm (VNĐ)" class="!mb-0">
+                        <el-form-item :label="$t('rostering.label_night_meal_bonus')" class="!mb-0">
                             <el-input-number v-model="form.night_bonus_amount" :min="0" :step="10000" style="width: 100%" />
-                            <span class="text-[10px] text-slate-500">Phụ cấp tiền ăn/đêm</span>
+                            <span class="text-[10px] text-slate-500">{{ $t('rostering.night_meal_bonus_hint') }}</span>
                         </el-form-item>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Kích hoạt ca làm việc</span>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $t('rostering.label_activate_shift') }}</span>
                     <el-switch v-model="form.is_active" />
                 </div>
             </el-form>
 
             <template #footer>
                 <div class="flex justify-end space-x-2">
-                    <el-button @click="dialogVisible = false">Hủy bỏ</el-button>
+                    <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
                     <el-button type="primary" :loading="form.processing" @click="submitForm">
-                        {{ isEditing ? 'Cập Nhật Ca' : 'Tạo Mới' }}
+                        {{ isEditing ? $t('rostering.btn_update_shift') : $t('common.create') }}
                     </el-button>
                 </div>
             </template>

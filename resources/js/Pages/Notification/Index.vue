@@ -18,6 +18,7 @@ import {
     RefreshRight,
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface NotificationItem {
     id: number;
@@ -66,6 +67,7 @@ const props = defineProps<{
     canManageChannels: boolean;
     eventTypes: Array<{ value: string; label: string }>;
 }>();
+const { t } = useThemeAndLocale();
 
 const activeTab = ref('inbox');
 
@@ -116,22 +118,22 @@ const markAllRead = () => {
     router.post('/notifications/read-all', {}, {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã đánh dấu tất cả thông báo là đã đọc.');
+            ElMessage.success(t('notifications.mark_all_read_success'));
         },
     });
 };
 
 // Xóa thông báo
 const deleteNotification = (item: NotificationItem) => {
-    ElMessageBox.confirm('Bạn có chắc chắn muốn xóa thông báo này?', 'Xác nhận xóa', {
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy',
+    ElMessageBox.confirm(t('notifications.delete_confirm_msg'), t('notifications.delete_confirm_title'), {
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
     }).then(() => {
         router.delete(`/notifications/${item.id}`, {
             preserveScroll: true,
             onSuccess: () => {
-                ElMessage.success('Đã xóa thông báo.');
+                ElMessage.success(t('notifications.delete_success'));
             },
         });
     });
@@ -169,7 +171,7 @@ const saveTelegramConfig = () => {
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã lưu cấu hình Telegram Bot.');
+            ElMessage.success(t('notifications.save_telegram_success'));
         },
     });
 };
@@ -186,14 +188,14 @@ const saveWebhookConfig = () => {
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã lưu cấu hình Webhook.');
+            ElMessage.success(t('notifications.save_webhook_success'));
         },
     });
 };
 
 const testTelegram = async () => {
     if (!telegramForm.bot_token || !telegramForm.chat_id) {
-        ElMessage.warning('Vui lòng nhập Bot Token và Chat ID trước khi kiểm tra.');
+        ElMessage.warning(t('notifications.telegram_validate_msg'));
         return;
     }
     isTestingTelegram.value = true;
@@ -216,10 +218,10 @@ const testTelegram = async () => {
         if (data.success) {
             ElMessage.success(data.message);
         } else {
-            ElMessage.error(data.message || 'Kiểm tra kết nối thất bại.');
+            ElMessage.error(data.message || t('notifications.test_connection_failed'));
         }
     } catch {
-        ElMessage.error('Không thể kết nối đến máy chủ.');
+        ElMessage.error(t('notifications.server_unreachable'));
     } finally {
         isTestingTelegram.value = false;
     }
@@ -227,7 +229,7 @@ const testTelegram = async () => {
 
 const testWebhook = async () => {
     if (!webhookForm.webhook_url) {
-        ElMessage.warning('Vui lòng nhập Webhook URL trước khi kiểm tra.');
+        ElMessage.warning(t('notifications.webhook_validate_msg'));
         return;
     }
     isTestingWebhook.value = true;
@@ -250,10 +252,10 @@ const testWebhook = async () => {
         if (data.success) {
             ElMessage.success(data.message);
         } else {
-            ElMessage.error(data.message || 'Kiểm tra kết nối thất bại.');
+            ElMessage.error(data.message || t('notifications.test_connection_failed'));
         }
     } catch {
-        ElMessage.error('Không thể kết nối đến máy chủ.');
+        ElMessage.error(t('notifications.server_unreachable'));
     } finally {
         isTestingWebhook.value = false;
     }
@@ -270,17 +272,17 @@ const getSeverityTagType = (severity: string): '' | 'success' | 'warning' | 'dan
 
 const getSeverityLabel = (severity: string): string => {
     switch (severity?.toUpperCase()) {
-        case 'CRITICAL': return 'Khẩn cấp';
-        case 'WARNING': return 'Cảnh báo';
-        case 'SUCCESS': return 'Thành công';
-        default: return 'Thông tin';
+        case 'CRITICAL': return t('notifications.tag_critical');
+        case 'WARNING': return t('notifications.tag_warning');
+        case 'SUCCESS': return t('notifications.tag_success');
+        default: return t('notifications.tag_info');
     }
 };
 </script>
 
 <template>
     <AppLayout>
-        <Head title="Trung Tâm Thông Báo - Smart-HR" />
+        <Head :title="$t('notifications.page_title')" />
 
         <div class="space-y-6">
             <!-- Header Banner -->
@@ -291,9 +293,9 @@ const getSeverityLabel = (severity: string): string => {
                             <el-icon :size="22"><Bell /></el-icon>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-slate-900 dark:text-white">Trung Tâm Thông Báo & Cảnh Báo</h1>
+                            <h1 class="text-xl font-bold text-slate-900 dark:text-white">{{ $t('notifications.title') }}</h1>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Quản lý luồng thông báo thời gian thực hướng đối tượng và cấu hình các kênh gửi mở rộng
+                                {{ $t('notifications.subtitle') }}
                             </p>
                         </div>
                     </div>
@@ -306,7 +308,7 @@ const getSeverityLabel = (severity: string): string => {
                         class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition flex items-center space-x-1.5 border border-indigo-200 dark:border-indigo-800"
                     >
                         <el-icon :size="14"><Check /></el-icon>
-                        <span>Đánh dấu tất cả đã đọc</span>
+                        <span>{{ $t('header.mark_all_read') }}</span>
                     </button>
 
                     <button
@@ -314,7 +316,7 @@ const getSeverityLabel = (severity: string): string => {
                         class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-200 dark:border-slate-700 transition flex items-center space-x-1.5"
                     >
                         <el-icon :size="14"><RefreshRight /></el-icon>
-                        <span>Làm mới</span>
+                        <span>{{ $t('common.refresh') }}</span>
                     </button>
                 </div>
             </div>
@@ -326,7 +328,7 @@ const getSeverityLabel = (severity: string): string => {
                         <el-icon :size="20"><Message /></el-icon>
                     </div>
                     <div>
-                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tổng Thông Báo</div>
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{{ $t('notifications.kpi_total') }}</div>
                         <div class="text-xl font-bold text-slate-800 dark:text-white">{{ stats.total }}</div>
                     </div>
                 </div>
@@ -336,7 +338,7 @@ const getSeverityLabel = (severity: string): string => {
                         <el-icon :size="20"><Bell /></el-icon>
                     </div>
                     <div>
-                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Chưa Đọc</div>
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{{ $t('notifications.kpi_unread') }}</div>
                         <div class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ stats.unread }}</div>
                     </div>
                 </div>
@@ -346,7 +348,7 @@ const getSeverityLabel = (severity: string): string => {
                         <el-icon :size="20"><Warning /></el-icon>
                     </div>
                     <div>
-                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Vi Phạm BLLĐ (Đỏ)</div>
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{{ $t('notifications.kpi_critical') }}</div>
                         <div class="text-xl font-bold text-rose-600 dark:text-rose-400">{{ stats.critical }}</div>
                     </div>
                 </div>
@@ -356,7 +358,7 @@ const getSeverityLabel = (severity: string): string => {
                         <el-icon :size="20"><InfoFilled /></el-icon>
                     </div>
                     <div>
-                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cảnh Báo (Vàng)</div>
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{{ $t('notifications.kpi_warning') }}</div>
                         <div class="text-xl font-bold text-amber-600 dark:text-amber-400">{{ stats.warning }}</div>
                     </div>
                 </div>
@@ -372,7 +374,7 @@ const getSeverityLabel = (severity: string): string => {
                             :class="activeTab === 'inbox' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
                         >
                             <el-icon :size="16"><Message /></el-icon>
-                            <span>Hộp Thư Thông Báo</span>
+                            <span>{{ $t('notifications.tab_inbox') }}</span>
                             <span v-if="stats.unread > 0" class="ml-1.5 px-2 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 font-bold">
                                 {{ stats.unread }}
                             </span>
@@ -385,7 +387,7 @@ const getSeverityLabel = (severity: string): string => {
                             :class="activeTab === 'channels' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
                         >
                             <el-icon :size="16"><Setting /></el-icon>
-                            <span>Cấu Hình Kênh Gửi (Telegram & Webhook)</span>
+                            <span>{{ $t('notifications.tab_channels') }}</span>
                         </button>
                     </div>
                 </div>
@@ -396,31 +398,31 @@ const getSeverityLabel = (severity: string): string => {
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
                         <el-select
                             v-model="filterForm.filter"
-                            placeholder="Trạng thái đọc"
+                            :placeholder="$t('notifications.filter_read_status')"
                             class="w-full"
                             @change="applyFilters"
                         >
-                            <el-option label="Tất cả thông báo" value="all" />
-                            <el-option label="Chỉ xem chưa đọc" value="unread" />
-                            <el-option label="Chỉ xem đã đọc" value="read" />
+                            <el-option :label="$t('notifications.filter_all')" value="all" />
+                            <el-option :label="$t('notifications.filter_unread_only')" value="unread" />
+                            <el-option :label="$t('notifications.filter_read_only')" value="read" />
                         </el-select>
 
                         <el-select
                             v-model="filterForm.severity"
-                            placeholder="Mức độ nghiêm trọng"
+                            :placeholder="$t('notifications.filter_severity')"
                             clearable
                             class="w-full"
                             @change="applyFilters"
                         >
-                            <el-option label="Khẩn cấp (Critical)" value="CRITICAL" />
-                            <el-option label="Cảnh báo (Warning)" value="WARNING" />
-                            <el-option label="Thành công (Success)" value="SUCCESS" />
-                            <el-option label="Thông tin (Info)" value="INFO" />
+                            <el-option :label="$t('notifications.severity_critical')" value="CRITICAL" />
+                            <el-option :label="$t('notifications.severity_warning')" value="WARNING" />
+                            <el-option :label="$t('notifications.severity_success')" value="SUCCESS" />
+                            <el-option :label="$t('notifications.severity_info')" value="INFO" />
                         </el-select>
 
                         <el-select
                             v-model="filterForm.type"
-                            placeholder="Loại sự kiện"
+                            :placeholder="$t('notifications.filter_event_type')"
                             clearable
                             class="w-full"
                             @change="applyFilters"
@@ -435,7 +437,7 @@ const getSeverityLabel = (severity: string): string => {
 
                         <el-input
                             v-model="filterForm.search"
-                            placeholder="Tìm kiếm nội dung..."
+                            :placeholder="$t('notifications.search_placeholder')"
                             clearable
                             :prefix-icon="Search"
                             @keyup.enter="applyFilters"
@@ -488,10 +490,10 @@ const getSeverityLabel = (severity: string): string => {
                                     <div class="flex items-center space-x-3 text-[11px] text-slate-400 pt-0.5">
                                         <span>{{ item.created_at }}</span>
                                         <span v-if="item.channels_sent?.includes('telegram')" class="inline-flex items-center text-blue-500 font-medium">
-                                            • Đã gửi Telegram
+                                            {{ $t('notifications.sent_telegram') }}
                                         </span>
                                         <span v-if="item.channels_sent?.includes('webhook')" class="inline-flex items-center text-purple-500 font-medium">
-                                            • Đã gửi Webhook
+                                            {{ $t('notifications.sent_webhook') }}
                                         </span>
                                     </div>
                                 </div>
@@ -504,7 +506,7 @@ const getSeverityLabel = (severity: string): string => {
                                     @click="markAsRead(item)"
                                     class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center space-x-1"
                                 >
-                                    <span>Xử lý ngay</span>
+                                    <span>{{ $t('notifications.btn_handle_now') }}</span>
                                     <el-icon :size="12"><ArrowRight /></el-icon>
                                 </button>
 
@@ -512,7 +514,7 @@ const getSeverityLabel = (severity: string): string => {
                                     v-if="!item.is_read"
                                     @click="markAsRead(item)"
                                     class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                                    title="Đánh dấu đã đọc"
+                                    :title="$t('notifications.mark_read_tooltip')"
                                 >
                                     <el-icon :size="16"><Check /></el-icon>
                                 </button>
@@ -520,7 +522,7 @@ const getSeverityLabel = (severity: string): string => {
                                 <button
                                     @click="deleteNotification(item)"
                                     class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition"
-                                    title="Xóa thông báo"
+                                    :title="$t('notifications.delete_tooltip')"
                                 >
                                     <el-icon :size="16"><Delete /></el-icon>
                                 </button>
@@ -530,8 +532,8 @@ const getSeverityLabel = (severity: string): string => {
 
                     <div v-else class="text-center py-16 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
                         <el-icon :size="48" class="text-slate-300 dark:text-slate-600 mb-2"><Bell /></el-icon>
-                        <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">Không tìm thấy thông báo nào</h4>
-                        <p class="text-xs text-slate-400 mt-1">Không có thông báo phù hợp với bộ lọc hiện tại.</p>
+                        <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ $t('notifications.empty_title') }}</h4>
+                        <p class="text-xs text-slate-400 mt-1">{{ $t('notifications.empty_desc') }}</p>
                     </div>
 
                     <!-- Phân trang -->
@@ -558,12 +560,12 @@ const getSeverityLabel = (severity: string): string => {
                                         <el-icon :size="22"><Promotion /></el-icon>
                                     </div>
                                     <div>
-                                        <h3 class="text-base font-bold text-slate-800 dark:text-white">Kênh Telegram Bot</h3>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400">Gửi thông báo tức thì đến nhóm điều hành / quản lý qua Telegram</p>
+                                        <h3 class="text-base font-bold text-slate-800 dark:text-white">{{ $t('notifications.telegram_channel_title') }}</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $t('notifications.telegram_channel_desc') }}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <span class="text-xs font-medium text-slate-500">{{ telegramForm.is_active ? 'Đang bật' : 'Đang tắt' }}</span>
+                                    <span class="text-xs font-medium text-slate-500">{{ telegramForm.is_active ? $t('notifications.channel_enabled') : $t('notifications.channel_disabled') }}</span>
                                     <el-switch v-model="telegramForm.is_active" />
                                 </div>
                             </div>
@@ -571,31 +573,31 @@ const getSeverityLabel = (severity: string): string => {
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                        Telegram Bot Token <span class="text-rose-500">*</span>
+                                        {{ $t('notifications.telegram_bot_token_label') }} <span class="text-rose-500">*</span>
                                     </label>
                                     <el-input
                                         v-model="telegramForm.bot_token"
-                                        placeholder="VD: 123456789:ABCdefGhIJKlmNoPQRstUVwxyZ"
+                                        :placeholder="$t('notifications.telegram_ph_bot_token')"
                                         show-password
                                     />
-                                    <span class="text-[11px] text-slate-400 mt-1 block">Lấy từ @BotFather trên Telegram</span>
+                                    <span class="text-[11px] text-slate-400 mt-1 block">{{ $t('notifications.telegram_botfather_hint') }}</span>
                                 </div>
 
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                        Telegram Chat ID / Group ID <span class="text-rose-500">*</span>
+                                        {{ $t('notifications.telegram_chat_id_label') }} <span class="text-rose-500">*</span>
                                     </label>
                                     <el-input
                                         v-model="telegramForm.chat_id"
-                                        placeholder="VD: -100123456789 hoặc @my_channel"
+                                        :placeholder="$t('notifications.telegram_ph_chat_id')"
                                     />
-                                    <span class="text-[11px] text-slate-400 mt-1 block">ID của nhóm hoặc kênh nhận cảnh báo</span>
+                                    <span class="text-[11px] text-slate-400 mt-1 block">{{ $t('notifications.telegram_chat_id_hint') }}</span>
                                 </div>
                             </div>
 
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                                    Đăng ký sự kiện chuyển tiếp đến Telegram (Zero-hardcode):
+                                    {{ $t('notifications.subscribe_telegram') }}
                                 </label>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <el-checkbox-group v-model="telegramForm.event_subscriptions">
@@ -619,7 +621,7 @@ const getSeverityLabel = (severity: string): string => {
                                     class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 transition flex items-center space-x-1.5"
                                 >
                                     <el-icon :size="14"><Connection /></el-icon>
-                                    <span>{{ isTestingTelegram ? 'Đang gửi...' : 'Gửi thử nghiệm' }}</span>
+                                    <span>{{ isTestingTelegram ? $t('notifications.btn_sending') : $t('notifications.btn_test') }}</span>
                                 </button>
 
                                 <button
@@ -627,7 +629,7 @@ const getSeverityLabel = (severity: string): string => {
                                     class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center space-x-1.5"
                                 >
                                     <el-icon :size="14"><Check /></el-icon>
-                                    <span>Lưu cấu hình Telegram</span>
+                                    <span>{{ $t('notifications.save_telegram_btn') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -640,12 +642,12 @@ const getSeverityLabel = (severity: string): string => {
                                         <el-icon :size="22"><Connection /></el-icon>
                                     </div>
                                     <div>
-                                        <h3 class="text-base font-bold text-slate-800 dark:text-white">Kênh Webhook Doanh Nghiệp</h3>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400">Đẩy JSON payload đến hệ thống nội bộ, ERP hoặc kênh Zalo ZNS</p>
+                                        <h3 class="text-base font-bold text-slate-800 dark:text-white">{{ $t('notifications.webhook_channel_title') }}</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $t('notifications.webhook_channel_desc') }}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <span class="text-xs font-medium text-slate-500">{{ webhookForm.is_active ? 'Đang bật' : 'Đang tắt' }}</span>
+                                    <span class="text-xs font-medium text-slate-500">{{ webhookForm.is_active ? $t('notifications.channel_enabled') : $t('notifications.channel_disabled') }}</span>
                                     <el-switch v-model="webhookForm.is_active" />
                                 </div>
                             </div>
@@ -653,31 +655,31 @@ const getSeverityLabel = (severity: string): string => {
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                        Webhook URL Endpoint <span class="text-rose-500">*</span>
+                                        {{ $t('notifications.webhook_url_label') }} <span class="text-rose-500">*</span>
                                     </label>
                                     <el-input
                                         v-model="webhookForm.webhook_url"
                                         placeholder="https://api.domain.com/webhook/smarthr"
                                     />
-                                    <span class="text-[11px] text-slate-400 mt-1 block">Phương thức HTTP POST</span>
+                                    <span class="text-[11px] text-slate-400 mt-1 block">{{ $t('notifications.webhook_method_hint') }}</span>
                                 </div>
 
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                                        Secret Signature Token (Tùy chọn)
+                                        {{ $t('notifications.webhook_secret_label') }}
                                     </label>
                                     <el-input
                                         v-model="webhookForm.secret_token"
-                                        placeholder="Khóa bí mật tạo chữ ký HMAC-SHA256"
+                                        :placeholder="$t('notifications.webhook_ph_secret')"
                                         show-password
                                     />
-                                    <span class="text-[11px] text-slate-400 mt-1 block">Gửi qua header X-SmartHR-Signature</span>
+                                    <span class="text-[11px] text-slate-400 mt-1 block">{{ $t('notifications.webhook_signature_hint') }}</span>
                                 </div>
                             </div>
 
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                                    Đăng ký sự kiện chuyển tiếp đến Webhook:
+                                    {{ $t('notifications.subscribe_webhook') }}
                                 </label>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                                     <el-checkbox-group v-model="webhookForm.event_subscriptions">
@@ -701,7 +703,7 @@ const getSeverityLabel = (severity: string): string => {
                                     class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 transition flex items-center space-x-1.5"
                                 >
                                     <el-icon :size="14"><Connection /></el-icon>
-                                    <span>{{ isTestingWebhook ? 'Đang gửi...' : 'Gửi thử nghiệm' }}</span>
+                                    <span>{{ isTestingWebhook ? $t('notifications.btn_sending') : $t('notifications.btn_test') }}</span>
                                 </button>
 
                                 <button
@@ -709,7 +711,7 @@ const getSeverityLabel = (severity: string): string => {
                                     class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition flex items-center space-x-1.5"
                                 >
                                     <el-icon :size="14"><Check /></el-icon>
-                                    <span>Lưu cấu hình Webhook</span>
+                                    <span>{{ $t('notifications.save_webhook_btn') }}</span>
                                 </button>
                             </div>
                         </div>

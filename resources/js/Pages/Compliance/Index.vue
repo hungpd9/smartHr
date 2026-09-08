@@ -17,6 +17,7 @@ import {
     CloseBold
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface EmployeeItem {
     id: number;
@@ -88,6 +89,7 @@ const props = defineProps<{
         branch_id?: string;
     };
 }>();
+const { t } = useThemeAndLocale();
 
 // State quản lý bộ lọc
 const searchKeyword = ref(props.filters.search || '');
@@ -161,7 +163,7 @@ const submitResolve = () => {
         preserveScroll: true,
         onSuccess: () => {
             resolveDialogVisible.value = false;
-            ElMessage.success('Đã ghi nhận biện pháp khắc phục thành công.');
+            ElMessage.success(t('compliance.resolve_success'));
         },
     });
 };
@@ -176,12 +178,12 @@ const handleBulkResolve = () => {
     if (selectedAlerts.value.length === 0) return;
 
     ElMessageBox.prompt(
-        `Nhập ghi chú giải pháp đã áp dụng cho ${selectedAlerts.value.length} cảnh báo được chọn:`,
-        'Xác nhận Khắc phục Hàng loạt',
+        t('compliance.bulk_resolve_prompt_msg', { count: selectedAlerts.value.length }),
+        t('compliance.bulk_resolve_title'),
         {
-            confirmButtonText: 'Khắc phục ngay',
-            cancelButtonText: 'Hủy',
-            inputPlaceholder: 'Ví dụ: Đã hoán đổi ca và thông báo quy chế an toàn lao động...',
+            confirmButtonText: t('compliance.bulk_resolve_confirm_btn'),
+            cancelButtonText: t('common.cancel'),
+            inputPlaceholder: t('compliance.bulk_resolve_placeholder'),
         }
     ).then(({ value }) => {
         router.post(
@@ -194,7 +196,7 @@ const handleBulkResolve = () => {
                 preserveScroll: true,
                 onSuccess: () => {
                     selectedAlerts.value = [];
-                    ElMessage.success('Đã khắc phục thành công các cảnh báo được chọn.');
+                    ElMessage.success(t('compliance.bulk_resolve_success'));
                 },
             }
         );
@@ -214,27 +216,31 @@ const openLegalModal = (alertType: string) => {
 };
 
 // Danh mục loại vi phạm
-const alertTypeLabels: Record<string, string> = {
-    OT_BREACH_RED_40H: 'Vi phạm trần OT tháng (>= 40h)',
-    OT_WARNING_YELLOW_35H: 'Cảnh báo cận trần OT tháng (>= 35h)',
-    OT_ANNUAL_CAP_BREACH: 'Vi phạm trần OT năm (>= 200h)',
-    REST_BETWEEN_SHIFTS_BREACH: 'Nghỉ giữa 2 ca (< 12 giờ)',
-    WEEKLY_REST_BREACH: 'Nghỉ hàng tuần (7 ngày liên tục)',
-    PREGNANT_NIGHT_BREACH: 'Lao động mang thai làm đêm/OT',
-    CONTRACT_EXPIRING_30D: 'Hợp đồng sắp hết hạn (30 ngày)',
-    BURNOUT_RISK_HIGH: 'Nguy cơ kiệt sức (Burnout)',
+const alertTypeKeys: Record<string, string> = {
+    OT_BREACH_RED_40H: 'compliance.type_ot_breach_red_40h',
+    OT_WARNING_YELLOW_35H: 'compliance.type_ot_warning_yellow_35h',
+    OT_ANNUAL_CAP_BREACH: 'compliance.type_ot_annual_cap_breach',
+    REST_BETWEEN_SHIFTS_BREACH: 'compliance.type_rest_between_shifts_breach',
+    WEEKLY_REST_BREACH: 'compliance.type_weekly_rest_breach',
+    PREGNANT_NIGHT_BREACH: 'compliance.type_pregnant_night_breach',
+    CONTRACT_EXPIRING_30D: 'compliance.type_contract_expiring_30d',
+    BURNOUT_RISK_HIGH: 'compliance.type_burnout_risk_high',
 };
 
-const getAlertTypeLabel = (type: string) => alertTypeLabels[type] || type;
+const alertTypeOptions = computed(() =>
+    Object.entries(alertTypeKeys).map(([type, key]) => ({ type, label: t(key) }))
+);
+
+const getAlertTypeLabel = (type: string) => (alertTypeKeys[type] ? t(alertTypeKeys[type]) : type);
 
 const getSeverityTag = (sev: string) => {
     switch (sev) {
         case 'CRITICAL':
-            return { type: 'danger', label: 'Nghiêm trọng', class: 'bg-red-500/10 text-red-500 border-red-500/20' };
+            return { type: 'danger', label: t('compliance.tag_critical'), class: 'bg-red-500/10 text-red-500 border-red-500/20' };
         case 'WARNING':
-            return { type: 'warning', label: 'Cảnh báo', class: 'bg-amber-500/10 text-amber-500 border-amber-500/20' };
+            return { type: 'warning', label: t('compliance.tag_warning'), class: 'bg-amber-500/10 text-amber-500 border-amber-500/20' };
         default:
-            return { type: 'info', label: 'Thông tin', class: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
+            return { type: 'info', label: t('compliance.tag_info'), class: 'bg-blue-500/10 text-blue-500 border-blue-500/20' };
     }
 };
 
@@ -248,8 +254,8 @@ const scoreColorClass = computed(() => {
 </script>
 
 <template>
-    <AppLayout title="Giám Sát Tuân Thủ & Cảnh Báo Sớm BLLĐ">
-        <Head title="Trung Tâm Tuân Thủ BLLĐ 2019" />
+    <AppLayout :title="$t('compliance.layout_title')">
+        <Head :title="$t('compliance.page_title')" />
 
         <div class="space-y-6">
             <!-- Header Card Banner Doanh Nghiệp -->
@@ -258,13 +264,13 @@ const scoreColorClass = computed(() => {
                     <div>
                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-3">
                             <ScaleToOriginal class="w-3.5 h-3.5" />
-                            Smart-HR Enterprise • Giám Sát Tuân Thủ & Cảnh Báo Sớm BLLĐ
+                            {{ $t('compliance.hero_badge') }}
                         </div>
                         <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">
-                            Trung Tâm Radar Tuân Thủ Pháp Luật Lao Động
+                            {{ $t('compliance.hero_title') }}
                         </h1>
                         <p class="mt-2 text-sm text-slate-300 max-w-3xl leading-relaxed">
-                            Tự động rà soát thời gian thực 8 nhóm rủi ro: trần làm thêm giờ 40h/tháng & 200h/năm, khoảng cách nghỉ 12h giữa 2 ca, nghỉ 24h hàng tuần, bảo vệ thai sản Điều 137 và hợp đồng hết hạn theo Bộ luật Lao động 2019 & Nghị định 145/2020.
+                            {{ $t('compliance.hero_subtitle') }}
                         </p>
                     </div>
 
@@ -272,7 +278,7 @@ const scoreColorClass = computed(() => {
                         <el-date-picker
                             v-model="selectedDate"
                             type="date"
-                            placeholder="Chọn ngày kiểm tra"
+                            :placeholder="$t('compliance.scan_date_placeholder')"
                             format="YYYY-MM-DD"
                             value-format="YYYY-MM-DD"
                             size="default"
@@ -285,7 +291,7 @@ const scoreColorClass = computed(() => {
                             class="!bg-indigo-600 hover:!bg-indigo-500 !border-indigo-600 font-semibold"
                         >
                             <el-icon class="mr-1.5"><RefreshRight /></el-icon>
-                            Quét Tuân Thủ Ngay
+                            {{ $t('compliance.scan_now_btn') }}
                         </el-button>
                     </div>
                 </div>
@@ -297,13 +303,13 @@ const scoreColorClass = computed(() => {
                 <div class="rounded-xl p-5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
                     <div>
                         <div class="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-                            Điểm Sức Khỏe Tuân Thủ
+                            {{ $t('compliance.kpi_compliance_score') }}
                         </div>
                         <div class="mt-2 text-3xl font-extrabold" :class="scoreColorClass">
                             {{ stats.compliance_score }}%
                         </div>
                         <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {{ stats.compliance_score >= 90 ? 'Trạng thái an toàn cao' : 'Có rủi ro xử phạt' }}
+                            {{ stats.compliance_score >= 90 ? $t('compliance.score_status_safe') : $t('compliance.score_status_risk') }}
                         </div>
                     </div>
                     <div class="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-700/50">
@@ -315,13 +321,13 @@ const scoreColorClass = computed(() => {
                 <div class="rounded-xl p-5 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/40 shadow-sm flex items-center justify-between">
                     <div>
                         <div class="text-xs font-semibold uppercase text-red-600 dark:text-red-400">
-                            Vi Phạm Nghiêm Trọng
+                            {{ $t('compliance.kpi_critical') }}
                         </div>
                         <div class="mt-2 text-3xl font-extrabold text-red-600 dark:text-red-400">
                             {{ stats.critical_count }}
                         </div>
                         <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            Trần OT, Nghỉ giữa ca, Thai sản
+                            {{ $t('compliance.kpi_critical_sub') }}
                         </div>
                     </div>
                     <div class="p-3.5 rounded-xl bg-red-50 dark:bg-red-900/20">
@@ -333,13 +339,13 @@ const scoreColorClass = computed(() => {
                 <div class="rounded-xl p-5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/40 shadow-sm flex items-center justify-between">
                     <div>
                         <div class="text-xs font-semibold uppercase text-amber-600 dark:text-amber-400">
-                            Cảnh Báo Cận Ngưỡng
+                            {{ $t('compliance.kpi_warning') }}
                         </div>
                         <div class="mt-2 text-3xl font-extrabold text-amber-600 dark:text-amber-400">
                             {{ stats.warning_count }}
                         </div>
                         <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            OT 35h, HĐLĐ 30d, Burnout
+                            {{ $t('compliance.kpi_warning_sub') }}
                         </div>
                     </div>
                     <div class="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20">
@@ -351,13 +357,13 @@ const scoreColorClass = computed(() => {
                 <div class="rounded-xl p-5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-900/40 shadow-sm flex items-center justify-between">
                     <div>
                         <div class="text-xs font-semibold uppercase text-emerald-600 dark:text-emerald-400">
-                            Đã Xử Lý & Khắc Phục
+                            {{ $t('compliance.kpi_resolved') }}
                         </div>
                         <div class="mt-2 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
                             {{ stats.resolved_count }}
                         </div>
                         <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            Lưu vết kiểm toán đầy đủ
+                            {{ $t('compliance.kpi_resolved_sub') }}
                         </div>
                     </div>
                     <div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
@@ -373,7 +379,7 @@ const scoreColorClass = computed(() => {
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 flex-1">
                         <el-input
                             v-model="searchKeyword"
-                            placeholder="Tìm nhân viên, mã NV..."
+                            :placeholder="$t('compliance.filter_search_placeholder')"
                             :prefix-icon="Search"
                             clearable
                             @change="applyFilters"
@@ -381,48 +387,48 @@ const scoreColorClass = computed(() => {
 
                         <el-select
                             v-model="filterSeverity"
-                            placeholder="Mức độ"
+                            :placeholder="$t('compliance.severity')"
                             clearable
                             @change="applyFilters"
                         >
-                            <el-option label="Tất cả mức độ" value="" />
-                            <el-option label="Nghiêm trọng (Critical)" value="CRITICAL" />
-                            <el-option label="Cảnh báo (Warning)" value="WARNING" />
-                            <el-option label="Thông tin (Info)" value="INFO" />
+                            <el-option :label="$t('compliance.severity_all')" value="" />
+                            <el-option :label="$t('compliance.severity_critical')" value="CRITICAL" />
+                            <el-option :label="$t('compliance.severity_warning')" value="WARNING" />
+                            <el-option :label="$t('compliance.severity_info')" value="INFO" />
                         </el-select>
 
                         <el-select
                             v-model="filterAlertType"
-                            placeholder="Loại vi phạm"
+                            :placeholder="$t('compliance.filter_type_placeholder')"
                             clearable
                             @change="applyFilters"
                         >
-                            <el-option label="Tất cả loại vi phạm" value="" />
+                            <el-option :label="$t('compliance.type_all')" value="" />
                             <el-option
-                                v-for="(label, key) in alertTypeLabels"
-                                :key="key"
-                                :label="label"
-                                :value="key"
+                                v-for="option in alertTypeOptions"
+                                :key="option.type"
+                                :label="option.label"
+                                :value="option.type"
                             />
                         </el-select>
 
                         <el-select
                             v-model="filterIsResolved"
-                            placeholder="Trạng thái"
+                            :placeholder="$t('common.status')"
                             @change="applyFilters"
                         >
-                            <el-option label="Chưa khắc phục" value="0" />
-                            <el-option label="Đã khắc phục" value="1" />
-                            <el-option label="Tất cả trạng thái" value="" />
+                            <el-option :label="$t('compliance.unresolved')" value="0" />
+                            <el-option :label="$t('compliance.resolved')" value="1" />
+                            <el-option :label="$t('compliance.status_all')" value="" />
                         </el-select>
 
                         <el-select
                             v-model="filterBranch"
-                            placeholder="Chi nhánh"
+                            :placeholder="$t('common.branch')"
                             clearable
                             @change="applyFilters"
                         >
-                            <el-option label="Tất cả chi nhánh" value="" />
+                            <el-option :label="$t('compliance.branch_all')" value="" />
                             <el-option
                                 v-for="branch in branches"
                                 :key="branch.id"
@@ -433,15 +439,15 @@ const scoreColorClass = computed(() => {
 
                         <el-select
                             v-model="filterDepartment"
-                            placeholder="Phòng ban"
+                            :placeholder="$t('common.department')"
                             clearable
                             @change="applyFilters"
                         >
-                            <el-option label="Tất cả phòng ban" value="" />
+                            <el-option :label="$t('compliance.department_all')" value="" />
                             <el-option
                                 v-for="dept in departments"
                                 :key="dept.id"
-                                :label="dept.current_version?.name || `Phòng ban #${dept.id}`"
+                                :label="dept.current_version?.name || $t('compliance.department_fallback', { id: dept.id })"
                                 :value="dept.id"
                             />
                         </el-select>
@@ -449,7 +455,7 @@ const scoreColorClass = computed(() => {
 
                     <div class="flex items-center gap-2 shrink-0">
                         <el-button @click="resetFilters">
-                            Đặt lại
+                            {{ $t('compliance.btn_reset') }}
                         </el-button>
                         <el-button
                             v-if="selectedAlerts.length > 0"
@@ -457,7 +463,7 @@ const scoreColorClass = computed(() => {
                             @click="handleBulkResolve"
                         >
                             <el-icon class="mr-1"><Check /></el-icon>
-                            Khắc phục ({{ selectedAlerts.length }})
+                            {{ $t('compliance.bulk_resolve_btn', { count: selectedAlerts.length }) }}
                         </el-button>
                     </div>
                 </div>
@@ -469,12 +475,12 @@ const scoreColorClass = computed(() => {
                     border
                     style="width: 100%"
                     @selection-change="handleSelectionChange"
-                    empty-text="Tuyệt vời! Không phát hiện vi phạm tuân thủ pháp luật lao động nào."
+                    :empty-text="$t('compliance.table_empty')"
                 >
                     <el-table-column type="selection" width="45" :selectable="(row: ComplianceAlertItem) => !row.is_resolved" />
 
                     <!-- Mức độ -->
-                    <el-table-column label="Mức độ" width="130" align="center">
+                    <el-table-column :label="$t('compliance.severity')" width="130" align="center">
                         <template #default="{ row }">
                             <el-tag :type="getSeverityTag(row.severity).type" effect="dark" size="small" class="font-semibold">
                                 {{ getSeverityTag(row.severity).label }}
@@ -483,11 +489,11 @@ const scoreColorClass = computed(() => {
                     </el-table-column>
 
                     <!-- Loại vi phạm & Tiêu đề -->
-                    <el-table-column label="Nội dung vi phạm & Cảnh báo" min-width="280">
+                    <el-table-column :label="$t('compliance.col_content')" min-width="280">
                         <template #default="{ row }">
                             <div class="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                                 <span>{{ row.title }}</span>
-                                <el-tooltip content="Xem căn cứ pháp lý & mức phạt BLLĐ" placement="top">
+                                <el-tooltip :content="$t('compliance.legal_tooltip')" placement="top">
                                     <button
                                         type="button"
                                         @click="openLegalModal(row.alert_type)"
@@ -504,7 +510,7 @@ const scoreColorClass = computed(() => {
                     </el-table-column>
 
                     <!-- Nhân sự liên quan -->
-                    <el-table-column label="Nhân sự" width="220">
+                    <el-table-column :label="$t('common.employee')" width="220">
                         <template #default="{ row }">
                             <div v-if="row.employee" class="space-y-0.5">
                                 <div class="font-medium text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
@@ -514,19 +520,19 @@ const scoreColorClass = computed(() => {
                                 </div>
                                 <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                     <OfficeBuilding class="w-3 h-3 text-slate-400" />
-                                    <span>{{ row.employee.current_timeline?.department?.current_version?.name || 'Chưa phân bổ' }}</span>
+                                    <span>{{ row.employee.current_timeline?.department?.current_version?.name || $t('compliance.not_assigned') }}</span>
                                 </div>
                             </div>
-                            <span v-else class="text-xs text-slate-400 italic">Toàn công ty</span>
+                            <span v-else class="text-xs text-slate-400 italic">{{ $t('compliance.company_wide') }}</span>
                         </template>
                     </el-table-column>
 
                     <!-- Trạng thái -->
-                    <el-table-column label="Trạng thái" width="160" align="center">
+                    <el-table-column :label="$t('common.status')" width="160" align="center">
                         <template #default="{ row }">
                             <div v-if="row.is_resolved" class="space-y-0.5">
                                 <el-tag type="success" size="small" effect="plain" class="font-medium">
-                                    <el-icon class="mr-0.5"><CircleCheck /></el-icon> Đã khắc phục
+                                    <el-icon class="mr-0.5"><CircleCheck /></el-icon> {{ $t('compliance.resolved') }}
                                 </el-tag>
                                 <div class="text-[11px] text-slate-400">
                                     {{ row.resolved_at ? new Date(row.resolved_at).toLocaleDateString('vi-VN') : '' }}
@@ -534,14 +540,14 @@ const scoreColorClass = computed(() => {
                             </div>
                             <div v-else>
                                 <el-tag type="danger" size="small" effect="plain" class="font-medium animate-pulse">
-                                    <el-icon class="mr-0.5"><Warning /></el-icon> Cần xử lý ngay
+                                    <el-icon class="mr-0.5"><Warning /></el-icon> {{ $t('compliance.needs_action') }}
                                 </el-tag>
                             </div>
                         </template>
                     </el-table-column>
 
                     <!-- Thao tác -->
-                    <el-table-column label="Thao tác" width="160" align="center" fixed="right">
+                    <el-table-column :label="$t('common.actions')" width="160" align="center" fixed="right">
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-2">
                                 <el-button
@@ -550,7 +556,7 @@ const scoreColorClass = computed(() => {
                                     size="small"
                                     @click="openResolveDialog(row)"
                                 >
-                                    Khắc phục
+                                    {{ $t('compliance.btn_resolve') }}
                                 </el-button>
                                 <el-button
                                     type="info"
@@ -558,7 +564,7 @@ const scoreColorClass = computed(() => {
                                     plain
                                     @click="openLegalModal(row.alert_type)"
                                 >
-                                    Điều luật
+                                    {{ $t('compliance.btn_legal') }}
                                 </el-button>
                             </div>
                         </template>
@@ -568,7 +574,7 @@ const scoreColorClass = computed(() => {
                 <!-- Phân trang -->
                 <div v-if="alerts.total > 0" class="flex items-center justify-between pt-2">
                     <div class="text-xs text-slate-500 dark:text-slate-400">
-                        Hiển thị {{ alerts.data.length }} trên tổng số {{ alerts.total }} cảnh báo vi phạm
+                        {{ $t('compliance.pagination_info', { shown: alerts.data.length, total: alerts.total }) }}
                     </div>
                     <el-pagination
                         background
@@ -584,7 +590,7 @@ const scoreColorClass = computed(() => {
         <!-- Dialog Ghi Nhận Khắc Phục Vi Phạm -->
         <el-dialog
             v-model="resolveDialogVisible"
-            title="Ghi Nhận Biện Pháp Khắc Phục Vi Phạm"
+            :title="$t('compliance.resolve_dialog_title')"
             width="540px"
             destroy-on-close
         >
@@ -594,35 +600,35 @@ const scoreColorClass = computed(() => {
                         {{ resolvingAlert.title }}
                     </div>
                     <div class="text-xs text-slate-500 dark:text-slate-400">
-                        Nhân sự: {{ resolvingAlert.employee?.full_name || 'Hệ thống' }} ({{ resolvingAlert.employee?.user_code || '' }})
+                        {{ $t('compliance.resolve_employee_info', { name: resolvingAlert.employee?.full_name || $t('compliance.system_employee'), code: resolvingAlert.employee?.user_code || '' }) }}
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Biện pháp xử lý / Khắc phục đã thực hiện:
+                        {{ $t('compliance.resolve_notes_label') }}
                     </label>
                     <el-input
                         v-model="resolveForm.resolution_notes"
                         type="textarea"
                         :rows="4"
-                        placeholder="Ví dụ: Đã hoán đổi ca cho nhân sự sang ca ngày; Đã ký phụ lục hợp đồng gia hạn 12 tháng; Đã bố trí ngày nghỉ bù..."
+                        :placeholder="$t('compliance.resolve_notes_placeholder')"
                     />
                     <p class="mt-1.5 text-[11px] text-slate-400">
-                        * Thao tác này sẽ được ghi nhận vào Nhật ký Kiểm toán (Audit Trail) phục vụ công tác thanh tra lao động.
+                        {{ $t('compliance.resolve_audit_note') }}
                     </p>
                 </div>
             </div>
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="resolveDialogVisible = false">Hủy</el-button>
+                    <el-button @click="resolveDialogVisible = false">{{ $t('common.cancel') }}</el-button>
                     <el-button
                         type="primary"
                         :loading="resolveForm.processing"
                         @click="submitResolve"
                     >
-                        Xác nhận Khắc phục
+                        {{ $t('compliance.resolve_confirm_btn') }}
                     </el-button>
                 </div>
             </template>
@@ -631,7 +637,7 @@ const scoreColorClass = computed(() => {
         <!-- Dialog Tra Cứu Căn Cứ Pháp Lý & Mức Phạt Hành Chính -->
         <el-dialog
             v-model="legalDialogVisible"
-            title="Căn Cứ Pháp Lý & Mức Phạt Hành Chính (BLLĐ 2019)"
+            :title="$t('compliance.legal_dialog_title')"
             width="620px"
             destroy-on-close
         >
@@ -646,7 +652,7 @@ const scoreColorClass = computed(() => {
                 <div class="space-y-1.5">
                     <div class="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                         <Document class="w-3.5 h-3.5" />
-                        Văn bản Luật & Nghị Định Hướng Dẫn
+                        {{ $t('compliance.legal_section_law') }}
                     </div>
                     <div class="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/40 text-sm font-medium text-slate-800 dark:text-slate-200">
                         {{ activeLegalRef.details.law }}
@@ -660,7 +666,7 @@ const scoreColorClass = computed(() => {
                 <div class="space-y-1.5">
                     <div class="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                         <Warning class="w-3.5 h-3.5" />
-                        Khung Xử Phạt Vi Phạm Hành Chính
+                        {{ $t('compliance.legal_section_penalty') }}
                     </div>
                     <div class="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-sm text-rose-800 dark:text-rose-200 leading-relaxed font-medium">
                         {{ activeLegalRef.details.penalty }}
@@ -671,7 +677,7 @@ const scoreColorClass = computed(() => {
                 <div class="space-y-1.5">
                     <div class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                         <CircleCheck class="w-3.5 h-3.5" />
-                        Khuyến Nghị Biện Pháp Xử Lý
+                        {{ $t('compliance.legal_section_solution') }}
                     </div>
                     <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 text-sm text-emerald-800 dark:text-emerald-200 leading-relaxed">
                         {{ activeLegalRef.details.solution }}
@@ -681,7 +687,7 @@ const scoreColorClass = computed(() => {
 
             <template #footer>
                 <div class="flex justify-end">
-                    <el-button type="primary" @click="legalDialogVisible = false">Đã hiểu</el-button>
+                    <el-button type="primary" @click="legalDialogVisible = false">{{ $t('compliance.legal_understood_btn') }}</el-button>
                 </div>
             </template>
         </el-dialog>

@@ -4,6 +4,7 @@ import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import CreateRequestModal from './Components/CreateRequestModal.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import {
     Document,
     Check,
@@ -99,6 +100,8 @@ const props = defineProps<{
     requestTypes: Array<{ value: string; label: string }>;
 }>();
 
+const { t } = useThemeAndLocale();
+
 const activeTab = ref(props.filters.tab || 'to_approve');
 const selectedType = ref(props.filters.type || '');
 const selectedStatus = ref(props.filters.status || '');
@@ -150,11 +153,11 @@ const submitApprove = () => {
     approveForm.post(`/workflow/requests/${selectedRequestToApprove.value.id}/approve`, {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Phê duyệt thành công!');
+            ElMessage.success(t('workflow.approve_success'));
             approveDialogVisible.value = false;
         },
         onError: (errs) => {
-            ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi xảy ra.');
+            ElMessage.error(Object.values(errs)[0] as string || t('workflow.error_occurred'));
         }
     });
 };
@@ -169,17 +172,17 @@ const openRejectDialog = (req: ApprovalRequestItem) => {
 const submitReject = () => {
     if (!selectedRequestToReject.value) return;
     if (!rejectForm.comment.trim()) {
-        ElMessage.warning('Vui lòng nhập lý do từ chối.');
+        ElMessage.warning(t('workflow.reject_reason_required'));
         return;
     }
     rejectForm.post(`/workflow/requests/${selectedRequestToReject.value.id}/reject`, {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã từ chối đơn yêu cầu.');
+            ElMessage.success(t('workflow.reject_success'));
             rejectDialogVisible.value = false;
         },
         onError: (errs) => {
-            ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi xảy ra.');
+            ElMessage.error(Object.values(errs)[0] as string || t('workflow.error_occurred'));
         }
     });
 };
@@ -187,13 +190,13 @@ const submitReject = () => {
 // Hủy đơn
 const cancelRequest = (req: ApprovalRequestItem) => {
     ElMessageBox.confirm(
-        'Bạn có chắc chắn muốn hủy đơn yêu cầu này không?',
-        'Xác nhận hủy đơn',
-        { confirmButtonText: 'Hủy đơn', cancelButtonText: 'Đóng', type: 'warning' }
+        t('workflow.cancel_confirm_msg'),
+        t('workflow.cancel_confirm_title'),
+        { confirmButtonText: t('workflow.btn_cancel'), cancelButtonText: t('common.close'), type: 'warning' }
     ).then(() => {
         router.post(`/workflow/requests/${req.id}/cancel`, {}, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã hủy đơn thành công.'),
+            onSuccess: () => ElMessage.success(t('workflow.cancel_success')),
         });
     }).catch(() => {});
 };
@@ -205,29 +208,36 @@ const viewDetail = (req: ApprovalRequestItem) => {
 };
 
 // Format tag loại đơn
+const requestTypeTagMap: Record<string, { type: string; key: string }> = {
+    LEAVE: { type: 'primary', key: 'workflow.tag_type_leave' },
+    OVERTIME: { type: 'warning', key: 'workflow.tag_type_overtime' },
+    NIGHT_SHIFT: { type: 'purple', key: 'workflow.tag_type_night_shift' },
+    TIMESHEET_EDIT: { type: 'success', key: 'workflow.tag_type_timesheet_edit' },
+    SHIFT_SWAP: { type: 'info', key: 'workflow.tag_type_shift_swap' },
+    REMOTE_WORK: { type: 'info', key: 'workflow.tag_type_remote_work' },
+    RESIGNATION: { type: 'danger', key: 'workflow.tag_type_resignation' },
+};
 const getRequestTypeTag = (type: string) => {
-    switch (type) {
-        case 'LEAVE': return { type: 'primary', label: 'Nghỉ phép' };
-        case 'OVERTIME': return { type: 'warning', label: 'Làm thêm (OT)' };
-        case 'NIGHT_SHIFT': return { type: 'purple', label: 'Ca đêm (Đ.137)' };
-        case 'TIMESHEET_EDIT': return { type: 'success', label: 'Sửa chấm công' };
-        case 'SHIFT_SWAP': return { type: 'info', label: 'Đổi ca kíp' };
-        case 'REMOTE_WORK': return { type: 'info', label: 'Làm từ xa' };
-        case 'RESIGNATION': return { type: 'danger', label: 'Thôi việc' };
-        default: return { type: 'info', label: type };
-    }
+    const entry = requestTypeTagMap[type];
+    return entry ? { type: entry.type, label: t(entry.key) } : { type: 'info', label: type };
+};
+const getRequestTypeOptionLabel = (type: string, fallbackLabel?: string) => {
+    const entry = requestTypeTagMap[type];
+    return entry ? t(entry.key) : (fallbackLabel || type);
 };
 
 // Format tag trạng thái
-const getStatusTag = (status: string) => {
-    switch (status) {
-        case 'PENDING': return { type: 'warning', label: 'Chờ duyệt' };
-        case 'APPROVED': return { type: 'success', label: 'Đã duyệt' };
-        case 'REJECTED': return { type: 'danger', label: 'Từ chối' };
-        case 'CANCELLED': return { type: 'info', label: 'Đã hủy' };
-        default: return { type: 'info', label: status };
-    }
+const statusTagMap: Record<string, { type: string; key: string }> = {
+    PENDING: { type: 'warning', key: 'status.pending' },
+    APPROVED: { type: 'success', key: 'status.approved' },
+    REJECTED: { type: 'danger', key: 'status.rejected' },
+    CANCELLED: { type: 'info', key: 'status.cancelled' },
 };
+const getStatusTag = (status: string) => {
+    const entry = statusTagMap[status];
+    return entry ? { type: entry.type, label: t(entry.key) } : { type: 'info', label: status };
+};
+const statusFilterValues = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'];
 
 // Cập nhật cấu hình quy trình duyệt (Tab 3)
 const editingConfig = ref<WorkflowConfigItem | null>(null);
@@ -254,7 +264,7 @@ const handleLevelsChange = (val: number) => {
         configForm.steps_config.push({
             level: nextLevel,
             role_type: nextLevel === 2 ? 'DEPARTMENT_HEAD' : 'HR_ADMIN',
-            title: `Cấp duyệt ${nextLevel}`,
+            title: t('workflow.config_step_default_title', { level: nextLevel }),
         });
     }
     while (configForm.steps_config.length > val) {
@@ -266,11 +276,11 @@ const saveWorkflowConfig = () => {
     configForm.post('/workflow/configs', {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã lưu cấu hình quy trình phê duyệt thành công!');
+            ElMessage.success(t('workflow.config_save_success'));
             editingConfig.value = null;
         },
         onError: (errs) => {
-            ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi khi lưu cấu hình.');
+            ElMessage.error(Object.values(errs)[0] as string || t('workflow.config_save_error'));
         }
     });
 };
@@ -278,7 +288,7 @@ const saveWorkflowConfig = () => {
 
 <template>
     <AppLayout>
-        <Head title="Quản Lý Đơn Từ & Luồng Phê Duyệt Đa Cấp" />
+        <Head :title="t('workflow.title')" />
 
         <div class="space-y-6">
             <!-- Header Banner Doanh Nghiệp -->
@@ -291,10 +301,10 @@ const saveWorkflowConfig = () => {
                             </div>
                             <div>
                                 <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-                                    Quản Trị Luồng Đơn Từ & Phê Duyệt Đa Cấp
+                                    {{ $t('workflow.title') }}
                                 </h1>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                    Đóng băng chuỗi duyệt (Snapshot Approvers), bám sát Bộ luật Lao động 2019 (Điều 107, 113, 115, 137).
+                                    {{ $t('workflow.subtitle') }}
                                 </p>
                             </div>
                         </div>
@@ -302,8 +312,8 @@ const saveWorkflowConfig = () => {
 
                     <div class="flex items-center gap-3">
                         <div v-if="leaveBalance" class="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-xs">
-                            <span class="text-blue-700 dark:text-blue-300">Phép năm khả dụng:</span>
-                            <strong class="text-blue-900 dark:text-blue-100 font-bold text-sm">{{ leaveBalance.remaining_days }} ngày</strong>
+                            <span class="text-blue-700 dark:text-blue-300">{{ $t('workflow.leave_balance_available') }}</span>
+                            <strong class="text-blue-900 dark:text-blue-100 font-bold text-sm">{{ leaveBalance.remaining_days }} {{ $t('common.days') }}</strong>
                         </div>
 
                         <el-button
@@ -311,7 +321,7 @@ const saveWorkflowConfig = () => {
                             :icon="Plus"
                             @click="showCreateModal = true"
                         >
-                            Tạo Đơn Mới
+                            {{ $t('workflow.btn_create_request') }}
                         </el-button>
                     </div>
                 </div>
@@ -321,7 +331,7 @@ const saveWorkflowConfig = () => {
                     <div class="flex flex-wrap items-center gap-2.5">
                         <el-select
                             v-model="selectedType"
-                            placeholder="Lọc loại đơn"
+                            :placeholder="$t('workflow.filter_all_types')"
                             clearable
                             size="default"
                             class="w-44"
@@ -330,7 +340,7 @@ const saveWorkflowConfig = () => {
                             <el-option
                                 v-for="t in requestTypes"
                                 :key="t.value"
-                                :label="t.label"
+                                :label="getRequestTypeOptionLabel(t.value, t.label)"
                                 :value="t.value"
                             />
                         </el-select>
@@ -338,19 +348,21 @@ const saveWorkflowConfig = () => {
                         <el-select
                             v-if="activeTab === 'my_requests'"
                             v-model="selectedStatus"
-                            placeholder="Trạng thái"
+                            :placeholder="$t('common.status')"
                             clearable
                             size="default"
                             class="w-36"
                             @change="applyFilters"
                         >
-                            <el-option label="Chờ duyệt" value="PENDING" />
-                            <el-option label="Đã duyệt" value="APPROVED" />
-                            <el-option label="Từ chối" value="REJECTED" />
-                            <el-option label="Đã hủy" value="CANCELLED" />
+                            <el-option
+                                v-for="s in statusFilterValues"
+                                :key="s"
+                                :label="getStatusTag(s).label"
+                                :value="s"
+                            />
                         </el-select>
 
-                        <el-button :icon="Refresh" @click="applyFilters">Làm mới</el-button>
+                        <el-button :icon="Refresh" @click="applyFilters">{{ $t('common.refresh') }}</el-button>
                     </div>
                 </div>
             </div>
@@ -362,7 +374,7 @@ const saveWorkflowConfig = () => {
                     <el-tab-pane name="to_approve">
                         <template #label>
                             <span class="flex items-center gap-2">
-                                <span>Đơn Cần Tôi Duyệt</span>
+                                <span>{{ $t('workflow.tab_to_approve') }}</span>
                                 <el-badge
                                     v-if="requestsToApprove.length > 0"
                                     :value="requestsToApprove.length"
@@ -374,7 +386,7 @@ const saveWorkflowConfig = () => {
 
                         <div v-if="requestsToApprove.length === 0" class="py-12 text-center text-gray-400 text-sm">
                             <Check class="w-10 h-10 mx-auto text-emerald-500 mb-2 opacity-70" />
-                            <p>Tuyệt vời! Hiện không có đơn từ nào đang chờ bạn phê duyệt.</p>
+                            <p>{{ $t('workflow.empty_to_approve') }}</p>
                         </div>
 
                         <el-table
@@ -384,13 +396,13 @@ const saveWorkflowConfig = () => {
                             style="width: 100%"
                             class="rounded-lg overflow-hidden text-xs"
                         >
-                            <el-table-column label="Mã Đơn" width="90" align="center">
+                            <el-table-column :label="$t('workflow.col_request_id')" width="90" align="center">
                                 <template #default="{ row }">
                                     <span class="font-mono font-semibold text-blue-600 dark:text-blue-400">#{{ row.id }}</span>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Nhân Sự Nộp Đơn" min-width="170">
+                            <el-table-column :label="$t('workflow.col_creator')" min-width="170">
                                 <template #default="{ row }">
                                     <div class="font-medium text-gray-900 dark:text-gray-100">
                                         {{ row.employee?.full_name }}
@@ -401,7 +413,7 @@ const saveWorkflowConfig = () => {
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Phân Loại" width="130">
+                            <el-table-column :label="$t('workflow.col_type')" width="130">
                                 <template #default="{ row }">
                                     <el-tag :type="getRequestTypeTag(row.request_type).type" size="small" effect="plain">
                                         {{ getRequestTypeTag(row.request_type).label }}
@@ -409,21 +421,21 @@ const saveWorkflowConfig = () => {
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Chi Tiết Yêu Cầu" min-width="220">
+                            <el-table-column :label="$t('workflow.col_content')" min-width="220">
                                 <template #default="{ row }">
                                     <div class="space-y-1">
                                         <!-- Chi tiết theo loại đơn -->
                                         <div v-if="row.request_type === 'LEAVE'" class="font-medium">
-                                            Nghỉ {{ row.form_payload?.days }} ngày ({{ row.form_payload?.start_date }} &rarr; {{ row.form_payload?.end_date }})
+                                            {{ $t('workflow.summary_leave', { days: row.form_payload?.days, start: row.form_payload?.start_date, end: row.form_payload?.end_date }) }}
                                         </div>
                                         <div v-else-if="row.request_type === 'OVERTIME'" class="font-medium">
-                                            Làm thêm {{ row.form_payload?.hours }}h ngày {{ row.form_payload?.date }}
+                                            {{ $t('workflow.summary_overtime', { hours: row.form_payload?.hours, date: row.form_payload?.date }) }}
                                         </div>
                                         <div v-else-if="row.request_type === 'NIGHT_SHIFT'" class="font-medium">
-                                            Làm ca đêm ngày {{ row.form_payload?.work_date }}
+                                            {{ $t('workflow.summary_night_shift', { date: row.form_payload?.work_date }) }}
                                         </div>
                                         <div v-else-if="row.request_type === 'TIMESHEET_EDIT'" class="font-medium">
-                                            Điều chỉnh công ngày {{ row.form_payload?.work_date }}
+                                            {{ $t('workflow.summary_timesheet_edit', { date: row.form_payload?.work_date }) }}
                                         </div>
 
                                         <div v-if="row.form_payload?.reason" class="text-[11px] text-gray-500 italic truncate max-w-xs">
@@ -433,14 +445,14 @@ const saveWorkflowConfig = () => {
                                         <!-- Badge Cảnh Báo Điều 137 BLLĐ -->
                                         <div v-if="row.is_voluntary_consent" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10px] font-semibold border border-purple-200 dark:border-purple-800">
                                             <Warning class="w-3 h-3 text-purple-600" />
-                                            <span>Điều 137 BLLĐ: Thỏa thuận tự nguyện con &lt; 12T</span>
-                                            <a v-if="row.voluntary_agreement_url" :href="row.voluntary_agreement_url" target="_blank" class="underline ml-1">Văn bản</a>
+                                            <span>{{ $t('workflow.consent_under_12m_badge') }}</span>
+                                            <a v-if="row.voluntary_agreement_url" :href="row.voluntary_agreement_url" target="_blank" class="underline ml-1">{{ $t('workflow.doc_link') }}</a>
                                         </div>
                                     </div>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Tiến Trình Duyệt" width="200">
+                            <el-table-column :label="$t('workflow.col_progress')" width="200">
                                 <template #default="{ row }">
                                     <div class="flex items-center gap-1.5">
                                         <div
@@ -465,18 +477,18 @@ const saveWorkflowConfig = () => {
                                         </div>
                                     </div>
                                     <div class="text-[10px] text-gray-400 mt-1">
-                                        Cấp hiện tại: {{ row.current_step }}/{{ row.snapshot_approvers?.length }}
+                                        {{ $t('workflow.current_step_label', { current: row.current_step, total: row.snapshot_approvers?.length }) }}
                                     </div>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Thời Gian Gửi" width="130">
+                            <el-table-column :label="$t('workflow.col_created_at')" width="130">
                                 <template #default="{ row }">
                                     <span class="text-gray-500">{{ row.created_at?.substring(0, 16) }}</span>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Thao Tác" width="190" align="center" fixed="right">
+                            <el-table-column :label="$t('workflow.col_actions')" width="190" align="center" fixed="right">
                                 <template #default="{ row }">
                                     <div class="flex items-center justify-center gap-1.5">
                                         <el-button
@@ -485,7 +497,7 @@ const saveWorkflowConfig = () => {
                                             :icon="Check"
                                             @click="openApproveDialog(row)"
                                         >
-                                            Duyệt
+                                            {{ $t('workflow.btn_approve') }}
                                         </el-button>
                                         <el-button
                                             type="danger"
@@ -493,13 +505,13 @@ const saveWorkflowConfig = () => {
                                             :icon="Close"
                                             @click="openRejectDialog(row)"
                                         >
-                                            Từ chối
+                                            {{ $t('workflow.btn_reject') }}
                                         </el-button>
                                         <el-button
                                             size="small"
                                             @click="viewDetail(row)"
                                         >
-                                            Chi tiết
+                                            {{ $t('common.detail') }}
                                         </el-button>
                                     </div>
                                 </template>
@@ -508,10 +520,10 @@ const saveWorkflowConfig = () => {
                     </el-tab-pane>
 
                     <!-- TAB 2: ĐƠN CỦA TÔI -->
-                    <el-tab-pane label="Đơn Của Tôi" name="my_requests">
+                    <el-tab-pane :label="$t('workflow.tab_my_requests')" name="my_requests">
                         <div v-if="myRequests.data.length === 0" class="py-12 text-center text-gray-400 text-sm">
                             <Document class="w-10 h-10 mx-auto text-gray-300 mb-2 opacity-50" />
-                            <p>Bạn chưa gửi đơn từ nào. Bấm "Tạo Đơn Mới" để bắt đầu gửi yêu cầu.</p>
+                            <p>{{ $t('workflow.empty_my_requests') }}</p>
                         </div>
 
                         <el-table
@@ -521,13 +533,13 @@ const saveWorkflowConfig = () => {
                             style="width: 100%"
                             class="rounded-lg overflow-hidden text-xs"
                         >
-                            <el-table-column label="Mã Đơn" width="90" align="center">
+                            <el-table-column :label="$t('workflow.col_request_id')" width="90" align="center">
                                 <template #default="{ row }">
                                     <span class="font-mono font-semibold text-blue-600 dark:text-blue-400">#{{ row.id }}</span>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Phân Loại" width="130">
+                            <el-table-column :label="$t('workflow.col_type')" width="130">
                                 <template #default="{ row }">
                                     <el-tag :type="getRequestTypeTag(row.request_type).type" size="small" effect="plain">
                                         {{ getRequestTypeTag(row.request_type).label }}
@@ -535,20 +547,20 @@ const saveWorkflowConfig = () => {
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Nội Dung Đơn" min-width="240">
+                            <el-table-column :label="$t('workflow.col_content')" min-width="240">
                                 <template #default="{ row }">
                                     <div class="space-y-1">
                                         <div v-if="row.request_type === 'LEAVE'" class="font-medium">
-                                            Nghỉ {{ row.form_payload?.days }} ngày ({{ row.form_payload?.start_date }} &rarr; {{ row.form_payload?.end_date }})
+                                            {{ $t('workflow.summary_leave', { days: row.form_payload?.days, start: row.form_payload?.start_date, end: row.form_payload?.end_date }) }}
                                         </div>
                                         <div v-else-if="row.request_type === 'OVERTIME'" class="font-medium">
-                                            Làm thêm {{ row.form_payload?.hours }}h ngày {{ row.form_payload?.date }}
+                                            {{ $t('workflow.summary_overtime', { hours: row.form_payload?.hours, date: row.form_payload?.date }) }}
                                         </div>
                                         <div v-else-if="row.request_type === 'NIGHT_SHIFT'" class="font-medium">
-                                            Làm ca đêm ngày {{ row.form_payload?.work_date }}
+                                            {{ $t('workflow.summary_night_shift', { date: row.form_payload?.work_date }) }}
                                         </div>
                                         <div v-else class="font-medium">
-                                            {{ row.form_payload?.reason || 'Đơn yêu cầu công vụ' }}
+                                            {{ row.form_payload?.reason || $t('workflow.summary_work_request') }}
                                         </div>
 
                                         <div v-if="row.form_payload?.reason && row.request_type !== 'RESIGNATION'" class="text-[11px] text-gray-500 italic truncate">
@@ -558,7 +570,7 @@ const saveWorkflowConfig = () => {
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Tiến Trình Cấp Duyệt" width="220">
+                            <el-table-column :label="$t('workflow.col_progress')" width="220">
                                 <template #default="{ row }">
                                     <div class="flex items-center gap-1.5">
                                         <div
@@ -583,12 +595,12 @@ const saveWorkflowConfig = () => {
                                         </div>
                                     </div>
                                     <div class="text-[10px] text-gray-400 mt-1">
-                                        {{ row.snapshot_approvers?.[row.current_step - 1]?.approver_name || 'Hoàn tất' }}
+                                        {{ row.snapshot_approvers?.[row.current_step - 1]?.approver_name || $t('status.completed') }}
                                     </div>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Trạng Thái" width="110" align="center">
+                            <el-table-column :label="$t('common.status')" width="110" align="center">
                                 <template #default="{ row }">
                                     <el-tag :type="getStatusTag(row.status).type" size="small">
                                         {{ getStatusTag(row.status).label }}
@@ -596,20 +608,20 @@ const saveWorkflowConfig = () => {
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Thời Gian Gửi" width="130">
+                            <el-table-column :label="$t('workflow.col_created_at')" width="130">
                                 <template #default="{ row }">
                                     <span class="text-gray-500">{{ row.created_at?.substring(0, 16) }}</span>
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="Thao Tác" width="150" align="center" fixed="right">
+                            <el-table-column :label="$t('workflow.col_actions')" width="150" align="center" fixed="right">
                                 <template #default="{ row }">
                                     <div class="flex items-center justify-center gap-1.5">
                                         <el-button
                                             size="small"
                                             @click="viewDetail(row)"
                                         >
-                                            Xem
+                                            {{ $t('common.view') }}
                                         </el-button>
                                         <el-button
                                             v-if="row.status === 'PENDING'"
@@ -618,7 +630,7 @@ const saveWorkflowConfig = () => {
                                             plain
                                             @click="cancelRequest(row)"
                                         >
-                                            Hủy đơn
+                                            {{ $t('workflow.btn_cancel') }}
                                         </el-button>
                                     </div>
                                 </template>
@@ -639,29 +651,29 @@ const saveWorkflowConfig = () => {
                     </el-tab-pane>
 
                     <!-- TAB 3: CẤU HÌNH QUY TRÌNH PHÊ DUYỆT (ZERO-HARDCODE) -->
-                    <el-tab-pane label="Cấu Hình Quy Trình (Zero-Hardcode)" name="configs">
+                    <el-tab-pane :label="$t('workflow.tab_configs')" name="configs">
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <div class="text-xs text-gray-500">
-                                    Cấu hình số cấp duyệt và thẩm quyền phê duyệt cho từng phân loại đơn từ (1 đến 3 cấp duyệt).
+                                    {{ $t('workflow.config_tab_desc') }}
                                 </div>
                             </div>
 
                             <el-table :data="workflowConfigs" stripe class="text-xs">
-                                <el-table-column label="Loại Đơn Từ" width="180">
+                                <el-table-column :label="$t('workflow.col_type')" width="180">
                                     <template #default="{ row }">
                                         <span class="font-semibold">{{ getRequestTypeTag(row.request_type).label }}</span>
                                         <div class="text-[10px] font-mono text-gray-400">{{ row.request_type }}</div>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Số Cấp Duyệt" width="120" align="center">
+                                <el-table-column :label="$t('workflow.col_total_levels')" width="120" align="center">
                                     <template #default="{ row }">
-                                        <span class="font-bold text-blue-600">{{ row.total_levels }} cấp</span>
+                                        <span class="font-bold text-blue-600">{{ row.total_levels }} {{ $t('workflow.config_level_unit') }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Chuỗi Các Cấp Duyệt" min-width="280">
+                                <el-table-column :label="$t('workflow.col_approval_chain')" min-width="280">
                                     <template #default="{ row }">
                                         <div class="flex items-center gap-2">
                                             <div
@@ -669,36 +681,36 @@ const saveWorkflowConfig = () => {
                                                 :key="step.level"
                                                 class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[11px]"
                                             >
-                                                <span class="font-semibold text-blue-600">Cấp {{ step.level }}:</span>
+                                                <span class="font-semibold text-blue-600">{{ $t('workflow.level_prefix', { level: step.level }) }}</span>
                                                 {{ step.title }} ({{ step.role_type }})
                                             </div>
                                         </div>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Quy Tắc Động (Conditions)" width="180">
+                                <el-table-column :label="$t('workflow.col_conditions')" width="180">
                                     <template #default="{ row }">
                                         <div v-if="row.condition_rules?.min_days_for_level_2" class="text-[11px] text-amber-600">
-                                            &ge; {{ row.condition_rules.min_days_for_level_2 }} ngày: Duyệt 2 cấp
+                                            {{ $t('workflow.rule_min_days', { days: row.condition_rules.min_days_for_level_2 }) }}
                                         </div>
                                         <div v-else class="text-gray-400 text-[11px]">
-                                            Cố định theo cấp
+                                            {{ $t('workflow.rule_fixed') }}
                                         </div>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Trạng Thái" width="100" align="center">
+                                <el-table-column :label="$t('common.status')" width="100" align="center">
                                     <template #default="{ row }">
                                         <el-tag :type="row.is_active ? 'success' : 'info'" size="small">
-                                            {{ row.is_active ? 'Kích hoạt' : 'Tắt' }}
+                                            {{ row.is_active ? $t('workflow.tag_active') : $t('workflow.tag_inactive') }}
                                         </el-tag>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Thao Tác" width="100" align="center">
+                                <el-table-column :label="$t('workflow.col_actions')" width="100" align="center">
                                     <template #default="{ row }">
                                         <el-button type="primary" size="small" link @click="openEditConfig(row)">
-                                            Chỉnh sửa
+                                            {{ $t('common.edit') }}
                                         </el-button>
                                     </template>
                                 </el-table-column>
@@ -722,14 +734,13 @@ const saveWorkflowConfig = () => {
         <!-- DIALOG PHÊ DUYỆT -->
         <el-dialog
             v-model="approveDialogVisible"
-            title="Xác Nhận Phê Duyệt Đơn Yêu Cầu"
+            :title="$t('workflow.dialog_approve_title')"
             width="500px"
         >
             <div v-if="selectedRequestToApprove" class="space-y-4 text-xs">
                 <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
                     <div class="font-medium text-gray-800 dark:text-gray-200">
-                        Phê duyệt đơn <strong>#{{ selectedRequestToApprove.id }}</strong> của nhân sự:
-                        <strong>{{ selectedRequestToApprove.employee?.full_name }}</strong>
+                        {{ $t('workflow.approve_dialog_line_prefix') }} <strong>#{{ selectedRequestToApprove.id }}</strong> {{ $t('workflow.approve_dialog_line_suffix') }} <strong>{{ selectedRequestToApprove.employee?.full_name }}</strong>
                     </div>
                 </div>
 
@@ -737,35 +748,35 @@ const saveWorkflowConfig = () => {
                 <div v-if="selectedRequestToApprove.is_voluntary_consent" class="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-300 dark:border-purple-800 space-y-2">
                     <div class="flex items-center gap-1.5 text-purple-900 dark:text-purple-200 font-semibold text-[11px]">
                         <Warning class="w-4 h-4 text-purple-600" />
-                        Đối Soát Điều 137 Khoản 1 Điểm b BLLĐ 2019
+                        {{ $t('workflow.consent_art137_title') }}
                     </div>
                     <p class="text-[11px] text-purple-700 dark:text-purple-300">
-                        Đơn làm thêm/ca đêm của lao động nuôi con dưới 12 tháng. Cấp duyệt có trách nhiệm xác nhận đã đối soát văn bản thỏa thuận tự nguyện hợp lệ.
+                        {{ $t('workflow.consent_art137_desc') }}
                     </p>
                     <el-checkbox
                         v-model="approveForm.verified_child_under_12m_consent"
                         class="text-purple-900 dark:text-purple-100 font-semibold"
                     >
-                        Tôi xác nhận đã đối soát văn bản thỏa thuận tự nguyện hợp lệ
+                        {{ $t('workflow.consent_checkbox_confirm') }}
                     </el-checkbox>
                 </div>
 
                 <div>
-                    <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Ý kiến phê duyệt (tùy chọn):</label>
+                    <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $t('workflow.dialog_approve_comment') }}</label>
                     <el-input
                         v-model="approveForm.comment"
                         type="textarea"
                         :rows="3"
-                        placeholder="Đồng ý phê duyệt..."
+                        :placeholder="$t('workflow.approve_dialog_comment_placeholder')"
                     />
                 </div>
             </div>
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="approveDialogVisible = false">Đóng</el-button>
+                    <el-button @click="approveDialogVisible = false">{{ $t('common.close') }}</el-button>
                     <el-button type="success" :loading="approveForm.processing" @click="submitApprove">
-                        Đồng Ý Phê Duyệt
+                        {{ $t('workflow.btn_approve') }}
                     </el-button>
                 </div>
             </template>
@@ -774,31 +785,30 @@ const saveWorkflowConfig = () => {
         <!-- DIALOG TỪ CHỐI -->
         <el-dialog
             v-model="rejectDialogVisible"
-            title="Từ Chối Đơn Yêu Cầu"
+            :title="$t('workflow.dialog_reject_title')"
             width="500px"
         >
             <div v-if="selectedRequestToReject" class="space-y-4 text-xs">
                 <div class="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-800 dark:text-red-300">
-                    Từ chối đơn #{{ selectedRequestToReject.id }} của nhân sự <strong>{{ selectedRequestToReject.employee?.full_name }}</strong>.
-                    Nếu là đơn xin nghỉ phép năm, các ngày phép tạm giữ sẽ được tự động hoàn lại quỹ phép khả dụng.
+                    {{ $t('workflow.reject_dialog_line_prefix') }} #{{ selectedRequestToReject.id }} {{ $t('workflow.reject_dialog_line_suffix') }} <strong>{{ selectedRequestToReject.employee?.full_name }}</strong>. {{ $t('workflow.reject_dialog_note') }}
                 </div>
 
                 <div>
-                    <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">Lý do từ chối (bắt buộc):</label>
+                    <label class="block font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $t('workflow.dialog_reject_comment') }}</label>
                     <el-input
                         v-model="rejectForm.comment"
                         type="textarea"
                         :rows="3"
-                        placeholder="Nêu rõ lý do từ chối để nhân sự nắm thông tin..."
+                        :placeholder="$t('workflow.reject_dialog_comment_placeholder')"
                     />
                 </div>
             </div>
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="rejectDialogVisible = false">Hủy</el-button>
+                    <el-button @click="rejectDialogVisible = false">{{ $t('common.cancel') }}</el-button>
                     <el-button type="danger" :loading="rejectForm.processing" @click="submitReject">
-                        Xác Nhận Từ Chối
+                        {{ $t('workflow.btn_reject') }}
                     </el-button>
                 </div>
             </template>
@@ -807,30 +817,30 @@ const saveWorkflowConfig = () => {
         <!-- DIALOG CHI TIẾT ĐƠN & LỊCH SỬ PHÊ DUYỆT -->
         <el-dialog
             v-model="detailDialogVisible"
-            title="Chi Tiết Đơn Yêu Cầu & Lịch Sử Duyệt"
+            :title="$t('workflow.detail_title')"
             width="620px"
         >
             <div v-if="selectedDetailRequest" class="space-y-4 text-xs">
                 <!-- Thông tin cơ bản -->
                 <div class="grid grid-cols-2 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
                     <div>
-                        <span class="text-gray-400">Nhân sự:</span>
+                        <span class="text-gray-400">{{ $t('common.employee') }}:</span>
                         <strong class="ml-1 text-gray-800 dark:text-gray-200">{{ selectedDetailRequest.employee?.full_name }}</strong>
                     </div>
                     <div>
-                        <span class="text-gray-400">Loại đơn:</span>
+                        <span class="text-gray-400">{{ $t('workflow.col_type') }}:</span>
                         <el-tag :type="getRequestTypeTag(selectedDetailRequest.request_type).type" size="small" class="ml-1">
                             {{ getRequestTypeTag(selectedDetailRequest.request_type).label }}
                         </el-tag>
                     </div>
                     <div>
-                        <span class="text-gray-400">Trạng thái:</span>
+                        <span class="text-gray-400">{{ $t('common.status') }}:</span>
                         <el-tag :type="getStatusTag(selectedDetailRequest.status).type" size="small" class="ml-1">
                             {{ getStatusTag(selectedDetailRequest.status).label }}
                         </el-tag>
                     </div>
                     <div>
-                        <span class="text-gray-400">Ngày gửi:</span>
+                        <span class="text-gray-400">{{ $t('workflow.detail_created_at_label') }}:</span>
                         <span class="ml-1 text-gray-700 dark:text-gray-300">{{ selectedDetailRequest.created_at }}</span>
                     </div>
                 </div>
@@ -838,7 +848,7 @@ const saveWorkflowConfig = () => {
                 <!-- Lịch sử các cấp duyệt -->
                 <div>
                     <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-1.5">
-                        <Clock class="w-4 h-4 text-blue-500" /> Tiến Trình & Ý Kiến Phê Duyệt
+                        <Clock class="w-4 h-4 text-blue-500" /> {{ $t('workflow.detail_progress_title') }}
                     </h4>
 
                     <div class="space-y-2">
@@ -863,10 +873,10 @@ const saveWorkflowConfig = () => {
                                     <div class="font-semibold text-gray-800 dark:text-gray-200">
                                         {{ step.title }} &bull; {{ step.approver_name }}
                                     </div>
-                                    <span class="text-[10px] text-gray-400">{{ step.action_at || 'Chưa duyệt' }}</span>
+                                    <span class="text-[10px] text-gray-400">{{ step.action_at || $t('workflow.step_not_acted') }}</span>
                                 </div>
                                 <div class="text-[11px] text-gray-500 mt-0.5">
-                                    Trạng thái: <strong :class="step.status === 'APPROVED' ? 'text-emerald-600' : step.status === 'REJECTED' ? 'text-red-600' : 'text-amber-600'">{{ step.status }}</strong>
+                                    {{ $t('common.status') }}: <strong :class="step.status === 'APPROVED' ? 'text-emerald-600' : step.status === 'REJECTED' ? 'text-red-600' : 'text-amber-600'">{{ step.status }}</strong>
                                 </div>
                                 <div v-if="step.comment" class="mt-1 p-1.5 rounded bg-gray-50 dark:bg-gray-900/50 text-[11px] text-gray-600 dark:text-gray-300 italic">
                                     "{{ step.comment }}"
@@ -878,67 +888,67 @@ const saveWorkflowConfig = () => {
             </div>
 
             <template #footer>
-                <el-button @click="detailDialogVisible = false">Đóng</el-button>
+                <el-button @click="detailDialogVisible = false">{{ $t('common.close') }}</el-button>
             </template>
         </el-dialog>
 
         <!-- DIALOG CHỈNH SỬA CẤU HÌNH QUY TRÌNH (TAB 3) -->
         <el-dialog
             v-model="editingConfig"
-            title="Chỉnh Sửa Quy Trình Phê Duyệt"
+            :title="$t('workflow.config_dialog_title')"
             width="560px"
         >
             <el-form :model="configForm" label-position="top" class="space-y-3 text-xs">
-                <el-form-item label="Loại đơn từ">
+                <el-form-item :label="$t('workflow.col_type')">
                     <el-input :value="getRequestTypeTag(configForm.request_type).label" disabled />
                 </el-form-item>
 
-                <el-form-item label="Tổng số cấp duyệt (1 đến 3 cấp)">
+                <el-form-item :label="$t('workflow.config_total_levels_label')">
                     <el-radio-group v-model="configForm.total_levels" @change="handleLevelsChange">
-                        <el-radio-button :value="1">1 Cấp</el-radio-button>
-                        <el-radio-button :value="2">2 Cấp</el-radio-button>
-                        <el-radio-button :value="3">3 Cấp</el-radio-button>
+                        <el-radio-button :value="1">{{ $t('workflow.config_level_1') }}</el-radio-button>
+                        <el-radio-button :value="2">{{ $t('workflow.config_level_2') }}</el-radio-button>
+                        <el-radio-button :value="3">{{ $t('workflow.config_level_3') }}</el-radio-button>
                     </el-radio-group>
                 </el-form-item>
 
                 <div class="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-                    <label class="block font-semibold text-gray-700 dark:text-gray-300">Cấu hình vai trò cho từng cấp:</label>
+                    <label class="block font-semibold text-gray-700 dark:text-gray-300">{{ $t('workflow.config_roles_label') }}</label>
                     <div
                         v-for="(step, idx) in configForm.steps_config"
                         :key="step.level"
                         class="p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2"
                     >
-                        <span class="font-bold text-blue-600 shrink-0">Cấp {{ step.level }}:</span>
-                        <el-input v-model="step.title" placeholder="Tiêu đề cấp duyệt" size="small" class="w-36" />
+                        <span class="font-bold text-blue-600 shrink-0">{{ $t('workflow.level_prefix', { level: step.level }) }}</span>
+                        <el-input v-model="step.title" :placeholder="$t('workflow.config_step_title_placeholder')" size="small" class="w-36" />
                         <el-select v-model="step.role_type" size="small" class="w-48">
-                            <el-option label="Quản lý trực tiếp (Manager)" value="DIRECT_MANAGER" />
-                            <el-option label="Trưởng phòng ban (Dept Head)" value="DEPARTMENT_HEAD" />
-                            <el-option label="Phòng Nhân sự (HR Admin)" value="HR_ADMIN" />
-                            <el-option label="Tổng Giám Đốc (Director)" value="GENERAL_DIRECTOR" />
+                            <el-option :label="$t('workflow.config_role_direct_manager')" value="DIRECT_MANAGER" />
+                            <el-option :label="$t('workflow.config_role_dept_head')" value="DEPARTMENT_HEAD" />
+                            <el-option :label="$t('workflow.config_role_hr_admin')" value="HR_ADMIN" />
+                            <el-option :label="$t('workflow.config_role_general_director')" value="GENERAL_DIRECTOR" />
                         </el-select>
                     </div>
                 </div>
 
                 <div v-if="configForm.request_type === 'LEAVE' && configForm.total_levels > 1" class="border-t border-gray-200 dark:border-gray-700 pt-3">
-                    <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">Quy tắc điều kiện số ngày nghỉ:</label>
+                    <label class="block font-semibold text-gray-700 dark:text-gray-300 mb-1">{{ $t('workflow.config_leave_rule_label') }}</label>
                     <div class="flex items-center gap-2 text-xs">
-                        <span>Chỉ áp dụng Cấp 2 khi số ngày nghỉ &ge;</span>
+                        <span>{{ $t('workflow.config_rule_prefix') }}</span>
                         <el-input-number
                             v-model="configForm.condition_rules.min_days_for_level_2"
                             :min="1"
                             :max="30"
                             size="small"
                         />
-                        <span>ngày</span>
+                        <span>{{ $t('common.days') }}</span>
                     </div>
                 </div>
             </el-form>
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="editingConfig = null">Hủy</el-button>
+                    <el-button @click="editingConfig = null">{{ $t('common.cancel') }}</el-button>
                     <el-button type="primary" :loading="configForm.processing" @click="saveWorkflowConfig">
-                        Lưu Cấu Hình
+                        {{ $t('workflow.config_save_button') }}
                     </el-button>
                 </div>
             </template>

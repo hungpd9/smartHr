@@ -14,6 +14,7 @@ import {
     Link,
     Paperclip
 } from '@element-plus/icons-vue';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 const props = defineProps<{
     modelValue: boolean;
@@ -28,10 +29,26 @@ const emit = defineEmits<{
     (e: 'success'): void;
 }>();
 
+const { t } = useThemeAndLocale();
+
 const visible = computed({
     get: () => props.modelValue,
     set: (val) => emit('update:modelValue', val),
 });
+
+const requestTypeOptionKeys: Record<string, string> = {
+    LEAVE: 'workflow.tag_type_leave',
+    OVERTIME: 'workflow.tag_type_overtime',
+    NIGHT_SHIFT: 'workflow.tag_type_night_shift',
+    TIMESHEET_EDIT: 'workflow.tag_type_timesheet_edit',
+    SHIFT_SWAP: 'workflow.tag_type_shift_swap',
+    REMOTE_WORK: 'workflow.tag_type_remote_work',
+    RESIGNATION: 'workflow.tag_type_resignation',
+};
+const getRequestTypeOptionLabel = (value: string, fallback: string) => {
+    const key = requestTypeOptionKeys[value];
+    return key ? t(key) : fallback;
+};
 
 const form = useForm({
     employee_id: props.currentEmployee?.id || null,
@@ -110,21 +127,21 @@ watch(() => form.employee_id, () => {
 
 const submit = () => {
     if (requiresVoluntaryConsent.value && !form.is_voluntary_consent) {
-        ElMessage.warning('Vui lòng xác nhận cam kết thỏa thuận tự nguyện theo Điều 137 BLLĐ.');
+        ElMessage.warning(t('workflow.consent_submitter_required'));
         return;
     }
 
     form.post('/workflow/requests', {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã gửi đơn yêu cầu thành công!');
+            ElMessage.success(t('workflow.submit_request_success'));
             visible.value = false;
             form.reset();
             emit('success');
         },
         onError: (errors) => {
             const firstErr = Object.values(errors)[0];
-            ElMessage.error(typeof firstErr === 'string' ? firstErr : 'Không thể gửi đơn, vui lòng kiểm tra lại.');
+            ElMessage.error(typeof firstErr === 'string' ? firstErr : t('workflow.submit_request_error'));
         }
     });
 };
@@ -133,7 +150,7 @@ const submit = () => {
 <template>
     <el-dialog
         v-model="visible"
-        title="Tạo Đơn Yêu Cầu & Xem Trước Luồng Phê Duyệt"
+        :title="$t('workflow.modal_create_title')"
         width="680px"
         destroy-on-close
         class="workflow-create-modal"
@@ -142,10 +159,10 @@ const submit = () => {
             <!-- Chọn nhân sự nếu có quyền (mặc định là nhân sự hiện tại) -->
             <el-row :gutter="16">
                 <el-col :span="12">
-                    <el-form-item label="Nhân sự nộp đơn" required>
+                    <el-form-item :label="$t('workflow.label_requester')" required>
                         <el-select
                             v-model="form.employee_id"
-                            placeholder="Chọn nhân viên"
+                            :placeholder="$t('workflow.placeholder_select_employee')"
                             filterable
                             class="w-full"
                         >
@@ -160,16 +177,16 @@ const submit = () => {
                 </el-col>
 
                 <el-col :span="12">
-                    <el-form-item label="Phân loại đơn từ" required>
+                    <el-form-item :label="$t('workflow.label_request_type')" required>
                         <el-select
                             v-model="form.request_type"
-                            placeholder="Chọn loại đơn"
+                            :placeholder="$t('workflow.placeholder_select_request_type')"
                             class="w-full"
                         >
                             <el-option
                                 v-for="type in requestTypes"
                                 :key="type.value"
-                                :label="type.label"
+                                :label="getRequestTypeOptionLabel(type.value, type.label)"
                                 :value="type.value"
                             />
                         </el-select>
@@ -180,26 +197,26 @@ const submit = () => {
             <!-- Chi tiết form theo loại đơn: LEAVE -->
             <div v-if="form.request_type === 'LEAVE'" class="p-4 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 space-y-3">
                 <div class="flex items-center justify-between text-xs font-semibold text-blue-800 dark:text-blue-300">
-                    <span class="flex items-center gap-1.5"><Calendar class="w-4 h-4" /> Chi tiết đơn xin nghỉ phép</span>
+                    <span class="flex items-center gap-1.5"><Calendar class="w-4 h-4" /> {{ $t('workflow.leave_details_title') }}</span>
                     <span v-if="leaveBalance" class="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-2 py-0.5 rounded">
-                        Quỹ phép năm còn lại: <strong>{{ leaveBalance.remaining_days }} ngày</strong>
+                        {{ $t('workflow.leave_balance_available') }} <strong>{{ leaveBalance.remaining_days }} {{ $t('common.days') }}</strong>
                     </span>
                 </div>
 
                 <el-row :gutter="12">
                     <el-col :span="8">
-                        <el-form-item label="Loại nghỉ" size="small">
+                        <el-form-item :label="$t('workflow.label_leave_type')" size="small">
                             <el-select v-model="form.form_payload.leave_category" class="w-full">
-                                <el-option label="Phép năm (Hưởng lương)" value="ANNUAL" />
-                                <el-option label="Nghỉ bù OT (Hưởng lương)" value="COMPENSATION" />
-                                <el-option label="Việc riêng có lương (Đ.115)" value="SPECIAL" />
-                                <el-option label="Nghỉ không hưởng lương" value="UNPAID" />
-                                <el-option label="Nghỉ ốm / Thai sản" value="SOCIAL_INSURANCE" />
+                                <el-option :label="$t('workflow.label_leave_annual')" value="ANNUAL" />
+                                <el-option :label="$t('workflow.label_leave_comp')" value="COMPENSATION" />
+                                <el-option :label="$t('workflow.label_leave_marriage')" value="SPECIAL" />
+                                <el-option :label="$t('workflow.label_leave_unpaid')" value="UNPAID" />
+                                <el-option :label="$t('workflow.label_leave_maternity')" value="SOCIAL_INSURANCE" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Từ ngày" size="small">
+                        <el-form-item :label="$t('common.from_date')" size="small">
                             <el-date-picker
                                 v-model="form.form_payload.start_date"
                                 type="date"
@@ -210,7 +227,7 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Đến ngày" size="small">
+                        <el-form-item :label="$t('common.to_date')" size="small">
                             <el-date-picker
                                 v-model="form.form_payload.end_date"
                                 type="date"
@@ -224,7 +241,7 @@ const submit = () => {
 
                 <el-row :gutter="12">
                     <el-col :span="8">
-                        <el-form-item label="Tổng số ngày nghỉ" size="small">
+                        <el-form-item :label="$t('workflow.label_total_duration')" size="small">
                             <el-input-number
                                 v-model="form.form_payload.days"
                                 :min="0.5"
@@ -235,10 +252,10 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="16">
-                        <el-form-item label="Lý do nghỉ phép" size="small">
+                        <el-form-item :label="$t('workflow.label_reason')" size="small">
                             <el-input
                                 v-model="form.form_payload.reason"
-                                placeholder="Nhập lý do chi tiết..."
+                                :placeholder="$t('workflow.placeholder_leave_reason')"
                             />
                         </el-form-item>
                     </el-col>
@@ -248,13 +265,13 @@ const submit = () => {
             <!-- Chi tiết form theo loại đơn: OVERTIME -->
             <div v-else-if="form.request_type === 'OVERTIME'" class="p-4 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 space-y-3">
                 <div class="flex items-center justify-between text-xs font-semibold text-amber-800 dark:text-amber-300">
-                    <span class="flex items-center gap-1.5"><Clock class="w-4 h-4" /> Đơn đăng ký làm thêm giờ (OT)</span>
-                    <span class="text-amber-600 dark:text-amber-400 text-[11px]">Trần luật định: Tối đa 4 giờ/ngày (Điều 107 BLLĐ)</span>
+                    <span class="flex items-center gap-1.5"><Clock class="w-4 h-4" /> {{ $t('workflow.ot_details_title') }}</span>
+                    <span class="text-amber-600 dark:text-amber-400 text-[11px]">{{ $t('workflow.ot_legal_cap') }}</span>
                 </div>
 
                 <el-row :gutter="12">
                     <el-col :span="10">
-                        <el-form-item label="Ngày làm thêm" size="small">
+                        <el-form-item :label="$t('workflow.label_ot_date')" size="small">
                             <el-date-picker
                                 v-model="form.form_payload.date"
                                 type="date"
@@ -265,7 +282,7 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="6">
-                        <el-form-item label="Số giờ OT (h)" size="small">
+                        <el-form-item :label="$t('workflow.label_ot_hours')" size="small">
                             <el-input-number
                                 v-model="form.form_payload.hours"
                                 :min="0.5"
@@ -276,8 +293,8 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Nội dung công việc" size="small">
-                            <el-input v-model="form.form_payload.reason" placeholder="Kế hoạch OT..." />
+                        <el-form-item :label="$t('workflow.label_ot_content')" size="small">
+                            <el-input v-model="form.form_payload.reason" :placeholder="$t('workflow.placeholder_ot_plan')" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -286,13 +303,13 @@ const submit = () => {
             <!-- Chi tiết form theo loại đơn: NIGHT_SHIFT -->
             <div v-else-if="form.request_type === 'NIGHT_SHIFT'" class="p-4 rounded-lg bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 space-y-3">
                 <div class="flex items-center justify-between text-xs font-semibold text-purple-800 dark:text-purple-300">
-                    <span class="flex items-center gap-1.5"><Moon class="w-4 h-4" /> Đơn đăng ký làm ca đêm (22:00 - 06:00)</span>
-                    <span class="text-purple-600 dark:text-purple-400 text-[11px]">Phụ cấp ca đêm +30% lương</span>
+                    <span class="flex items-center gap-1.5"><Moon class="w-4 h-4" /> {{ $t('workflow.night_details_title') }}</span>
+                    <span class="text-purple-600 dark:text-purple-400 text-[11px]">{{ $t('workflow.night_allowance_hint') }}</span>
                 </div>
 
                 <el-row :gutter="12">
                     <el-col :span="12">
-                        <el-form-item label="Ngày làm việc ca đêm" size="small">
+                        <el-form-item :label="$t('workflow.label_night_date')" size="small">
                             <el-date-picker
                                 v-model="form.form_payload.work_date"
                                 type="date"
@@ -303,8 +320,8 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="Lý do phân ca đêm" size="small">
-                            <el-input v-model="form.form_payload.reason" placeholder="Nhập lý do..." />
+                        <el-form-item :label="$t('workflow.label_night_reason')" size="small">
+                            <el-input v-model="form.form_payload.reason" :placeholder="$t('workflow.placeholder_enter_reason')" />
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -313,12 +330,12 @@ const submit = () => {
             <!-- Chi tiết form theo loại đơn: TIMESHEET_EDIT -->
             <div v-else-if="form.request_type === 'TIMESHEET_EDIT'" class="p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
                 <div class="flex items-center justify-between text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    <span class="flex items-center gap-1.5"><Document class="w-4 h-4" /> Đơn giải trình & điều chỉnh giờ chấm công</span>
+                    <span class="flex items-center gap-1.5"><Document class="w-4 h-4" /> {{ $t('workflow.timesheet_details_title') }}</span>
                 </div>
 
                 <el-row :gutter="12">
                     <el-col :span="8">
-                        <el-form-item label="Ngày cần chỉnh sửa" size="small">
+                        <el-form-item :label="$t('workflow.label_timesheet_date')" size="small">
                             <el-date-picker
                                 v-model="form.form_payload.work_date"
                                 type="date"
@@ -329,7 +346,7 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Giờ vào thực tế" size="small">
+                        <el-form-item :label="$t('workflow.label_actual_in')" size="small">
                             <el-time-picker
                                 v-model="form.form_payload.actual_in"
                                 format="HH:mm:ss"
@@ -340,7 +357,7 @@ const submit = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Giờ ra thực tế" size="small">
+                        <el-form-item :label="$t('workflow.label_actual_out')" size="small">
                             <el-time-picker
                                 v-model="form.form_payload.actual_out"
                                 format="HH:mm:ss"
@@ -352,19 +369,19 @@ const submit = () => {
                     </el-col>
                 </el-row>
 
-                <el-form-item label="Lý do quên/sai sót chấm công" size="small">
-                    <el-input v-model="form.form_payload.reason" placeholder="Quên quẹt thẻ, đi công tác, lỗi thiết bị vân tay..." />
+                <el-form-item :label="$t('workflow.label_timesheet_reason')" size="small">
+                    <el-input v-model="form.form_payload.reason" :placeholder="$t('workflow.placeholder_timesheet_reason')" />
                 </el-form-item>
             </div>
 
             <!-- Các loại đơn khác -->
             <div v-else class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 space-y-3">
-                <el-form-item label="Lý do & Nội dung đơn từ" size="small">
+                <el-form-item :label="$t('workflow.label_reason_content')" size="small">
                     <el-input
                         v-model="form.form_payload.reason"
                         type="textarea"
                         :rows="3"
-                        placeholder="Trình bày nội dung chi tiết đơn yêu cầu..."
+                        :placeholder="$t('workflow.placeholder_request_content')"
                     />
                 </el-form-item>
             </div>
@@ -374,10 +391,9 @@ const submit = () => {
                 <div class="flex items-start gap-2 text-purple-900 dark:text-purple-200 text-xs leading-relaxed">
                     <Warning class="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 shrink-0" />
                     <div>
-                        <strong>Quy định Pháp lý (Điều 137 Khoản 1 Điểm b BLLĐ 2019):</strong>
+                        <strong>{{ $t('workflow.consent_legal_heading') }}</strong>
                         <p class="mt-0.5 text-[11px] text-purple-700 dark:text-purple-300">
-                            Người sử dụng lao động không được bố trí làm việc ban đêm, làm thêm giờ đối với lao động đang nuôi con dưới 12 tháng tuổi, 
-                            <em>trừ trường hợp được người lao động đồng ý bằng văn bản thỏa thuận tự nguyện</em>.
+                            {{ $t('workflow.consent_legal_body_1') }}<em>{{ $t('workflow.consent_legal_body_em') }}</em>.
                         </p>
                     </div>
                 </div>
@@ -386,13 +402,13 @@ const submit = () => {
                     v-model="form.is_voluntary_consent"
                     class="text-purple-900 dark:text-purple-200 font-medium text-xs"
                 >
-                    Xác nhận người lao động đã tự nguyện đồng ý làm thêm giờ / làm ca đêm
+                    {{ $t('workflow.consent_submitter_confirm') }}
                 </el-checkbox>
 
                 <div class="flex items-center gap-2">
                     <el-input
                         v-model="form.voluntary_agreement_url"
-                        placeholder="Dán liên kết văn bản thỏa thuận tự nguyện (Google Drive / OneDrive...)"
+                        :placeholder="$t('workflow.placeholder_voluntary_url')"
                         size="small"
                         class="text-xs"
                     >
@@ -407,9 +423,9 @@ const submit = () => {
             <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
                 <div class="flex items-center justify-between mb-2.5">
                     <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Connection class="w-4 h-4 text-blue-500" /> Chuỗi người duyệt thẩm quyền (Snapshot Approvers)
+                        <Connection class="w-4 h-4 text-blue-500" /> {{ $t('workflow.approver_chain_preview_title') }}
                     </span>
-                    <span v-if="loadingPreview" class="text-[11px] text-gray-400">Đang phân giải cây tổ chức...</span>
+                    <span v-if="loadingPreview" class="text-[11px] text-gray-400">{{ $t('workflow.approver_chain_loading') }}</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -436,13 +452,13 @@ const submit = () => {
 
         <template #footer>
             <div class="flex justify-end gap-2">
-                <el-button @click="visible = false">Hủy bỏ</el-button>
+                <el-button @click="visible = false">{{ $t('common.cancel') }}</el-button>
                 <el-button
                     type="primary"
                     :loading="form.processing"
                     @click="submit"
                 >
-                    Nộp Đơn Yêu Cầu
+                    {{ $t('workflow.submit_request_btn') }}
                 </el-button>
             </div>
         </template>

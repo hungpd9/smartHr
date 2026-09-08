@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { useThemeAndLocale } from '@/composables/useThemeAndLocale';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import { ElMessage } from 'element-plus';
 import {
     Lock,
@@ -85,7 +85,7 @@ const props = defineProps<{
     };
 }>();
 
-const { t, currentLocale } = useThemeAndLocale();
+const { t } = useThemeAndLocale();
 const page = usePage();
 
 const activeTab = ref('overview');
@@ -109,7 +109,7 @@ const submitUpload = () => {
     } else if (uploadMode.value === 'text' && licenseTextContent.value.trim()) {
         formData.append('license_content', licenseTextContent.value.trim());
     } else {
-        ElMessage.warning('Vui lòng chọn file .lic hoặc nhập chuỗi bản quyền JSON');
+        ElMessage.warning(t('licensing.upload_select_warning'));
         isSubmittingUpload.value = false;
         return;
     }
@@ -119,10 +119,10 @@ const submitUpload = () => {
         onSuccess: () => {
             fileList.value = [];
             licenseTextContent.value = '';
-            ElMessage.success('Đã nạp và xác thực giấy phép thành công!');
+            ElMessage.success(t('licensing.upload_success'));
         },
         onError: (err) => {
-            ElMessage.error(err.message || 'Kích hoạt thất bại. Vui lòng kiểm tra lại chữ ký tệp giấy phép.');
+            ElMessage.error(err.message || t('licensing.upload_failed'));
         },
         onFinish: () => {
             isSubmittingUpload.value = false;
@@ -140,7 +140,7 @@ const isDecrypting = ref(false);
 
 const runEncryptTest = async () => {
     if (!sandboxInput.value.trim()) {
-        ElMessage.warning('Vui lòng nhập chuỗi dữ liệu cần mã hóa');
+        ElMessage.warning(t('licensing.encrypt_input_warning'));
         return;
     }
 
@@ -166,12 +166,12 @@ const runEncryptTest = async () => {
         const res = await response.json();
         if (response.ok && res.status === 'success') {
             sandboxCiphertext.value = res.ciphertext;
-            ElMessage.success('Mã hóa AES-256-GCM thành công!');
+            ElMessage.success(t('licensing.encrypt_success'));
         } else {
-            ElMessage.error(res.message || 'Lỗi mã hóa dữ liệu');
+            ElMessage.error(res.message || t('licensing.encrypt_error'));
         }
     } catch (e: any) {
-        ElMessage.error('Không thể kết nối API mã hóa: ' + e.message);
+        ElMessage.error(t('licensing.encrypt_conn_error', { msg: e.message }));
     } finally {
         isEncrypting.value = false;
     }
@@ -179,7 +179,7 @@ const runEncryptTest = async () => {
 
 const runDecryptTest = async () => {
     if (!sandboxCiphertext.value.trim()) {
-        ElMessage.warning('Chưa có chuỗi Ciphertext để giải mã');
+        ElMessage.warning(t('licensing.decrypt_input_warning'));
         return;
     }
 
@@ -204,12 +204,12 @@ const runDecryptTest = async () => {
         const res = await response.json();
         if (response.ok && res.status === 'success') {
             sandboxPlaintext.value = res.plaintext;
-            ElMessage.success('Giải mã DEK thành công 100% đối soát!');
+            ElMessage.success(t('licensing.decrypt_success'));
         } else {
-            ElMessage.error(res.message || 'Giải mã thất bại!');
+            ElMessage.error(res.message || t('licensing.decrypt_error'));
         }
     } catch (e: any) {
-        ElMessage.error('Lỗi giải mã: ' + e.message);
+        ElMessage.error(t('licensing.decrypt_conn_error', { msg: e.message }));
     } finally {
         isDecrypting.value = false;
     }
@@ -220,7 +220,7 @@ const showSecret = ref(false);
 
 const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    ElMessage.success('Đã sao chép vào bộ nhớ tạm');
+    ElMessage.success(t('licensing.copy_success'));
 };
 
 // Modal chi tiết chữ ký Ed25519
@@ -229,7 +229,7 @@ const isAuditModalOpen = ref(false);
 
 <template>
     <AppLayout>
-        <Head title="Bảo vệ Bản quyền Doanh nghiệp & Mật mã CSDL" />
+        <Head :title="$t('licensing.title')" />
 
         <div class="p-6 max-w-7xl mx-auto space-y-6">
             <!-- Header Banner Doanh Nghiệp -->
@@ -247,10 +247,10 @@ const isAuditModalOpen = ref(false);
                             <span class="text-xs text-slate-400">Ed25519 Verified</span>
                         </div>
                         <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                            Bảo Vệ Bản Quyền Doanh Nghiệp & Mật Mã CSDL
+                            {{ $t('licensing.title') }}
                         </h1>
                         <p class="text-sm text-slate-300 max-w-2xl">
-                            Cặp bài trùng đối xứng giữa Golang Edge Collector Daemon và Laravel Cloud Core. Khóa mã hóa CSDL dẫn xuất từ chữ ký số Ed25519 bảo vệ toàn vẹn dữ liệu Lương và CCCD.
+                            {{ $t('licensing.subtitle') }}
                         </p>
                     </div>
 
@@ -262,11 +262,11 @@ const isAuditModalOpen = ref(false);
                             @click="isAuditModalOpen = true"
                             :icon="DocumentChecked"
                         >
-                            Kiểm Tra Toàn Vẹn
+                            {{ $t('licensing.integrity_check') }}
                         </el-button>
                         <a href="/licensing/sample-config" download="config.json">
                             <el-button type="primary" :icon="Download">
-                                Tải Config Go Edge
+                                {{ $t('licensing.download_config') }}
                             </el-button>
                         </a>
                     </div>
@@ -276,7 +276,7 @@ const isAuditModalOpen = ref(false);
             <!-- Tabs Điều Hướng Nghiệp Vụ -->
             <el-tabs v-model="activeTab" class="bg-white dark:bg-slate-900 rounded-xl p-4 shadow-xs border border-slate-200/80 dark:border-slate-800">
                 <!-- ================= TAB 1: TỔNG QUAN BẢN QUYỀN ================= -->
-                <el-tab-pane label="Tổng quan Bản quyền" name="overview">
+                <el-tab-pane :label="$t('licensing.tab_overview')" name="overview">
                     <div class="space-y-6 pt-2">
                         <!-- Hero Card Trạng Thái Bản Quyền -->
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -289,27 +289,27 @@ const isAuditModalOpen = ref(false);
                                                 <el-icon :size="18"><Lock /></el-icon>
                                             </div>
                                             <div>
-                                                <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Tổ chức cấp phép</div>
+                                                <div class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $t('licensing.issuing_org_label') }}</div>
                                                 <div class="font-bold text-slate-900 dark:text-white text-base">{{ license.customer_name }}</div>
                                             </div>
                                         </div>
                                         <el-tag :type="license.is_valid ? 'success' : 'danger'" effect="dark" round>
-                                            {{ license.is_valid ? 'ĐÃ KÍCH HOẠT' : (license.is_expired ? 'HẾT HẠN' : 'CHƯA KÍCH HOẠT') }}
+                                            {{ license.is_valid ? $t('licensing.license_valid') : (license.is_expired ? $t('licensing.license_expired') : $t('licensing.license_inactive')) }}
                                         </el-tag>
                                     </div>
                                     <div class="text-xs text-slate-600 dark:text-slate-300 space-y-1 mt-4">
                                         <div class="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-800">
-                                            <span class="text-slate-400">Tên miền được cấp phép:</span>
+                                            <span class="text-slate-400">{{ $t('licensing.allowed_domain_label') }}</span>
                                             <span class="font-mono font-semibold text-slate-800 dark:text-slate-200">{{ license.allowed_domain }}</span>
                                         </div>
                                         <div class="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-800">
-                                            <span class="text-slate-400">Tên miền máy chủ hiện tại:</span>
+                                            <span class="text-slate-400">{{ $t('licensing.current_domain_label') }}</span>
                                             <span class="font-mono text-slate-700 dark:text-slate-300">{{ system_status.current_domain }}</span>
                                         </div>
                                         <div class="flex justify-between py-1">
-                                            <span class="text-slate-400">Chữ ký số Ed25519:</span>
+                                            <span class="text-slate-400">{{ $t('licensing.signature_label') }}</span>
                                             <span class="font-mono text-xs text-emerald-600 dark:text-emerald-400 truncate max-w-[200px]" :title="license.raw_signature || ''">
-                                                {{ license.signature_preview || 'Chưa có chữ ký' }}
+                                                {{ license.signature_preview || $t('licensing.no_signature') }}
                                             </span>
                                         </div>
                                     </div>
@@ -319,16 +319,16 @@ const isAuditModalOpen = ref(false);
                             <!-- Card 2: Thời hạn giấy phép -->
                             <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between">
                                 <div>
-                                    <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Thời hạn sử dụng</div>
+                                    <div class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $t('licensing.validity_title') }}</div>
                                     <div class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-                                        {{ license.days_remaining }} <span class="text-sm font-normal text-slate-500">ngày còn lại</span>
+                                        {{ license.days_remaining }} <span class="text-sm font-normal text-slate-500">{{ $t('licensing.days_left') }}</span>
                                     </div>
                                     <div class="mt-1 text-xs text-slate-500">
-                                        Hiệu lực đến: <span class="font-medium text-slate-700 dark:text-slate-300">{{ license.expires_at || 'Không giới hạn' }}</span>
+                                        {{ $t('licensing.expires_at_label') }} <span class="font-medium text-slate-700 dark:text-slate-300">{{ license.expires_at || $t('licensing.unlimited') }}</span>
                                     </div>
                                 </div>
                                 <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                                    <span class="text-slate-400">Ngày phát hành:</span>
+                                    <span class="text-slate-400">{{ $t('licensing.issued_at_label') }}</span>
                                     <span class="font-medium text-slate-700 dark:text-slate-300">{{ license.issued_at || 'N/A' }}</span>
                                 </div>
                             </div>
@@ -337,7 +337,7 @@ const isAuditModalOpen = ref(false);
                             <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between">
                                 <div>
                                     <div class="flex items-center justify-between">
-                                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Khóa Mật Mã CSDL (DEK)</div>
+                                        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $t('licensing.dek_title') }}</div>
                                         <span class="relative flex h-2.5 w-2.5">
                                             <span v-if="system_status.dek_active" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                             <span :class="['relative inline-flex rounded-full h-2.5 w-2.5', system_status.dek_active ? 'bg-emerald-500' : 'bg-red-500']"></span>
@@ -348,12 +348,12 @@ const isAuditModalOpen = ref(false);
                                         {{ system_status.dek_active ? 'ACTIVE (256-bit)' : 'LOCKED' }}
                                     </div>
                                     <div class="mt-1 text-xs text-slate-500">
-                                        Thuật toán: <span class="font-mono text-slate-700 dark:text-slate-300">{{ system_status.crypto_engine }}</span>
+                                        {{ $t('licensing.algorithm_label') }} <span class="font-mono text-slate-700 dark:text-slate-300">{{ system_status.crypto_engine }}</span>
                                     </div>
                                 </div>
                                 <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                                    <span class="text-slate-400">Trạng thái CSDL:</span>
-                                    <span class="font-semibold text-emerald-600 dark:text-emerald-400">Được bảo vệ an toàn</span>
+                                    <span class="text-slate-400">{{ $t('licensing.db_status_label') }}</span>
+                                    <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ $t('licensing.db_protected') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -364,15 +364,15 @@ const isAuditModalOpen = ref(false);
                                 <div class="space-y-0.5">
                                     <h3 class="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                                         <el-icon class="text-indigo-500"><Key /></el-icon>
-                                        Cập Nhật & Kích Hoạt Giấy Phép Bản Quyền (smart-hr.lic)
+                                        {{ $t('licensing.upload_title') }}
                                     </h3>
                                     <p class="text-xs text-slate-500">
-                                        Tải lên tệp giấy phép do tác giả ký số để gia hạn hoặc chuyển đổi tên miền hệ thống.
+                                        {{ $t('licensing.upload_desc') }}
                                     </p>
                                 </div>
                                 <el-radio-group v-model="uploadMode" size="small">
-                                    <el-radio-button value="file">Tải tệp .lic</el-radio-button>
-                                    <el-radio-button value="text">Dán mã JSON</el-radio-button>
+                                    <el-radio-button value="file">{{ $t('licensing.upload_file_tab') }}</el-radio-button>
+                                    <el-radio-button value="text">{{ $t('licensing.upload_text_tab') }}</el-radio-button>
                                 </el-radio-group>
                             </div>
 
@@ -390,11 +390,11 @@ const isAuditModalOpen = ref(false);
                                 >
                                     <el-icon class="el-icon--upload"><upload-filled /></el-icon>
                                     <div class="el-upload__text">
-                                        Kéo thả tệp <em>smart-hr.lic</em> vào đây hoặc <em>nhấp để chọn</em>
+                                        {{ $t('licensing.upload_drag_prefix') }} <em>smart-hr.lic</em> {{ $t('licensing.upload_drag_mid') }} <em>{{ $t('licensing.upload_drag_click') }}</em>
                                     </div>
                                     <template #tip>
                                         <div class="el-upload__tip text-center text-xs text-slate-400">
-                                            Chỉ chấp nhận tệp giấy phép hợp lệ định dạng SMARTHR-LIC-V1 kèm chữ ký Ed25519
+                                            {{ $t('licensing.upload_format_hint') }}
                                         </div>
                                     </template>
                                 </el-upload>
@@ -406,7 +406,7 @@ const isAuditModalOpen = ref(false);
                                     v-model="licenseTextContent"
                                     type="textarea"
                                     :rows="5"
-                                    placeholder='Dán toàn bộ nội dung JSON của file smart-hr.lic vào đây (ví dụ: {"format":"SMARTHR-LIC-V1", "payload":"...", "signature":"..."})'
+                                    :placeholder="$t('licensing.upload_textarea_placeholder')"
                                     class="font-mono text-xs"
                                 />
                             </div>
@@ -420,7 +420,7 @@ const isAuditModalOpen = ref(false);
                                     class="px-8"
                                     :icon="DocumentChecked"
                                 >
-                                    Xác Thực & Kích Hoạt Ngay
+                                    {{ $t('licensing.activate_now_btn') }}
                                 </el-button>
                             </div>
                         </div>
@@ -428,13 +428,13 @@ const isAuditModalOpen = ref(false);
                 </el-tab-pane>
 
                 <!-- ================= TAB 2: MẬT MÃ CSDL & SANDBOX NEO DỮ LIỆU ================= -->
-                <el-tab-pane label="Mật mã CSDL & Sandbox DEK" name="crypto">
+                <el-tab-pane :label="$t('licensing.tab_crypto')" name="crypto">
                     <div class="space-y-6 pt-2">
                         <!-- Sơ đồ giải thích Cryptographic Data Anchoring -->
                         <div class="p-5 rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-950/20 space-y-3">
                             <div class="flex items-center space-x-2 text-indigo-900 dark:text-indigo-300 font-semibold text-sm">
                                 <el-icon :size="18"><Cpu /></el-icon>
-                                <span>Cơ Chế Dẫn Xuất Khóa Mật Mã CSDL (Cryptographic Data Anchoring)</span>
+                                <span>{{ $t('licensing.anchoring_title') }}</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                                 <div class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-800">
@@ -446,16 +446,16 @@ const isAuditModalOpen = ref(false);
                                     <div class="font-semibold text-emerald-600 dark:text-emerald-400 mt-1 font-mono truncate">{{ license.signature_preview || 'Verified' }}</div>
                                 </div>
                                 <div class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-800">
-                                    <div class="text-slate-400 font-mono">3. Dẫn xuất HKDF</div>
+                                    <div class="text-slate-400 font-mono">{{ $t('licensing.crypto_step3') }}</div>
                                     <div class="font-semibold text-indigo-600 dark:text-indigo-400 mt-1 font-mono">HKDF-SHA256 (32 bytes)</div>
                                 </div>
                                 <div class="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-800">
-                                    <div class="text-slate-400 font-mono">4. Mã hóa Dữ liệu</div>
+                                    <div class="text-slate-400 font-mono">{{ $t('licensing.crypto_step4') }}</div>
                                     <div class="font-semibold text-purple-600 dark:text-purple-400 mt-1 font-mono">AES-256-GCM + IV 12B</div>
                                 </div>
                             </div>
                             <p class="text-xs text-slate-500 dark:text-slate-400 italic">
-                                * Nếu có hành vi sửa đổi mã nguồn PHP nhằm vượt qua kiểm tra bản quyền, chữ ký số bị sai lệch khiến khóa DEK không thể dẫn xuất chính xác, dẫn đến toàn bộ dữ liệu Lương và CCCD không thể giải mã.
+                                * {{ $t('licensing.anchoring_warning') }}
                             </p>
                         </div>
 
@@ -466,27 +466,27 @@ const isAuditModalOpen = ref(false);
                                 <div class="flex items-center justify-between">
                                     <h4 class="font-semibold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                                         <el-icon class="text-emerald-500"><Lock /></el-icon>
-                                        1. Thử Nghiệm Mã Hóa (Plaintext $\to$ Ciphertext)
+                                        {{ $t('licensing.sandbox_encrypt_title') }}
                                     </h4>
                                     <span class="text-xs text-slate-400 font-mono">AES-256-GCM</span>
                                 </div>
 
                                 <div class="space-y-3 text-xs">
                                     <div>
-                                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Dữ liệu cần bảo vệ (CCCD / Mức lương):</label>
-                                        <el-input v-model="sandboxInput" placeholder="Nhập chuỗi văn bản mẫu (VD: 001202008899)" />
+                                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">{{ $t('licensing.data_to_protect_label') }}</label>
+                                        <el-input v-model="sandboxInput" :placeholder="$t('licensing.encrypt_input_placeholder')" />
                                     </div>
                                     <div>
-                                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Tên miền Salt (để trống để dùng domain hiện hành):</label>
+                                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">{{ $t('licensing.salt_domain_label') }}</label>
                                         <el-input v-model="sandboxDomain" :placeholder="license.allowed_domain || 'smart-hr.test'" />
                                     </div>
                                     <div class="pt-1">
                                         <el-button type="primary" :loading="isEncrypting" @click="runEncryptTest" class="w-full">
-                                            Mã Hóa Bằng Khóa DEK Hệ Thống
+                                            {{ $t('licensing.encrypt_btn') }}
                                         </el-button>
                                     </div>
                                     <div v-if="sandboxCiphertext" class="space-y-1 pt-2">
-                                        <label class="block font-medium text-emerald-600 dark:text-emerald-400">Kết quả Ciphertext (Base64 chứa IV + Tag + Data):</label>
+                                        <label class="block font-medium text-emerald-600 dark:text-emerald-400">{{ $t('licensing.ciphertext_result_label') }}</label>
                                         <div class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono text-xs break-all select-all text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                                             {{ sandboxCiphertext }}
                                         </div>
@@ -499,29 +499,29 @@ const isAuditModalOpen = ref(false);
                                 <div class="flex items-center justify-between">
                                     <h4 class="font-semibold text-sm text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                                         <el-icon class="text-indigo-500"><Key /></el-icon>
-                                        2. Thử Nghiệm Giải Mã (Ciphertext $\to$ Plaintext)
+                                        {{ $t('licensing.sandbox_decrypt_title') }}
                                     </h4>
                                     <span class="text-xs text-slate-400 font-mono">HKDF DEK Verification</span>
                                 </div>
 
                                 <div class="space-y-3 text-xs">
                                     <div>
-                                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Chuỗi Ciphertext cần giải mã:</label>
+                                        <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">{{ $t('licensing.ciphertext_input_label') }}</label>
                                         <el-input
                                             v-model="sandboxCiphertext"
                                             type="textarea"
                                             :rows="4"
-                                            placeholder="Dán chuỗi ciphertext mã hóa AES-256-GCM vào đây"
+                                            :placeholder="$t('licensing.ciphertext_input_placeholder')"
                                             class="font-mono text-xs"
                                         />
                                     </div>
                                     <div class="pt-1">
                                         <el-button type="success" :loading="isDecrypting" @click="runDecryptTest" class="w-full" :disabled="!sandboxCiphertext">
-                                            Giải Mã Đối Soát Tính Toàn Vẹn
+                                            {{ $t('licensing.decrypt_btn') }}
                                         </el-button>
                                     </div>
                                     <div v-if="sandboxPlaintext" class="space-y-1 pt-2">
-                                        <label class="block font-medium text-indigo-600 dark:text-indigo-400">Dữ liệu gốc giải mã thành công:</label>
+                                        <label class="block font-medium text-indigo-600 dark:text-indigo-400">{{ $t('licensing.plaintext_result_label') }}</label>
                                         <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 font-semibold text-emerald-800 dark:text-emerald-200 text-sm">
                                             {{ sandboxPlaintext }}
                                         </div>
@@ -532,22 +532,22 @@ const isAuditModalOpen = ref(false);
 
                         <!-- Danh sách các trường được bảo vệ trong CSDL -->
                         <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
-                            <h4 class="font-semibold text-sm text-slate-900 dark:text-white">Các Bảng & Cột CSDL Được Móc Neo Mật Mã</h4>
+                            <h4 class="font-semibold text-sm text-slate-900 dark:text-white">{{ $t('licensing.anchored_tables_title') }}</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                                 <div class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                                    <div class="font-semibold text-slate-800 dark:text-slate-200">Bảng: employees</div>
+                                    <div class="font-semibold text-slate-800 dark:text-slate-200">{{ $t('licensing.table_prefix', { table: 'employees' }) }}</div>
                                     <div class="font-mono text-indigo-600 dark:text-indigo-400 mt-1">encrypted_citizen_id</div>
-                                    <div class="text-slate-400 text-[11px] mt-0.5">Số CCCD nhân viên được bảo mật tuyệt đối theo Luật Bảo vệ Dữ liệu Cá nhân</div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">{{ $t('licensing.anchor_emp_cccd_desc') }}</div>
                                 </div>
                                 <div class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                                    <div class="font-semibold text-slate-800 dark:text-slate-200">Bảng: payroll_records</div>
+                                    <div class="font-semibold text-slate-800 dark:text-slate-200">{{ $t('licensing.table_prefix', { table: 'payroll_records' }) }}</div>
                                     <div class="font-mono text-indigo-600 dark:text-indigo-400 mt-1">encrypted_salary_details</div>
-                                    <div class="text-slate-400 text-[11px] mt-0.5">Bóc tách toàn bộ chi tiết lương, các khoản phụ cấp và khấu trừ thuế TNCN</div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">{{ $t('licensing.anchor_payroll_desc') }}</div>
                                 </div>
                                 <div class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                                    <div class="font-semibold text-slate-800 dark:text-slate-200">Bảng: employee_contracts</div>
+                                    <div class="font-semibold text-slate-800 dark:text-slate-200">{{ $t('licensing.table_prefix', { table: 'employee_contracts' }) }}</div>
                                     <div class="font-mono text-indigo-600 dark:text-indigo-400 mt-1">encrypted_salary_data</div>
-                                    <div class="text-slate-400 text-[11px] mt-0.5">Mức lương thỏa thuận và ngạch bậc ký trong hợp đồng lao động</div>
+                                    <div class="text-slate-400 text-[11px] mt-0.5">{{ $t('licensing.anchor_contract_desc') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -555,7 +555,7 @@ const isAuditModalOpen = ref(false);
                 </el-tab-pane>
 
                 <!-- ================= TAB 3: KẾT NỐI GO EDGE DAEMON ================= -->
-                <el-tab-pane label="Trạm Thu thập IoT Edge (Golang)" name="edge">
+                <el-tab-pane :label="$t('licensing.tab_edge')" name="edge">
                     <div class="space-y-6 pt-2">
                         <!-- Thông số kỹ thuật đồng bộ -->
                         <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-4">
@@ -563,22 +563,22 @@ const isAuditModalOpen = ref(false);
                                 <div class="space-y-0.5">
                                     <h4 class="font-semibold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                                         <el-icon class="text-emerald-500"><Connection /></el-icon>
-                                        Thông Số Kết Nối Golang Edge Collector Daemon
+                                        {{ $t('licensing.edge_conn_title') }}
                                     </h4>
                                     <p class="text-xs text-slate-500">
-                                        Cấu hình cho file nhị phân smart-hr-edge.exe chạy trên mạng LAN chi nhánh / nhà kho
+                                        {{ $t('licensing.edge_conn_desc') }}
                                     </p>
                                 </div>
                                 <a href="/licensing/sample-config" download="config.json">
                                     <el-button type="primary" size="small" :icon="Download">
-                                        Tải file config.json mẫu
+                                        {{ $t('licensing.download_sample_btn') }}
                                     </el-button>
                                 </a>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                 <div class="space-y-1">
-                                    <span class="text-slate-400">Endpoint Tiếp nhận Quẹt thẻ Cloud:</span>
+                                    <span class="text-slate-400">{{ $t('licensing.edge_sync_endpoint_label') }}</span>
                                     <div class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                                         <span>POST /api/v1/attendance/sync</span>
                                         <el-button link type="primary" @click="copyToClipboard('/api/v1/attendance/sync')">
@@ -588,7 +588,7 @@ const isAuditModalOpen = ref(false);
                                 </div>
 
                                 <div class="space-y-1">
-                                    <span class="text-slate-400">Shared HMAC-SHA256 Secret (Trích từ License):</span>
+                                    <span class="text-slate-400">{{ $t('licensing.edge_hmac_label') }}</span>
                                     <div class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
                                         <span class="truncate">
                                             {{ showSecret ? license.shared_hmac_secret : license.shared_hmac_secret_masked }}
@@ -608,24 +608,24 @@ const isAuditModalOpen = ref(false);
 
                         <!-- Danh sách Chi nhánh & Khóa Secret -->
                         <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
-                            <h4 class="font-semibold text-sm text-slate-900 dark:text-white">Chi Nhánh & Trạm Edge Chấm Công</h4>
+                            <h4 class="font-semibold text-sm text-slate-900 dark:text-white">{{ $t('licensing.branches_title') }}</h4>
                             <el-table :data="branches" stripe border size="small" class="w-full">
-                                <el-table-column prop="code" label="Mã Chi Nhánh" width="140">
+                                <el-table-column prop="code" :label="$t('licensing.branch_code_col')" width="140">
                                     <template #default="{ row }">
                                         <span class="font-mono font-bold text-indigo-600 dark:text-indigo-400">{{ row.code }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="name" label="Tên Chi Nhánh" min-width="180" />
-                                <el-table-column prop="address" label="Địa Chỉ / Vị Trí" min-width="200" />
-                                <el-table-column prop="secret_key" label="Mã Bí Mật Ký Số" min-width="160">
+                                <el-table-column prop="name" :label="$t('licensing.branch_name_col')" min-width="180" />
+                                <el-table-column prop="address" :label="$t('licensing.branch_address_col')" min-width="200" />
+                                <el-table-column prop="secret_key" :label="$t('licensing.branch_secret_col')" min-width="160">
                                     <template #default="{ row }">
-                                        <span class="font-mono text-xs text-slate-500 truncate">{{ row.secret_key ? '••••••••••••••••' : 'Chưa thiết lập' }}</span>
+                                        <span class="font-mono text-xs text-slate-500 truncate">{{ row.secret_key ? '••••••••••••••••' : $t('licensing.not_set') }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="is_active" label="Trạng Thái" width="120" align="center">
+                                <el-table-column prop="is_active" :label="$t('licensing.col_status')" width="120" align="center">
                                     <template #default="{ row }">
                                         <el-tag :type="row.is_active ? 'success' : 'info'" size="small">
-                                            {{ row.is_active ? 'Hoạt động' : 'Tạm dừng' }}
+                                            {{ row.is_active ? $t('licensing.branch_active') : $t('licensing.branch_inactive') }}
                                         </el-tag>
                                     </template>
                                 </el-table-column>
@@ -635,19 +635,19 @@ const isAuditModalOpen = ref(false);
                         <!-- 10 Lượt Quẹt Thẻ Gần Nhất Nhận Từ Edge Collector -->
                         <div class="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
                             <div class="flex items-center justify-between">
-                                <h4 class="font-semibold text-sm text-slate-900 dark:text-white">Nhật Ký Quẹt Thẻ Gần Nhất Tiếp Nhận Từ Go Edge Daemon</h4>
+                                <h4 class="font-semibold text-sm text-slate-900 dark:text-white">{{ $t('licensing.recent_logs_title') }}</h4>
                                 <div class="text-xs text-slate-500">
-                                    Hôm nay: <span class="font-semibold text-emerald-600">{{ stats.total_raw_today }}</span> lượt quẹt
+                                    {{ $t('licensing.today_label') }} <span class="font-semibold text-emerald-600">{{ stats.total_raw_today }}</span> {{ $t('licensing.punch_count_suffix') }}
                                 </div>
                             </div>
 
                             <el-table :data="recent_logs" stripe border size="small" class="w-full">
-                                <el-table-column prop="punch_time" label="Thời Gian Quẹt" width="160">
+                                <el-table-column prop="punch_time" :label="$t('licensing.punch_time_col')" width="160">
                                     <template #default="{ row }">
                                         <span class="font-mono text-xs text-slate-700 dark:text-slate-300">{{ row.punch_time }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column label="Nhân Viên" min-width="180">
+                                <el-table-column :label="$t('licensing.employee_col')" min-width="180">
                                     <template #default="{ row }">
                                         <div v-if="row.employee" class="font-medium text-slate-800 dark:text-slate-200">
                                             {{ row.employee.full_name }}
@@ -656,24 +656,24 @@ const isAuditModalOpen = ref(false);
                                         <span v-else class="text-slate-400 italic">ID #{{ row.employee_id }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="punch_state" label="Loại Quẹt" width="120" align="center">
+                                <el-table-column prop="punch_state" :label="$t('licensing.punch_type_col')" width="120" align="center">
                                     <template #default="{ row }">
                                         <el-tag :type="row.punch_state === 'CHECK_IN' ? 'success' : (row.punch_state === 'CHECK_OUT' ? 'warning' : 'info')" size="small">
                                             {{ row.punch_state }}
                                         </el-tag>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="verification_mode" label="Phương Thức" width="130" align="center">
+                                <el-table-column prop="verification_mode" :label="$t('licensing.verification_mode_col')" width="130" align="center">
                                     <template #default="{ row }">
                                         <span class="text-xs font-mono">{{ row.verification_mode }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="device_sn" label="Serial Máy Chấm Công" min-width="150">
+                                <el-table-column prop="device_sn" :label="$t('licensing.device_sn_col')" min-width="150">
                                     <template #default="{ row }">
                                         <span class="font-mono text-xs text-slate-600 dark:text-slate-400">{{ row.device_sn }}</span>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="sync_batch_id" label="Mã Batch Đồng Bộ" min-width="170">
+                                <el-table-column prop="sync_batch_id" :label="$t('licensing.sync_batch_col')" min-width="170">
                                     <template #default="{ row }">
                                         <span class="font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ row.sync_batch_id }}</span>
                                     </template>
@@ -688,7 +688,7 @@ const isAuditModalOpen = ref(false);
         <!-- Dialog Chi Tiết Kiểm Tra Toàn Vẹn Chữ Ký Ed25519 -->
         <el-dialog
             v-model="isAuditModalOpen"
-            title="Kiểm Tra Tính Toàn Vẹn Bản Quyền Ed25519"
+            :title="$t('licensing.integrity_modal_title')"
             width="650px"
             destroy-on-close
         >
@@ -696,36 +696,36 @@ const isAuditModalOpen = ref(false);
                 <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center space-x-3 text-emerald-800 dark:text-emerald-300">
                     <el-icon :size="24" class="text-emerald-600"><CircleCheckFilled /></el-icon>
                     <div>
-                        <div class="font-bold text-sm">Chữ Ký Số Ed25519 Hợp Lệ 100%</div>
-                        <div>Tệp giấy phép smart-hr.lic nguyên vẹn, không bị chỉnh sửa và đúng chữ ký của tác giả.</div>
+                        <div class="font-bold text-sm">{{ $t('licensing.signature_valid_title') }}</div>
+                        <div>{{ $t('licensing.signature_valid_desc') }}</div>
                     </div>
                 </div>
 
                 <div class="space-y-2 border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-slate-50 dark:bg-slate-800/50">
                     <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                        <span class="text-slate-500">Định dạng giấy phép:</span>
+                        <span class="text-slate-500">{{ $t('licensing.license_format_label') }}</span>
                         <span class="font-mono font-bold">SMARTHR-LIC-V1</span>
                     </div>
                     <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                        <span class="text-slate-500">Thuật toán xác minh:</span>
+                        <span class="text-slate-500">{{ $t('licensing.verify_algorithm_label') }}</span>
                         <span class="font-mono">Ed25519 Detached Signature (RFC 8032)</span>
                     </div>
                     <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                        <span class="text-slate-500">Khóa công khai tác giả (Author Public Key):</span>
+                        <span class="text-slate-500">{{ $t('licensing.author_pubkey_label') }}</span>
                         <span class="font-mono truncate max-w-[300px]">2459e6b349932dfcfaa04db0130bc2a197ac46de32354b8e93b068367c81ac2c</span>
                     </div>
                     <div class="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                        <span class="text-slate-500">Tên miền cấp phép:</span>
+                        <span class="text-slate-500">{{ $t('licensing.licensed_domain_label') }}</span>
                         <span class="font-mono font-semibold text-emerald-600">{{ license.allowed_domain }}</span>
                     </div>
                     <div class="flex justify-between py-1">
-                        <span class="text-slate-500">Chữ ký số trích xuất:</span>
+                        <span class="text-slate-500">{{ $t('licensing.extracted_signature_label') }}</span>
                         <span class="font-mono truncate max-w-[300px] select-all">{{ license.raw_signature }}</span>
                     </div>
                 </div>
             </div>
             <template #footer>
-                <el-button type="primary" @click="isAuditModalOpen = false">Đóng</el-button>
+                <el-button type="primary" @click="isAuditModalOpen = false">{{ $t('common.close') }}</el-button>
             </template>
         </el-dialog>
     </AppLayout>

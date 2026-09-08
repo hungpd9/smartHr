@@ -23,6 +23,7 @@ import {
     CircleCheckFilled,
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface PermissionAssignmentItem {
     id?: number;
@@ -78,6 +79,8 @@ const props = defineProps<{
     positions: PositionInfo[];
     employees: EmployeeInfo[];
 }>();
+
+const { t } = useThemeAndLocale();
 
 // Active Tab: ROLE | DEPARTMENT | POSITION | USER
 const activeTab = ref<'ROLE' | 'DEPARTMENT' | 'POSITION' | 'USER'>('ROLE');
@@ -219,17 +222,17 @@ const addEmployeeException = () => {
         getUserAssignment(empId, m.code);
     });
     newEmployeeId.value = undefined;
-    ElMessage.success('Đã thêm nhân sự vào danh sách Ủy quyền Cá nhân Đặc biệt.');
+    ElMessage.success(t('access_control.add_individual_success'));
 };
 
 const removeEmployeeException = (empId: number) => {
-    ElMessageBox.confirm('Bạn có chắc chắn muốn gỡ bỏ toàn bộ ủy quyền ngoại lệ cho nhân sự này?', 'Cảnh báo', {
-        confirmButtonText: 'Gỡ bỏ',
-        cancelButtonText: 'Hủy',
+    ElMessageBox.confirm(t('access_control.remove_confirm_msg'), t('common.warning'), {
+        confirmButtonText: t('access_control.btn_remove'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning',
     }).then(() => {
         matrix.value = matrix.value.filter((a) => !(a.subject_type === 'USER' && a.subject_id === empId));
-        ElMessage.success('Đã gỡ bỏ ủy quyền cá nhân.');
+        ElMessage.success(t('access_control.remove_success'));
     });
 };
 
@@ -270,10 +273,10 @@ const saveMatrix = () => {
             preserveState: true,
             preserveScroll: true,
             onSuccess: () => {
-                ElMessage.success('Đã lưu cấu hình Ma trận Phân quyền & Ủy quyền thành công!');
+                ElMessage.success(t('access_control.save_success'));
             },
             onError: (err) => {
-                ElMessage.error('Có lỗi xảy ra khi lưu ma trận phân quyền: ' + Object.values(err).join(', '));
+                ElMessage.error(t('access_control.save_error', { errors: Object.values(err).join(', ') }));
             },
             onFinish: () => {
                 saving.value = false;
@@ -285,7 +288,7 @@ const saveMatrix = () => {
 
 <template>
     <AppLayout>
-        <Head title="Ma Trận Phân Quyền & Ủy Quyền Hệ Thống - Smart-HR" />
+        <Head :title="$t('access_control.page_title')" />
 
         <div class="space-y-6 pb-16">
             <!-- Header Banner -->
@@ -297,10 +300,10 @@ const saveMatrix = () => {
                         </div>
                         <div>
                             <h1 class="text-xl font-bold text-slate-900 dark:text-white">
-                                Ma Trận Phân Quyền & Ủy Quyền Hệ Thống (RBAC Matrix)
+                                {{ $t('access_control.heading') }}
                             </h1>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Kiểm soát quyền Xem (View), Quản lý/Sửa xóa (Manage) và Phê duyệt (Approve) theo Vai trò, Phòng ban, Chức danh hoặc Cá nhân.
+                                {{ $t('access_control.hero_desc') }}
                             </p>
                         </div>
                     </div>
@@ -313,7 +316,7 @@ const saveMatrix = () => {
                         class="!rounded-xl font-medium shadow-sm !px-5"
                         @click="saveMatrix"
                     >
-                        Lưu Cấu hình Ma trận
+                        {{ $t('access_control.btn_save_matrix') }}
                     </el-button>
                 </div>
             </div>
@@ -325,8 +328,8 @@ const saveMatrix = () => {
                         <el-icon :size="20"><UserFilled /></el-icon>
                     </div>
                     <div>
-                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Vai trò Hệ thống</span>
-                        <div class="text-lg font-bold text-slate-900 dark:text-white">{{ roles.length }} Nhóm quyền</div>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('access_control.kpi_roles_label') }}</span>
+                        <div class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('access_control.kpi_roles_value', { count: roles.length }) }}</div>
                     </div>
                 </div>
 
@@ -335,8 +338,8 @@ const saveMatrix = () => {
                         <el-icon :size="20"><OfficeBuilding /></el-icon>
                     </div>
                     <div>
-                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Phòng ban Ủy quyền</span>
-                        <div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ departments.length }} Bộ phận</div>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('access_control.kpi_departments_label') }}</span>
+                        <div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ $t('access_control.kpi_departments_value', { count: departments.length }) }}</div>
                     </div>
                 </div>
 
@@ -345,8 +348,8 @@ const saveMatrix = () => {
                         <el-icon :size="20"><Briefcase /></el-icon>
                     </div>
                     <div>
-                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Chức danh / Cấp bậc</span>
-                        <div class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ positions.length }} Vị trí</div>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('access_control.kpi_positions_label') }}</span>
+                        <div class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ $t('access_control.kpi_positions_value', { count: positions.length }) }}</div>
                     </div>
                 </div>
 
@@ -355,8 +358,8 @@ const saveMatrix = () => {
                         <el-icon :size="20"><User /></el-icon>
                     </div>
                     <div>
-                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Ủy quyền Ngoại lệ</span>
-                        <div class="text-lg font-bold text-purple-600 dark:text-purple-400">{{ configuredEmployeeIds.length }} Nhân sự</div>
+                        <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('access_control.kpi_individuals_label') }}</span>
+                        <div class="text-lg font-bold text-purple-600 dark:text-purple-400">{{ $t('access_control.kpi_individuals_value', { count: configuredEmployeeIds.length }) }}</div>
                     </div>
                 </div>
             </div>
@@ -371,7 +374,7 @@ const saveMatrix = () => {
                         @click="activeTab = 'ROLE'"
                     >
                         <el-icon><UserFilled /></el-icon>
-                        1. Phân quyền theo Vai trò (Roles)
+                        {{ $t('access_control.tab_roles') }}
                     </button>
                     <button
                         class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2"
@@ -379,7 +382,7 @@ const saveMatrix = () => {
                         @click="activeTab = 'DEPARTMENT'"
                     >
                         <el-icon><OfficeBuilding /></el-icon>
-                        2. Ủy quyền Phòng ban (Departments)
+                        {{ $t('access_control.tab_departments') }}
                     </button>
                     <button
                         class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2"
@@ -387,7 +390,7 @@ const saveMatrix = () => {
                         @click="activeTab = 'POSITION'"
                     >
                         <el-icon><Briefcase /></el-icon>
-                        3. Ủy quyền Chức vụ (Positions)
+                        {{ $t('access_control.tab_positions') }}
                     </button>
                     <button
                         class="px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2"
@@ -395,7 +398,7 @@ const saveMatrix = () => {
                         @click="activeTab = 'USER'"
                     >
                         <el-icon><User /></el-icon>
-                        4. Ủy quyền Cá nhân Ngoại lệ (Individuals)
+                        {{ $t('access_control.tab_individuals') }}
                     </button>
                 </div>
 
@@ -406,7 +409,7 @@ const saveMatrix = () => {
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <div>
                                 <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                                    Chọn Vai trò Hệ thống cần Phân quyền:
+                                    {{ $t('access_control.select_role_label') }}
                                 </span>
                                 <div class="flex flex-wrap gap-2">
                                     <button
@@ -425,27 +428,27 @@ const saveMatrix = () => {
 
                             <!-- Fast Presets Buttons -->
                             <div class="flex items-center gap-2">
-                                <span class="text-xs text-slate-400">Thao tác nhanh:</span>
+                                <span class="text-xs text-slate-400">{{ $t('access_control.quick_actions') }}</span>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg"
                                     @click="grantFullAccess(modules.map(m => getRoleAssignment(selectedRole, m.code)))"
                                 >
-                                    Toàn quyền (Full)
+                                    {{ $t('access_control.preset_full_role') }}
                                 </el-button>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg"
                                     @click="setReadOnlyAccess(modules.map(m => getRoleAssignment(selectedRole, m.code)))"
                                 >
-                                    Chỉ xem (Read)
+                                    {{ $t('access_control.preset_readonly') }}
                                 </el-button>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg text-rose-600 hover:text-rose-700"
                                     @click="revokeAllAccess(modules.map(m => getRoleAssignment(selectedRole, m.code)))"
                                 >
-                                    Thu hồi hết
+                                    {{ $t('access_control.preset_revoke_all') }}
                                 </el-button>
                             </div>
                         </div>
@@ -455,26 +458,26 @@ const saveMatrix = () => {
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40">
-                                        <th class="p-3.5 font-semibold">Phân hệ & Chức năng (Module)</th>
+                                        <th class="p-3.5 font-semibold">{{ $t('access_control.col_module') }}</th>
                                         <th class="p-3.5 font-semibold text-center w-36">
                                             <div class="flex items-center justify-center gap-1.5">
                                                 <el-icon><Unlock /></el-icon>
-                                                <span>Xem (View)</span>
+                                                <span>{{ $t('access_control.col_view') }}</span>
                                             </div>
                                         </th>
                                         <th class="p-3.5 font-semibold text-center w-44">
                                             <div class="flex items-center justify-center gap-1.5">
                                                 <el-icon><Setting /></el-icon>
-                                                <span>Quản lý / CRUD</span>
+                                                <span>{{ $t('access_control.col_manage') }}</span>
                                             </div>
                                         </th>
                                         <th class="p-3.5 font-semibold text-center w-36">
                                             <div class="flex items-center justify-center gap-1.5">
                                                 <el-icon><CircleCheckFilled /></el-icon>
-                                                <span>Phê duyệt</span>
+                                                <span>{{ $t('access_control.col_approve') }}</span>
                                             </div>
                                         </th>
-                                        <th class="p-3.5 font-semibold w-72">Ghi chú & Phạm vi</th>
+                                        <th class="p-3.5 font-semibold w-72">{{ $t('access_control.col_notes_scope') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -528,7 +531,7 @@ const saveMatrix = () => {
                                             <el-input
                                                 v-model="getRoleAssignment(selectedRole, mod.code).notes"
                                                 size="small"
-                                                placeholder="VD: Áp dụng toàn hệ thống"
+                                                :placeholder="$t('access_control.placeholder_role_note')"
                                                 clearable
                                             />
                                         </td>
@@ -543,7 +546,7 @@ const saveMatrix = () => {
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <div>
                                 <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                                    Chọn Phòng ban Ủy quyền Chuyên trách:
+                                    {{ $t('access_control.select_dept_label') }}
                                 </span>
                                 <div class="flex flex-wrap gap-2">
                                     <button
@@ -561,20 +564,20 @@ const saveMatrix = () => {
                             </div>
 
                             <div v-if="selectedDeptId" class="flex items-center gap-2">
-                                <span class="text-xs text-slate-400">Thao tác nhanh:</span>
+                                <span class="text-xs text-slate-400">{{ $t('access_control.quick_actions') }}</span>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg"
                                     @click="grantFullAccess(modules.map(m => getDeptAssignment(selectedDeptId!, m.code)))"
                                 >
-                                    Toàn quyền
+                                    {{ $t('access_control.btn_full_access') }}
                                 </el-button>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg text-rose-600"
                                     @click="revokeAllAccess(modules.map(m => getDeptAssignment(selectedDeptId!, m.code)))"
                                 >
-                                    Thu hồi
+                                    {{ $t('access_control.btn_revoke') }}
                                 </el-button>
                             </div>
                         </div>
@@ -583,7 +586,7 @@ const saveMatrix = () => {
                         <div v-if="selectedDeptId" class="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40 flex items-center gap-3">
                             <el-icon :size="20" class="text-emerald-600 dark:text-emerald-400"><InfoFilled /></el-icon>
                             <span class="text-xs text-emerald-800 dark:text-emerald-300">
-                                <strong>Nguyên lý kế thừa:</strong> Thành viên trực thuộc phòng ban này sẽ được tự động trao quyền tương ứng cho các chức năng bên dưới nếu quyền đó cao hơn quyền cá nhân của họ.
+                                <strong>{{ $t('access_control.dept_inherit_lead') }}</strong> {{ $t('access_control.dept_inherit_body') }}
                             </span>
                         </div>
 
@@ -592,11 +595,11 @@ const saveMatrix = () => {
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40">
-                                        <th class="p-3.5 font-semibold">Phân hệ & Chức năng (Module)</th>
-                                        <th class="p-3.5 font-semibold text-center w-36">Xem (View)</th>
-                                        <th class="p-3.5 font-semibold text-center w-44">Quản lý / CRUD</th>
-                                        <th class="p-3.5 font-semibold text-center w-36">Phê duyệt</th>
-                                        <th class="p-3.5 font-semibold w-72">Ghi chú & Phạm vi</th>
+                                        <th class="p-3.5 font-semibold">{{ $t('access_control.col_module') }}</th>
+                                        <th class="p-3.5 font-semibold text-center w-36">{{ $t('access_control.col_view') }}</th>
+                                        <th class="p-3.5 font-semibold text-center w-44">{{ $t('access_control.col_manage') }}</th>
+                                        <th class="p-3.5 font-semibold text-center w-36">{{ $t('access_control.col_approve') }}</th>
+                                        <th class="p-3.5 font-semibold w-72">{{ $t('access_control.col_notes_scope') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -644,7 +647,7 @@ const saveMatrix = () => {
                                             <el-input
                                                 v-model="getDeptAssignment(selectedDeptId, mod.code).notes"
                                                 size="small"
-                                                placeholder="VD: Ủy quyền cho phòng ban"
+                                                :placeholder="$t('access_control.placeholder_dept_note')"
                                                 clearable
                                             />
                                         </td>
@@ -659,7 +662,7 @@ const saveMatrix = () => {
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <div>
                                 <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                                    Chọn Chức danh / Vị trí Phân quyền (Ví dụ: Trưởng phòng HR, Kế toán trưởng...):
+                                    {{ $t('access_control.select_position_label') }}
                                 </span>
                                 <div class="flex flex-wrap gap-2">
                                     <button
@@ -671,26 +674,26 @@ const saveMatrix = () => {
                                             : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'"
                                         @click="selectedPosId = pos.id"
                                     >
-                                        {{ pos.name }} (Cấp {{ pos.level }})
+                                        {{ pos.name }} ({{ $t('access_control.level', { level: pos.level }) }})
                                     </button>
                                 </div>
                             </div>
 
                             <div v-if="selectedPosId" class="flex items-center gap-2">
-                                <span class="text-xs text-slate-400">Thao tác nhanh:</span>
+                                <span class="text-xs text-slate-400">{{ $t('access_control.quick_actions') }}</span>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg"
                                     @click="grantFullAccess(modules.map(m => getPosAssignment(selectedPosId!, m.code)))"
                                 >
-                                    Toàn quyền
+                                    {{ $t('access_control.btn_full_access') }}
                                 </el-button>
                                 <el-button
                                     size="small"
                                     class="!rounded-lg text-rose-600"
                                     @click="revokeAllAccess(modules.map(m => getPosAssignment(selectedPosId!, m.code)))"
                                 >
-                                    Thu hồi
+                                    {{ $t('access_control.btn_revoke') }}
                                 </el-button>
                             </div>
                         </div>
@@ -699,7 +702,8 @@ const saveMatrix = () => {
                         <div v-if="selectedPosId" class="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 flex items-center gap-3">
                             <el-icon :size="20" class="text-amber-600 dark:text-amber-400"><Briefcase /></el-icon>
                             <span class="text-xs text-amber-800 dark:text-amber-300">
-                                <strong>Ủy quyền Chức danh:</strong> Ví dụ cho phép <em>Trưởng phòng HR</em> được toàn quyền Quản lý/Thiết lập Lương (PAYROLL_SALARY) của nhân viên, trong khi nhân viên thông thường chỉ có quyền Xem hoặc không được truy cập.
+                                <strong>{{ $t('access_control.pos_info_lead') }}</strong>
+                                {{ $t('access_control.pos_info_prefix') }} <em>{{ $t('access_control.pos_info_example_role') }}</em> {{ $t('access_control.pos_info_suffix') }}
                             </span>
                         </div>
 
@@ -708,11 +712,11 @@ const saveMatrix = () => {
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40">
-                                        <th class="p-3.5 font-semibold">Phân hệ & Chức năng (Module)</th>
-                                        <th class="p-3.5 font-semibold text-center w-36">Xem (View)</th>
-                                        <th class="p-3.5 font-semibold text-center w-44">Quản lý / CRUD</th>
-                                        <th class="p-3.5 font-semibold text-center w-36">Phê duyệt</th>
-                                        <th class="p-3.5 font-semibold w-72">Ghi chú & Phạm vi</th>
+                                        <th class="p-3.5 font-semibold">{{ $t('access_control.col_module') }}</th>
+                                        <th class="p-3.5 font-semibold text-center w-36">{{ $t('access_control.col_view') }}</th>
+                                        <th class="p-3.5 font-semibold text-center w-44">{{ $t('access_control.col_manage') }}</th>
+                                        <th class="p-3.5 font-semibold text-center w-36">{{ $t('access_control.col_approve') }}</th>
+                                        <th class="p-3.5 font-semibold w-72">{{ $t('access_control.col_notes_scope') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -760,7 +764,7 @@ const saveMatrix = () => {
                                             <el-input
                                                 v-model="getPosAssignment(selectedPosId, mod.code).notes"
                                                 size="small"
-                                                placeholder="VD: Ủy quyền cho vị trí lãnh đạo"
+                                                :placeholder="$t('access_control.placeholder_pos_note')"
                                                 clearable
                                             />
                                         </td>
@@ -776,11 +780,11 @@ const saveMatrix = () => {
                         <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center justify-between gap-4">
                             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
                                 <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                    Ủy quyền cho Nhân sự Cụ thể:
+                                    {{ $t('access_control.grant_individual_label') }}
                                 </span>
                                 <el-select
                                     v-model="newEmployeeId"
-                                    placeholder="Chọn nhân viên từ danh sách..."
+                                    :placeholder="$t('access_control.select_employee_placeholder')"
                                     filterable
                                     class="!w-80"
                                 >
@@ -798,14 +802,14 @@ const saveMatrix = () => {
                                     class="!rounded-xl"
                                     @click="addEmployeeException"
                                 >
-                                    Thêm Ủy quyền
+                                    {{ $t('access_control.btn_add_grant') }}
                                 </el-button>
                             </div>
 
                             <div class="w-full md:w-72">
                                 <el-input
                                     v-model="employeeSearchQuery"
-                                    placeholder="Lọc nhân sự đã ủy quyền..."
+                                    :placeholder="$t('access_control.filter_configured_placeholder')"
                                     clearable
                                     :prefix-icon="Search"
                                 />
@@ -815,8 +819,8 @@ const saveMatrix = () => {
                         <!-- Configured Employees List -->
                         <div v-if="filteredConfiguredEmployees.length === 0" class="text-center py-12 text-slate-400">
                             <el-icon :size="32" class="mb-2"><User /></el-icon>
-                            <p class="text-sm">Chưa có nhân sự nào được cấu hình ủy quyền ngoại lệ cá nhân.</p>
-                            <p class="text-xs mt-1 text-slate-500">Hãy chọn nhân sự ở trên và nhấn "Thêm Ủy quyền" để cấp quyền riêng biệt.</p>
+                            <p class="text-sm">{{ $t('access_control.empty_individuals_title') }}</p>
+                            <p class="text-xs mt-1 text-slate-500">{{ $t('access_control.empty_individuals_desc') }}</p>
                         </div>
 
                         <div v-else class="space-y-6">
@@ -849,7 +853,7 @@ const saveMatrix = () => {
                                             class="!rounded-lg"
                                             @click="grantFullAccess(modules.map(m => getUserAssignment(emp.id, m.code)))"
                                         >
-                                            Toàn quyền
+                                            {{ $t('access_control.btn_full_access') }}
                                         </el-button>
                                         <el-button
                                             size="small"
@@ -858,7 +862,7 @@ const saveMatrix = () => {
                                             :icon="Delete"
                                             @click="removeEmployeeException(emp.id)"
                                         >
-                                            Gỡ bỏ nhân sự
+                                            {{ $t('access_control.btn_remove_employee') }}
                                         </el-button>
                                     </div>
                                 </div>
@@ -868,11 +872,11 @@ const saveMatrix = () => {
                                     <table class="w-full text-left border-collapse">
                                         <thead>
                                             <tr class="border-b border-slate-100 dark:border-slate-800 text-xs text-slate-400">
-                                                <th class="p-2 font-medium">Module</th>
-                                                <th class="p-2 font-medium text-center w-32">Xem (View)</th>
-                                                <th class="p-2 font-medium text-center w-36">Quản lý / CRUD</th>
-                                                <th class="p-2 font-medium text-center w-32">Phê duyệt</th>
-                                                <th class="p-2 font-medium w-64">Ghi chú ngoại lệ</th>
+                                                <th class="p-2 font-medium">{{ $t('access_control.col_module') }}</th>
+                                                <th class="p-2 font-medium text-center w-32">{{ $t('access_control.col_view') }}</th>
+                                                <th class="p-2 font-medium text-center w-36">{{ $t('access_control.col_manage') }}</th>
+                                                <th class="p-2 font-medium text-center w-32">{{ $t('access_control.col_approve') }}</th>
+                                                <th class="p-2 font-medium w-64">{{ $t('access_control.col_notes_exception') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-50 dark:divide-slate-800/60 text-xs">
@@ -909,7 +913,7 @@ const saveMatrix = () => {
                                                     <el-input
                                                         v-model="getUserAssignment(emp.id, mod.code).notes"
                                                         size="small"
-                                                        placeholder="VD: Cấp quyền riêng"
+                                                        :placeholder="$t('access_control.placeholder_user_note')"
                                                         clearable
                                                     />
                                                 </td>

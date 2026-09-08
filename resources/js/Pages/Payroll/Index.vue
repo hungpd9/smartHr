@@ -26,6 +26,7 @@ import {
 } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useSyncedTab } from '@/Composables/useNavigationHistory';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 
 interface PayrollRecord {
     id: number;
@@ -115,12 +116,14 @@ const props = defineProps<{
     unapprovedCount: number;
 }>();
 
+const { t } = useThemeAndLocale();
+
 const selectedMonth = ref(props.monthYear);
 const activeTab = useSyncedTab('records', 'tab');
 const isCalculating = ref(false);
 const isLocking = ref(false);
 
-// Phiếu lương chi tiết (Payslip Modal)
+// Detailed payslip (Payslip Modal)
 const isPayslipModalVisible = ref(false);
 const selectedPayslipRecord = ref<any>(null);
 
@@ -129,7 +132,7 @@ const openPayslip = (record: any) => {
     isPayslipModalVisible.value = true;
 };
 
-// Quản lý Mức lương nhân viên (Employee Salary Dialog)
+// Employee Salary management (Salary Dialog)
 const salaryDialogVisible = ref(false);
 const editingSalary = ref<EmployeeSalaryItem | null>(null);
 const salaryForm = useForm({
@@ -151,7 +154,7 @@ const openCreateSalary = () => {
 
 const openEditSalary = (item: EmployeeSalaryItem) => {
     if (item.is_locked) {
-        ElMessage.warning('Mức lương này đã được áp dụng trong kỳ lương đã khóa sổ, không thể chỉnh sửa.');
+        ElMessage.warning(t('payroll.salary_locked_edit_msg'));
         return;
     }
     editingSalary.value = item;
@@ -170,22 +173,22 @@ const submitSalaryForm = () => {
         salaryForm.put(`/payroll/salaries/${editingSalary.value.id}`, {
             preserveScroll: true,
             onSuccess: () => {
-                ElMessage.success('Đã cập nhật mức lương nhân sự thành công!');
+                ElMessage.success(t('payroll.salary_update_success'));
                 salaryDialogVisible.value = false;
             },
             onError: (errs) => {
-                ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi khi lưu mức lương.');
+                ElMessage.error(Object.values(errs)[0] as string || t('payroll.salary_update_error'));
             }
         });
     } else {
         salaryForm.post('/payroll/salaries', {
             preserveScroll: true,
             onSuccess: () => {
-                ElMessage.success('Đã thêm mức lương mới thành công!');
+                ElMessage.success(t('payroll.salary_create_success'));
                 salaryDialogVisible.value = false;
             },
             onError: (errs) => {
-                ElMessage.error(Object.values(errs)[0] as string || 'Có lỗi khi thêm mức lương.');
+                ElMessage.error(Object.values(errs)[0] as string || t('payroll.salary_create_error'));
             }
         });
     }
@@ -193,23 +196,27 @@ const submitSalaryForm = () => {
 
 const deleteSalaryItem = (item: EmployeeSalaryItem) => {
     if (item.is_locked) {
-        ElMessage.warning('Mức lương này đã được áp dụng trong kỳ lương đã khóa sổ, không thể xóa.');
+        ElMessage.warning(t('payroll.salary_locked_delete_msg'));
         return;
     }
 
     ElMessageBox.confirm(
-        `Bạn có chắc chắn muốn xóa bản ghi mức lương của nhân sự ${item.employee?.full_name}?`,
-        'Xác nhận xóa mức lương',
-        { confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy', type: 'warning' }
+        t('payroll.salary_delete_confirm_msg', { name: item.employee?.full_name as string }),
+        t('payroll.salary_delete_confirm_title'),
+        {
+            confirmButtonText: t('payroll.salary_delete_confirm_btn'),
+            cancelButtonText: t('common.cancel'),
+            type: 'warning',
+        }
     ).then(() => {
         router.delete(`/payroll/salaries/${item.id}`, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success('Đã xóa mức lương thành công.'),
+            onSuccess: () => ElMessage.success(t('payroll.salary_delete_success')),
         });
     });
 };
 
-// Tự động đồng bộ selectedMonth khi người dùng bấm Back / Forward trình duyệt
+// Auto-sync selectedMonth when the user navigates Back / Forward in the browser
 watch(() => props.monthYear, (newVal) => {
     if (newVal) {
         selectedMonth.value = newVal;
@@ -222,7 +229,7 @@ const auditEntityId = ref<number | undefined>(props.payrollPeriod?.id);
 
 const isPeriodLocked = computed(() => !!props.payrollPeriod?.is_locked);
 
-// Thống kê tổng hợp quỹ lương
+// Payroll fund aggregate statistics
 const totalGross = computed(() => {
     return props.records.reduce((acc, r) => acc + Number(r.gross_salary || 0), 0);
 });
@@ -255,17 +262,16 @@ const handleMonthChange = (val: string) => {
 
 const handleCalculate = () => {
     if (isPeriodLocked.value) {
-        ElMessage.warning('Kỳ lương đã khóa sổ, không thể tính toán lại.');
+        ElMessage.warning(t('payroll.period_locked_recalc_msg'));
         return;
     }
 
     ElMessageBox.confirm(
-        `Bạn có chắc chắn muốn chạy động cơ tính lương cho kỳ ${selectedMonth.value}? ` +
-        `Quy chuẩn: Những nhân sự chưa được Quản lý duyệt bảng chấm công sẽ tự động bị bỏ qua.`,
-        'Xác nhận tính lương',
+        t('payroll.calculate_run_confirm_msg', { month: selectedMonth.value }),
+        t('payroll.calculate_run_confirm_title'),
         {
-            confirmButtonText: 'Bắt đầu tính lương',
-            cancelButtonText: 'Hủy',
+            confirmButtonText: t('payroll.calculate_run_confirm_btn'),
+            cancelButtonText: t('common.cancel'),
             type: 'primary',
         }
     ).then(() => {
@@ -280,11 +286,11 @@ const handleCalculate = () => {
 
 const handleLockPeriod = () => {
     ElMessageBox.confirm(
-        `CẢNH BÁO KIỂM TOÁN: Sau khi khóa sổ kỳ lương ${selectedMonth.value}, toàn bộ dữ liệu công, lương và các mức lương cá nhân có hiệu lực trong kỳ này sẽ trở thành BẤT BIẾN, không thể sửa đổi hay hồi tố. Bạn có chắc chắn muốn tiếp tục?`,
-        'Khóa sổ kỳ lương bất biến',
+        t('payroll.lock_period_confirm_msg', { month: selectedMonth.value }),
+        t('payroll.lock_period_confirm_title'),
         {
-            confirmButtonText: 'Khóa sổ vĩnh viễn',
-            cancelButtonText: 'Xem lại',
+            confirmButtonText: t('payroll.lock_period_confirm_btn'),
+            cancelButtonText: t('payroll.lock_period_cancel_btn'),
             type: 'warning',
             confirmButtonClass: 'el-button--danger',
         }
@@ -302,7 +308,7 @@ const handleApproveTimesheet = (empId: number) => {
     router.post(`/payroll/approve-timesheet/${empId}`, { month_year: selectedMonth.value }, {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Đã duyệt bảng chấm công. Bạn có thể bấm Tính lương lại để bổ sung nhân sự này.');
+            ElMessage.success(t('payroll.approve_timesheet_success'));
         },
     });
 };
@@ -315,7 +321,7 @@ const openAuditHistory = () => {
 
 <template>
     <AppLayout>
-        <Head title="Bảng Lương & Chu Trình Tính Lương - Smart-HR" />
+        <Head :title="t('payroll.page_title')" />
 
         <div class="space-y-6 pb-12">
             <!-- Header & Action Bar -->
@@ -327,27 +333,27 @@ const openAuditHistory = () => {
                         </div>
                         <div>
                             <h1 class="text-xl font-bold text-slate-900 dark:text-white">
-                                Bảng Lương & Chu Trình Tính Lương
+                                {{ $t('payroll.page_heading') }}
                             </h1>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                Tính lương Gross-to-Net, Biểu thuế TNCN 5 bậc, OT miễn thuế NĐ 145 & Khóa sổ bất biến
+                                {{ $t('payroll.page_subtitle') }}
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
-                    <!-- Chọn kỳ lương -->
+                    <!-- Select payroll period -->
                     <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
                         <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                            <el-icon><Calendar /></el-icon> Kỳ lương:
+                            <el-icon><Calendar /></el-icon> {{ $t('payroll.period_label') }}
                         </span>
                         <el-date-picker
                             v-model="selectedMonth"
                             type="month"
                             value-format="YYYY-MM"
                             format="MM/YYYY"
-                            placeholder="Chọn tháng"
+                            :placeholder="$t('payroll.month_placeholder')"
                             class="!w-32"
                             size="small"
                             :clearable="false"
@@ -355,7 +361,7 @@ const openAuditHistory = () => {
                         />
                     </div>
 
-                    <!-- Nút tính toán lương -->
+                    <!-- Calculate payroll button -->
                     <el-button
                         type="primary"
                         :icon="RefreshRight"
@@ -363,10 +369,10 @@ const openAuditHistory = () => {
                         :disabled="isPeriodLocked"
                         @click="handleCalculate"
                     >
-                        Tính Lương Kỳ Này
+                        {{ $t('payroll.calculate_period_btn') }}
                     </el-button>
 
-                    <!-- Nút khóa sổ kỳ lương -->
+                    <!-- Lock payroll period button -->
                     <el-button
                         v-if="!isPeriodLocked"
                         type="danger"
@@ -375,24 +381,24 @@ const openAuditHistory = () => {
                         :loading="isLocking"
                         @click="handleLockPeriod"
                     >
-                        Khóa Sổ Kỳ Lương
+                        {{ $t('payroll.lock_period_btn') }}
                     </el-button>
 
-                    <!-- Nút Lịch sử kiểm toán -->
+                    <!-- Audit history button -->
                     <el-button
                         v-if="payrollPeriod"
                         :icon="Clock"
                         plain
                         @click="openAuditHistory"
                     >
-                        Kiểm Toán
+                        {{ $t('payroll.audit_btn') }}
                     </el-button>
                 </div>
             </div>
 
-            <!-- Cảnh báo quy tắc nghiệp vụ: Bỏ qua nhân sự chưa duyệt chấm công -->
+            <!-- Business rule warning: skip employees with unapproved timesheets -->
             <el-alert
-                title="Quy chuẩn Kiểm toán & Tính Lương (Zero-Hardcode & Temporal Integrity)"
+                :title="$t('payroll.alert_rules_title')"
                 type="info"
                 show-icon
                 :closable="false"
@@ -401,16 +407,16 @@ const openAuditHistory = () => {
                 <template #default>
                     <div class="text-xs text-slate-600 dark:text-slate-300 space-y-1">
                         <div>
-                            • <strong>Quy tắc loại trừ bắt buộc:</strong> Bất kỳ nhân sự nào <strong>chưa được Quản lý duyệt bảng chấm công tháng</strong> (<code>is_approved = false</code>) sẽ <strong>tự động bị bỏ qua</strong> không tính lương để bảo vệ ngân sách doanh nghiệp.
+                            • <strong>{{ $t('payroll.alert_exclusion_lead') }}</strong> {{ $t('payroll.alert_exclusion_body') }}
                         </div>
                         <div>
-                            • <strong>Bảo vệ Bất biến:</strong> Khi kỳ lương đã Khóa sổ (<code>is_locked = true</code>), mọi thao tác sửa đổi công, lương, phụ cấp hay mức lương cá nhân có hiệu lực trong kỳ đều bị phong tỏa hoàn toàn.
+                            • <strong>{{ $t('payroll.alert_immutable_lead') }}</strong> {{ $t('payroll.alert_immutable_body') }}
                         </div>
                     </div>
                 </template>
             </el-alert>
 
-            <!-- Trạng thái Khóa sổ Banner -->
+            <!-- Locked banner -->
             <div
                 v-if="isPeriodLocked"
                 class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-between"
@@ -418,49 +424,49 @@ const openAuditHistory = () => {
                 <div class="flex items-center gap-3 text-amber-800 dark:text-amber-300 text-xs">
                     <el-icon :size="20" class="text-amber-600 dark:text-amber-400"><Lock /></el-icon>
                     <div>
-                        <div class="font-bold text-sm">Kỳ lương này ĐÃ ĐƯỢC KHÓA SỔ BẤT BIẾN</div>
+                        <div class="font-bold text-sm">{{ $t('payroll.locked_banner_title') }}</div>
                         <div>
-                            Đã khóa lúc: {{ payrollPeriod?.locked_at || 'N/A' }} 
-                            <span v-if="payrollPeriod?.locked_by">• Người khóa: {{ payrollPeriod?.locked_by?.full_name }}</span>
+                            {{ $t('payroll.locked_at_label') }} {{ payrollPeriod?.locked_at || 'N/A' }}
+                            <span v-if="payrollPeriod?.locked_by"> • {{ $t('payroll.locked_by_label') }} {{ payrollPeriod?.locked_by?.full_name }}</span>
                         </div>
                     </div>
                 </div>
                 <el-tag type="danger" effect="dark" round>LOCKED</el-tag>
             </div>
 
-            <!-- Tổng quan các chỉ số quỹ lương -->
+            <!-- Payroll fund KPI overview -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Đã Tính Lương</span>
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('payroll.kpi_calculated_employees') }}</span>
                         <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                             <el-icon :size="16"><CircleCheck /></el-icon>
                         </div>
                     </div>
                     <div class="mt-3 flex items-baseline gap-2">
                         <span class="text-2xl font-black text-slate-900 dark:text-white">{{ calculatedCount }}</span>
-                        <span class="text-xs text-slate-400">/ {{ totalEmployeesCount }} nhân sự</span>
+                        <span class="text-xs text-slate-400">/ {{ totalEmployeesCount }} {{ $t('payroll.unit_employees') }}</span>
                     </div>
-                    <div class="mt-2 text-[11px] text-emerald-600 font-medium">Đủ điều kiện & đã duyệt công</div>
+                    <div class="mt-2 text-[11px] text-emerald-600 font-medium">{{ $t('payroll.card_calculated_sub') }}</div>
                 </div>
 
                 <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Bị Bỏ Qua (Chưa Duyệt)</span>
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('payroll.card_skipped_title') }}</span>
                         <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
                             <el-icon :size="16"><Warning /></el-icon>
                         </div>
                     </div>
                     <div class="mt-3 flex items-baseline gap-2">
                         <span class="text-2xl font-black text-rose-600 dark:text-rose-400">{{ unapprovedCount }}</span>
-                        <span class="text-xs text-slate-400">nhân sự</span>
+                        <span class="text-xs text-slate-400">{{ $t('payroll.unit_employees') }}</span>
                     </div>
-                    <div class="mt-2 text-[11px] text-rose-600 font-medium">Bảng công chưa được approve</div>
+                    <div class="mt-2 text-[11px] text-rose-600 font-medium">{{ $t('payroll.card_skipped_sub') }}</div>
                 </div>
 
                 <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tổng Quỹ Lương Gross</span>
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('payroll.kpi_total_gross') }}</span>
                         <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                             <el-icon :size="16"><Money /></el-icon>
                         </div>
@@ -468,12 +474,12 @@ const openAuditHistory = () => {
                     <div class="mt-3">
                         <span class="text-xl font-black text-slate-900 dark:text-white">{{ formatCurrency(totalGross) }}</span>
                     </div>
-                    <div class="mt-2 text-[11px] text-slate-400">Bao gồm phụ cấp & OT</div>
+                    <div class="mt-2 text-[11px] text-slate-400">{{ $t('payroll.card_gross_sub') }}</div>
                 </div>
 
                 <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Thực Chi (Tổng Net)</span>
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{{ $t('payroll.card_net_title') }}</span>
                         <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                             <el-icon :size="16"><Wallet /></el-icon>
                         </div>
@@ -481,19 +487,19 @@ const openAuditHistory = () => {
                     <div class="mt-3">
                         <span class="text-xl font-black text-indigo-600 dark:text-indigo-400">{{ formatCurrency(totalNet) }}</span>
                     </div>
-                    <div class="mt-2 text-[11px] text-slate-400">Thuế: {{ formatCurrency(totalPitTax) }} • BH: {{ formatCurrency(totalInsurance) }}</div>
+                    <div class="mt-2 text-[11px] text-slate-400">{{ $t('payroll.label_tax_abbr') }} {{ formatCurrency(totalPitTax) }} • {{ $t('payroll.label_insurance_abbr') }} {{ formatCurrency(totalInsurance) }}</div>
                 </div>
             </div>
 
-            <!-- Tabs: Bảng lương đã tính vs Danh sách bị bỏ qua vs Mức lương nhân viên -->
+            <!-- Tabs: calculated payroll vs skipped list vs employee salaries -->
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs">
                 <el-tabs v-model="activeTab">
-                    <!-- Tab 1: Danh sách bảng lương chi tiết -->
+                    <!-- Tab 1: Detailed payroll list -->
                     <el-tab-pane name="records">
                         <template #label>
                             <span class="flex items-center gap-1.5 font-bold text-sm">
                                 <el-icon><List /></el-icon>
-                                Bảng Lương Đã Tính ({{ records.length }})
+                                {{ $t('payroll.tab_calculated_records', { count: records.length }) }}
                             </span>
                         </template>
 
@@ -503,46 +509,46 @@ const openAuditHistory = () => {
                                 stripe
                                 border
                                 style="width: 100%"
-                                empty-text="Chưa có bảng lương nào được tính trong kỳ này. Vui lòng bấm 'Tính Lương Kỳ Này'."
+                                :empty-text="$t('payroll.empty_records')"
                             >
-                                <el-table-column prop="employee.user_code" label="Mã NV" width="100" fixed>
+                                <el-table-column prop="employee.user_code" :label="$t('payroll.col_user_code')" width="100" fixed>
                                     <template #default="{ row }">
                                         <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ row.employee?.user_code }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column prop="employee.full_name" label="Họ và Tên" min-width="160" fixed>
+                                <el-table-column prop="employee.full_name" :label="$t('payroll.col_full_name')" min-width="160" fixed>
                                     <template #default="{ row }">
                                         <div class="font-medium text-slate-800 dark:text-slate-200">{{ row.employee?.full_name }}</div>
                                         <div class="text-[10px] text-slate-400 uppercase">{{ row.employee?.status }}</div>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Lương Gross" width="140" align="right">
+                                <el-table-column :label="$t('payroll.col_salary_gross')" width="140" align="right">
                                     <template #default="{ row }">
                                         <span class="font-bold text-slate-800 dark:text-slate-100">{{ formatCurrency(row.gross_salary) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="PC Chức Vụ" width="120" align="right">
+                                <el-table-column :label="$t('payroll.col_allowance_position')" width="120" align="right">
                                     <template #default="{ row }">
                                         <span class="text-xs">{{ formatCurrency(row.position_allowance_amount) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="TC Con Nhỏ" width="120" align="right">
+                                <el-table-column :label="$t('payroll.col_allowance_child')" width="120" align="right">
                                     <template #default="{ row }">
                                         <span class="text-xs">{{ formatCurrency(row.child_allowance_amount) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="OT Miễn Thuế" width="120" align="right">
+                                <el-table-column :label="$t('payroll.col_ot_exempt')" width="120" align="right">
                                     <template #default="{ row }">
                                         <span class="text-xs text-emerald-600 font-semibold">{{ formatCurrency(row.tax_exempt_ot_amount) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="BHXH/YT/TN" width="130" align="right">
+                                <el-table-column :label="$t('payroll.col_insurance_abbr')" width="130" align="right">
                                     <template #default="{ row }">
                                         <span class="text-xs text-slate-600 dark:text-slate-300">
                                             {{ formatCurrency(Number(row.social_insurance_employee) + Number(row.health_insurance_employee) + Number(row.unemployment_insurance_employee)) }}
@@ -550,19 +556,19 @@ const openAuditHistory = () => {
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Thuế TNCN" width="130" align="right">
+                                <el-table-column :label="$t('payroll.col_pit_tax')" width="130" align="right">
                                     <template #default="{ row }">
                                         <span class="text-xs font-semibold text-amber-600 dark:text-amber-400">{{ formatCurrency(row.pit_tax_amount) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Thực Nhận (Net)" width="150" align="right">
+                                <el-table-column :label="$t('payroll.col_net_received')" width="150" align="right">
                                     <template #default="{ row }">
                                         <span class="font-black text-indigo-600 dark:text-indigo-400 text-sm">{{ formatCurrency(row.net_salary) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Phiếu Lương" width="120" align="center" fixed="right">
+                                <el-table-column :label="$t('payroll.btn_payslip')" width="120" align="center" fixed="right">
                                     <template #default="{ row }">
                                         <el-button
                                             size="small"
@@ -571,7 +577,7 @@ const openAuditHistory = () => {
                                             :icon="Document"
                                             @click="openPayslip(row)"
                                         >
-                                            Phiếu Lương
+                                            {{ $t('payroll.btn_payslip') }}
                                         </el-button>
                                     </template>
                                 </el-table-column>
@@ -579,20 +585,19 @@ const openAuditHistory = () => {
                         </div>
                     </el-tab-pane>
 
-                    <!-- Tab 2: Danh sách nhân sự bị bỏ qua do chưa duyệt bảng chấm công -->
+                    <!-- Tab 2: Skipped employees due to unapproved timesheets -->
                     <el-tab-pane name="unapproved">
                         <template #label>
                             <span class="flex items-center gap-1.5 font-bold text-sm text-rose-600 dark:text-rose-400">
                                 <el-icon><Warning /></el-icon>
-                                Nhân Sự Bị Bỏ Qua ({{ unapprovedEmployees.length }})
+                                {{ $t('payroll.tab_skipped_employees', { count: unapprovedEmployees.length }) }}
                             </span>
                         </template>
 
                         <div class="mt-3">
                             <div class="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/40 text-xs text-rose-700 dark:text-rose-300 mb-4 flex items-center justify-between">
                                 <div>
-                                    Những nhân sự dưới đây chưa đủ điều kiện tính lương do bảng chấm công tháng chưa được Quản lý bộ phận phê duyệt. 
-                                    Sau khi bảng công được duyệt, bấm <strong>"Tính Lương Kỳ Này"</strong> để hệ thống tự động bổ sung vào bảng lương.
+                                    {{ $t('payroll.hint_unapproved_prefix') }} <strong>"{{ $t('payroll.calculate_period_btn') }}"</strong> {{ $t('payroll.hint_unapproved_suffix') }}
                                 </div>
                             </div>
 
@@ -601,34 +606,34 @@ const openAuditHistory = () => {
                                 stripe
                                 border
                                 style="width: 100%"
-                                empty-text="Tuyệt vời! Toàn bộ nhân sự trong kỳ đều đã được duyệt bảng chấm công."
+                                :empty-text="$t('payroll.empty_unapproved')"
                             >
-                                <el-table-column prop="user_code" label="Mã NV" width="110">
+                                <el-table-column prop="user_code" :label="$t('payroll.col_user_code')" width="110">
                                     <template #default="{ row }">
                                         <span class="font-bold text-slate-700 dark:text-slate-300">{{ row.user_code }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column prop="full_name" label="Họ và Tên" min-width="180">
+                                <el-table-column prop="full_name" :label="$t('payroll.col_full_name')" min-width="180">
                                     <template #default="{ row }">
                                         <div class="font-medium text-slate-900 dark:text-white">{{ row.full_name }}</div>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column prop="status" label="Hợp Đồng" width="120">
+                                <el-table-column prop="status" :label="$t('payroll.col_contract')" width="120">
                                     <template #default="{ row }">
                                         <el-tag size="small" :type="row.status === 'PROBATION' ? 'warning' : 'info'">{{ row.status }}</el-tag>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Bảng Công Tháng" width="150">
+                                <el-table-column :label="$t('payroll.col_monthly_timesheet')" width="150">
                                     <template #default="{ row }">
-                                        <el-tag v-if="row.has_timesheet" type="warning" size="small">Chờ duyệt (Pending)</el-tag>
-                                        <el-tag v-else type="danger" size="small">Chưa tổng hợp</el-tag>
+                                        <el-tag v-if="row.has_timesheet" type="warning" size="small">{{ $t('payroll.badge_pending_approval') }}</el-tag>
+                                        <el-tag v-else type="danger" size="small">{{ $t('payroll.badge_not_tabulated') }}</el-tag>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column prop="reason" label="Lý Do Bỏ Qua" min-width="250">
+                                <el-table-column prop="reason" :label="$t('payroll.col_skip_reason')" min-width="250">
                                     <template #default="{ row }">
                                         <span class="text-xs text-rose-600 dark:text-rose-400 font-medium">
                                             {{ row.reason }}
@@ -636,7 +641,7 @@ const openAuditHistory = () => {
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Hành Động" width="140" align="center">
+                                <el-table-column :label="$t('payroll.col_action')" width="140" align="center">
                                     <template #default="{ row }">
                                         <el-button
                                             v-if="!isPeriodLocked"
@@ -646,28 +651,28 @@ const openAuditHistory = () => {
                                             :icon="Check"
                                             @click="handleApproveTimesheet(row.employee_id)"
                                         >
-                                            Duyệt Công
+                                            {{ $t('payroll.btn_approve_timesheet') }}
                                         </el-button>
-                                        <span v-else class="text-xs text-slate-400">Đã khóa</span>
+                                        <span v-else class="text-xs text-slate-400">{{ $t('status.locked') }}</span>
                                     </template>
                                 </el-table-column>
                             </el-table>
                         </div>
                     </el-tab-pane>
 
-                    <!-- Tab 3: Quản lý Mức Lương Nhân Viên (Effective Dating) -->
+                    <!-- Tab 3: Employee Salary Management (Effective Dating) -->
                     <el-tab-pane name="salaries">
                         <template #label>
                             <span class="flex items-center gap-1.5 font-bold text-sm">
                                 <el-icon><Money /></el-icon>
-                                Mức Lương Nhân Viên ({{ employeeSalaries.length }})
+                                {{ $t('payroll.tab_salary_items', { count: employeeSalaries.length }) }}
                             </span>
                         </template>
 
                         <div class="mt-3 space-y-4">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700">
                                 <div class="text-xs text-slate-500">
-                                    Quản lý mức lương cơ bản thỏa thuận theo dòng thời gian (Effective Dating). Mức lương trong kỳ đã chốt sổ sẽ tự động bị khóa chống sửa đổi hồi tố.
+                                    {{ $t('payroll.hint_salary_effective') }}
                                 </div>
                                 <el-button
                                     type="primary"
@@ -675,7 +680,7 @@ const openAuditHistory = () => {
                                     :icon="Plus"
                                     @click="openCreateSalary"
                                 >
-                                    Thiết Lập Mức Lương Mới
+                                    {{ $t('payroll.new_salary_btn') }}
                                 </el-button>
                             </div>
 
@@ -684,39 +689,39 @@ const openAuditHistory = () => {
                                 stripe
                                 border
                                 style="width: 100%"
-                                empty-text="Chưa có bản ghi mức lương cá nhân nào."
+                                :empty-text="$t('payroll.empty_salaries')"
                             >
-                                <el-table-column prop="employee.user_code" label="Mã NV" width="100" fixed>
+                                <el-table-column prop="employee.user_code" :label="$t('payroll.col_user_code')" width="100" fixed>
                                     <template #default="{ row }">
                                         <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ row.employee?.user_code }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column prop="employee.full_name" label="Họ và Tên" min-width="170" fixed>
+                                <el-table-column prop="employee.full_name" :label="$t('payroll.col_full_name')" min-width="170" fixed>
                                     <template #default="{ row }">
                                         <div class="font-medium text-slate-800 dark:text-slate-200">{{ row.employee?.full_name }}</div>
                                         <div class="text-[11px] text-slate-400">
-                                            {{ row.employee?.current_timeline?.position?.name || 'Nhân viên' }}
+                                            {{ row.employee?.current_timeline?.position?.name || $t('payroll.position_fallback') }}
                                         </div>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Lương Cơ Bản" width="150" align="right">
+                                <el-table-column :label="$t('payroll.col_base_salary_title')" width="150" align="right">
                                     <template #default="{ row }">
                                         <span class="font-bold text-slate-900 dark:text-white">{{ formatCurrency(row.base_salary) }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Lương Đóng BH" width="150" align="right">
+                                <el-table-column :label="$t('payroll.col_insurance_salary_title')" width="150" align="right">
                                     <template #default="{ row }">
                                         <span v-if="row.insurance_salary" class="text-xs font-semibold text-slate-700 dark:text-slate-300">
                                             {{ formatCurrency(row.insurance_salary) }}
                                         </span>
-                                        <span v-else class="text-xs text-slate-400 italic">Theo lương cơ bản</span>
+                                        <span v-else class="text-xs text-slate-400 italic">{{ $t('payroll.label_follows_base') }}</span>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Loại HĐ" width="110" align="center">
+                                <el-table-column :label="$t('payroll.col_contract_abbr')" width="110" align="center">
                                     <template #default="{ row }">
                                         <el-tag size="small" :type="row.contract_type === 'OFFICIAL' ? 'success' : 'warning'">
                                             {{ row.contract_type }}
@@ -724,12 +729,12 @@ const openAuditHistory = () => {
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Thời Gian Áp Dụng" min-width="180">
+                                <el-table-column :label="$t('payroll.col_effective_period')" min-width="180">
                                     <template #default="{ row }">
                                         <div class="text-xs">
-                                            Từ: <strong>{{ row.effective_date }}</strong>
+                                            {{ $t('payroll.label_from') }} <strong>{{ row.effective_date }}</strong>
                                             <span v-if="row.end_date"> &rarr; <strong>{{ row.end_date }}</strong></span>
-                                            <span v-else class="text-emerald-600 font-semibold"> (Hiện tại)</span>
+                                            <span v-else class="text-emerald-600 font-semibold"> {{ $t('payroll.label_current') }}</span>
                                         </div>
                                         <div v-if="row.notes" class="text-[11px] text-slate-400 italic truncate max-w-xs">
                                             "{{ row.notes }}"
@@ -737,14 +742,14 @@ const openAuditHistory = () => {
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Khóa Sổ" width="90" align="center">
+                                <el-table-column :label="$t('payroll.col_lock_status')" width="90" align="center">
                                     <template #default="{ row }">
                                         <el-tag v-if="row.is_locked" type="danger" size="small" effect="plain">LOCKED</el-tag>
-                                        <el-tag v-else type="info" size="small" effect="plain">Mở</el-tag>
+                                        <el-tag v-else type="info" size="small" effect="plain">{{ $t('payroll.salary_tag_open') }}</el-tag>
                                     </template>
                                 </el-table-column>
 
-                                <el-table-column label="Thao Tác" width="140" align="center" fixed="right">
+                                <el-table-column :label="$t('payroll.col_actions_title')" width="140" align="center" fixed="right">
                                     <template #default="{ row }">
                                         <div class="flex items-center justify-center gap-1">
                                             <el-button
@@ -755,7 +760,7 @@ const openAuditHistory = () => {
                                                 :icon="Edit"
                                                 @click="openEditSalary(row)"
                                             >
-                                                Sửa
+                                                {{ $t('payroll.btn_edit_short') }}
                                             </el-button>
                                             <el-button
                                                 size="small"
@@ -765,7 +770,7 @@ const openAuditHistory = () => {
                                                 :icon="Delete"
                                                 @click="deleteSalaryItem(row)"
                                             >
-                                                Xóa
+                                                {{ $t('common.delete') }}
                                             </el-button>
                                         </div>
                                     </template>
@@ -777,17 +782,17 @@ const openAuditHistory = () => {
             </div>
         </div>
 
-        <!-- DIALOG THIẾT LẬP MỨC LƯƠNG NHÂN SỰ -->
+        <!-- EMPLOYEE SALARY SETUP DIALOG -->
         <el-dialog
             v-model="salaryDialogVisible"
-            :title="editingSalary ? 'Chỉnh Sửa Mức Lương Nhân Sự' : 'Thiết Lập Mức Lương Mới Cho Nhân Sự'"
+            :title="editingSalary ? $t('payroll.salary_dialog_title_edit') : $t('payroll.salary_dialog_title_create')"
             width="560px"
         >
             <el-form :model="salaryForm" label-position="top" class="space-y-3 text-xs">
-                <el-form-item label="Nhân sự áp dụng" required>
+                <el-form-item :label="$t('payroll.label_salary_employee')" required>
                     <el-select
                         v-model="salaryForm.employee_id"
-                        placeholder="Chọn nhân viên"
+                        :placeholder="$t('payroll.dialog_salary_select_employee')"
                         filterable
                         :disabled="!!editingSalary"
                         class="w-full"
@@ -803,7 +808,7 @@ const openAuditHistory = () => {
 
                 <el-row :gutter="12">
                     <el-col :span="12">
-                        <el-form-item label="Mức lương cơ bản thỏa thuận (VND)" required>
+                        <el-form-item :label="$t('payroll.label_base_agreed')" required>
                             <el-input-number
                                 v-model="salaryForm.base_salary"
                                 :min="0"
@@ -813,12 +818,12 @@ const openAuditHistory = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="Lương đóng bảo hiểm (VND)">
+                        <el-form-item :label="$t('payroll.label_insurance_salary')">
                             <el-input-number
                                 v-model="salaryForm.insurance_salary"
                                 :min="0"
                                 :step="500000"
-                                placeholder="Mặc định bằng lương cơ bản"
+                                :placeholder="$t('payroll.placeholder_insurance_default')"
                                 class="w-full"
                             />
                         </el-form-item>
@@ -827,17 +832,17 @@ const openAuditHistory = () => {
 
                 <el-row :gutter="12">
                     <el-col :span="8">
-                        <el-form-item label="Loại hợp đồng" required>
+                        <el-form-item :label="$t('payroll.col_contract_type')" required>
                             <el-select v-model="salaryForm.contract_type" class="w-full">
-                                <el-option label="Chính thức" value="OFFICIAL" />
-                                <el-option label="Thử việc (85%)" value="PROBATION" />
-                                <el-option label="Thời vụ / Vãng lai" value="SEASONAL" />
-                                <el-option label="Thực tập sinh" value="INTERN" />
+                                <el-option :label="$t('payroll.contract_option_official')" value="OFFICIAL" />
+                                <el-option :label="$t('payroll.contract_option_probation')" value="PROBATION" />
+                                <el-option :label="$t('payroll.contract_option_seasonal')" value="SEASONAL" />
+                                <el-option :label="$t('payroll.contract_option_intern')" value="INTERN" />
                             </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Ngày bắt đầu hiệu lực" required>
+                        <el-form-item :label="$t('payroll.label_effective_start')" required>
                             <el-date-picker
                                 v-model="salaryForm.effective_date"
                                 type="date"
@@ -848,7 +853,7 @@ const openAuditHistory = () => {
                         </el-form-item>
                     </el-col>
                     <el-col :span="8">
-                        <el-form-item label="Ngày hết hạn (tùy chọn)">
+                        <el-form-item :label="$t('payroll.label_end_date_optional')">
                             <el-date-picker
                                 v-model="salaryForm.end_date"
                                 type="date"
@@ -860,25 +865,25 @@ const openAuditHistory = () => {
                     </el-col>
                 </el-row>
 
-                <el-form-item label="Ghi chú điều chỉnh">
+                <el-form-item :label="$t('payroll.label_salary_notes')">
                     <el-input
                         v-model="salaryForm.notes"
-                        placeholder="Lý do điều chỉnh (kết thúc thử việc, tăng lương định kỳ, bổ nhiệm...)"
+                        :placeholder="$t('payroll.placeholder_salary_notes')"
                     />
                 </el-form-item>
             </el-form>
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="salaryDialogVisible = false">Hủy</el-button>
+                    <el-button @click="salaryDialogVisible = false">{{ $t('common.cancel') }}</el-button>
                     <el-button type="primary" :loading="salaryForm.processing" @click="submitSalaryForm">
-                        Lưu Mức Lương
+                        {{ $t('payroll.btn_save_salary') }}
                     </el-button>
                 </div>
             </template>
         </el-dialog>
 
-        <!-- PAYSLIP MODAL CHI TIẾT -->
+        <!-- DETAILED PAYSLIP MODAL -->
         <PayslipModal
             v-model="isPayslipModalVisible"
             :record="selectedPayslipRecord"
@@ -889,7 +894,7 @@ const openAuditHistory = () => {
             v-model="isAuditDrawerVisible"
             entity-type="PayrollPeriod"
             :entity-id="auditEntityId"
-            title="Lịch Sử Kiểm Toán Kỳ Lương"
+            :title="t('payroll.audit_history_title')"
         />
     </AppLayout>
 </template>

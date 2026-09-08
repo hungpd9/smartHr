@@ -135,6 +135,9 @@ const props = defineProps<{
 }>();
 
 import { useSyncedTab } from '@/Composables/useNavigationHistory';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
+
+const { t } = useThemeAndLocale();
 
 const activeTab = useSyncedTab('employees', 'tab') as any;
 
@@ -177,10 +180,10 @@ const submitCreateDepartment = () => {
         onSuccess: () => {
             isCreateDeptModalOpen.value = false;
             createDeptForm.reset();
-            ElMessage.success('Thêm phòng ban mới thành công!');
+            ElMessage.success(t('core_hr.msg_dept_create_success'));
         },
         onError: () => {
-            ElMessage.error('Vui lòng kiểm tra lại thông tin phòng ban!');
+            ElMessage.error(t('core_hr.msg_dept_create_error'));
         },
     });
 };
@@ -218,31 +221,31 @@ const submitEditDepartment = () => {
     editDeptForm.put(`/core-hr/departments/${editingDeptId.value}`, {
         onSuccess: () => {
             isEditDeptModalOpen.value = false;
-            ElMessage.success('Cập nhật thông tin phòng ban thành công!');
+            ElMessage.success(t('core_hr.msg_dept_update_success'));
         },
         onError: () => {
-            ElMessage.error('Không thể cập nhật phòng ban!');
+            ElMessage.error(t('core_hr.msg_dept_update_error'));
         },
     });
 };
 
 const deleteDepartment = (dept: any) => {
     ElMessageBox.confirm(
-        `Bạn có chắc chắn muốn xóa phòng ban "${dept.name}" (${dept.code})? Hành động này sẽ được ghi vào nhật ký kiểm toán và chỉ thành công nếu phòng ban không có nhân sự hoặc đơn vị trực thuộc.`,
-        'Xác nhận xóa phòng ban',
+        t('core_hr.dept_delete_confirm', { name: dept.name, code: dept.code }),
+        t('core_hr.dept_delete_confirm_title'),
         {
-            confirmButtonText: 'Xóa phòng ban',
-            cancelButtonText: 'Hủy bỏ',
+            confirmButtonText: t('core_hr.dept_delete_confirm_btn'),
+            cancelButtonText: t('core_hr.btn_cancel'),
             type: 'warning',
             confirmButtonClass: 'el-button--danger',
         }
     ).then(() => {
         router.delete(`/core-hr/departments/${dept.id}`, {
             onSuccess: () => {
-                ElMessage.success('Xóa phòng ban thành công!');
+                ElMessage.success(t('core_hr.msg_dept_delete_success'));
             },
             onError: (errors: any) => {
-                ElMessage.error(errors.message || 'Không thể xóa phòng ban đang có nhân viên hoặc phòng ban con.');
+                ElMessage.error(errors.message || t('core_hr.msg_dept_delete_error'));
             },
         });
     }).catch(() => {});
@@ -273,10 +276,10 @@ const submitCreatePosition = () => {
         onSuccess: () => {
             isCreatePosModalOpen.value = false;
             createPosForm.reset();
-            ElMessage.success('Thêm chức danh mới thành công!');
+            ElMessage.success(t('core_hr.msg_pos_create_success'));
         },
         onError: () => {
-            ElMessage.error('Vui lòng kiểm tra lại thông tin chức danh!');
+            ElMessage.error(t('core_hr.msg_pos_create_error'));
         },
     });
 };
@@ -310,31 +313,31 @@ const submitEditPosition = () => {
     editPosForm.put(`/core-hr/positions/${editingPosId.value}`, {
         onSuccess: () => {
             isEditPosModalOpen.value = false;
-            ElMessage.success('Cập nhật chức vụ thành công!');
+            ElMessage.success(t('core_hr.msg_pos_update_success'));
         },
         onError: () => {
-            ElMessage.error('Không thể cập nhật chức vụ!');
+            ElMessage.error(t('core_hr.msg_pos_update_error'));
         },
     });
 };
 
 const deletePosition = (pos: any) => {
     ElMessageBox.confirm(
-        `Bạn có chắc chắn muốn xóa chức danh "${pos.name}" (${pos.code})? Hành động này sẽ được ghi vào nhật ký kiểm toán và chỉ thành công nếu chức danh không có nhân sự đang đảm nhiệm.`,
-        'Xác nhận xóa chức danh',
+        t('core_hr.pos_delete_confirm', { name: pos.name, code: pos.code }),
+        t('core_hr.pos_delete_confirm_title'),
         {
-            confirmButtonText: 'Xóa chức danh',
-            cancelButtonText: 'Hủy bỏ',
+            confirmButtonText: t('core_hr.pos_delete_confirm_btn'),
+            cancelButtonText: t('core_hr.btn_cancel'),
             type: 'warning',
             confirmButtonClass: 'el-button--danger',
         }
     ).then(() => {
         router.delete(`/core-hr/positions/${pos.id}`, {
             onSuccess: () => {
-                ElMessage.success('Xóa chức danh thành công!');
+                ElMessage.success(t('core_hr.msg_pos_delete_success'));
             },
             onError: (errors: any) => {
-                ElMessage.error(errors.message || 'Không thể xóa chức danh đang có nhân sự công tác.');
+                ElMessage.error(errors.message || t('core_hr.msg_pos_delete_error'));
             },
         });
     }).catch(() => {});
@@ -393,10 +396,10 @@ const submitCreateEmployee = () => {
         onSuccess: () => {
             isCreateEmployeeModalOpen.value = false;
             employeeForm.reset();
-            ElMessage.success('Tiếp nhận nhân sự mới và kích hoạt Timeline Onboarding thành công!');
+            ElMessage.success(t('core_hr.msg_employee_onboard_success'));
         },
         onError: () => {
-            ElMessage.error('Vui lòng kiểm tra lại thông tin nhập liệu!');
+            ElMessage.error(t('core_hr.msg_employee_onboard_error'));
         },
     });
 };
@@ -451,10 +454,10 @@ const submitEditEmployee = () => {
     editForm.put(`/core-hr/employees/${editingEmployeeId.value}`, {
         onSuccess: () => {
             isEditModalOpen.value = false;
-            ElMessage.success('Cập nhật hồ sơ nhân sự thành công!');
+            ElMessage.success(t('core_hr.msg_employee_update_success'));
         },
         onError: () => {
-            ElMessage.error('Không thể cập nhật hồ sơ!');
+            ElMessage.error(t('core_hr.msg_employee_update_error'));
         },
     });
 };
@@ -485,10 +488,10 @@ const submitOffboard = () => {
     offboardForm.post(`/core-hr/employees/${offboardingEmployee.value.id}/offboard`, {
         onSuccess: () => {
             isOffboardModalOpen.value = false;
-            ElMessage.success('Hoàn tất quy trình thôi việc và cập nhật timeline sự nghiệp!');
+            ElMessage.success(t('core_hr.msg_offboard_success'));
         },
         onError: () => {
-            ElMessage.error('Không thể hoàn tất thủ tục thôi việc!');
+            ElMessage.error(t('core_hr.msg_offboard_error'));
         },
     });
 };
@@ -516,10 +519,10 @@ const submitDepartmentVersion = () => {
         onSuccess: () => {
             isDepartmentModalOpen.value = false;
             departmentForm.reset();
-            ElMessage.success('Ban hành phiên bản phòng ban mới (Effective Dating) thành công!');
+            ElMessage.success(t('core_hr.msg_version_success'));
         },
         onError: () => {
-            ElMessage.error('Không thể cập nhật phiên bản phòng ban!');
+            ElMessage.error(t('core_hr.msg_version_error'));
         },
     });
 };
@@ -538,10 +541,10 @@ const submitBranch = () => {
         onSuccess: () => {
             isBranchModalOpen.value = false;
             branchForm.reset();
-            ElMessage.success('Khởi tạo chi nhánh mới thành công!');
+            ElMessage.success(t('core_hr.msg_branch_create_success'));
         },
         onError: () => {
-            ElMessage.error('Vui lòng kiểm tra lại thông tin chi nhánh!');
+            ElMessage.error(t('core_hr.msg_branch_create_error'));
         },
     });
 };
@@ -549,15 +552,15 @@ const submitBranch = () => {
 
 <template>
     <AppLayout>
-        <Head title="Quản trị Hồ sơ & Tổ chức (CoreHR) - Smart-HR" />
+        <Head :title="$t('core_hr.doc_title')" />
 
         <div class="space-y-6 pb-12">
             <!-- Header Banner -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
                 <div>
-                    <h1 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Hồ sơ & Cơ cấu Tổ chức (CoreHR)</h1>
+                    <h1 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">{{ $t('core_hr.page_title') }}</h1>
                     <p class="text-xs text-slate-400 mt-1">
-                        Quản lý sơ đồ tổ chức phân cấp đa tầng, hồ sơ nhân sự toàn diện, thâm niên và bảo hộ luật định Điều 137 BLLĐ 2019.
+                        {{ $t('core_hr.page_subtitle') }}
                     </p>
                 </div>
 
@@ -569,7 +572,7 @@ const submitBranch = () => {
                         :class="activeTab === 'employees' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><User /></el-icon>
-                        <span>Nhân sự ({{ employees.total }})</span>
+                        <span>{{ $t('core_hr.tab_people_count', { count: employees.total }) }}</span>
                     </button>
                     <button
                         @click="activeTab = 'org_tree'"
@@ -577,7 +580,7 @@ const submitBranch = () => {
                         :class="activeTab === 'org_tree' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><Share /></el-icon>
-                        <span>Sơ đồ Cây Tổ chức</span>
+                        <span>{{ $t('core_hr.tab_org_tree') }}</span>
                     </button>
                     <button
                         @click="activeTab = 'departments'"
@@ -585,7 +588,7 @@ const submitBranch = () => {
                         :class="activeTab === 'departments' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><OfficeBuilding /></el-icon>
-                        <span>Phòng ban ({{ departments.length }})</span>
+                        <span>{{ $t('core_hr.tab_departments_count', { count: departments.length }) }}</span>
                     </button>
                     <button
                         @click="activeTab = 'positions'"
@@ -593,7 +596,7 @@ const submitBranch = () => {
                         :class="activeTab === 'positions' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><Suitcase /></el-icon>
-                        <span>Chức danh ({{ positions.length }})</span>
+                        <span>{{ $t('core_hr.tab_positions_count', { count: positions.length }) }}</span>
                     </button>
                     <button
                         @click="activeTab = 'branches'"
@@ -601,7 +604,7 @@ const submitBranch = () => {
                         :class="activeTab === 'branches' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'"
                     >
                         <el-icon :size="14"><OfficeBuilding /></el-icon>
-                        <span>Chi nhánh ({{ branches.length }})</span>
+                        <span>{{ $t('core_hr.tab_branches_count', { count: branches.length }) }}</span>
                     </button>
                 </div>
             </div>
@@ -615,7 +618,7 @@ const submitBranch = () => {
                             <el-input
                                 v-model="search"
                                 @keyup.enter="applyFilters"
-                                placeholder="Tìm tên, mã, CCCD, SĐT..."
+                                :placeholder="$t('core_hr.search_placeholder')"
                                 :prefix-icon="Search"
                                 clearable
                             />
@@ -626,7 +629,7 @@ const submitBranch = () => {
                             @change="applyFilters"
                             class="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
-                            <option value="">Tất cả Phòng ban</option>
+                            <option value="">{{ $t('core_hr.filter_all_departments') }}</option>
                             <option v-for="d in departments" :key="d.id" :value="d.id">{{ d.name }}</option>
                         </select>
 
@@ -635,23 +638,23 @@ const submitBranch = () => {
                             @change="applyFilters"
                             class="text-xs px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
-                            <option value="">Tất cả Trạng thái</option>
-                            <option value="PROBATION">Thử việc</option>
-                            <option value="OFFICIAL">Chính thức</option>
-                            <option value="ON_LEAVE">Nghỉ thai sản/Nghỉ phép</option>
-                            <option value="TERMINATED">Đã thôi việc</option>
+                            <option value="">{{ $t('core_hr.filter_all_statuses') }}</option>
+                            <option value="PROBATION">{{ $t('core_hr.status_probation') }}</option>
+                            <option value="OFFICIAL">{{ $t('core_hr.status_official') }}</option>
+                            <option value="ON_LEAVE">{{ $t('core_hr.filter_status_maternity_leave') }}</option>
+                            <option value="TERMINATED">{{ $t('core_hr.status_terminated') }}</option>
                         </select>
 
                         <button
                             @click="applyFilters"
                             class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
                         >
-                            Lọc
+                            {{ $t('common.filter') }}
                         </button>
                         <button
                             @click="resetFilters"
                             class="p-2 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-700 rounded-xl text-xs transition"
-                            title="Xóa bộ lọc"
+                            :title="$t('core_hr.filter_reset_title')"
                         >
                             <el-icon :size="14"><Refresh /></el-icon>
                         </button>
@@ -663,14 +666,14 @@ const submitBranch = () => {
                             class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 hover:bg-pink-100 transition border border-pink-200 dark:border-pink-900/60 flex items-center gap-1.5"
                         >
                             <el-icon :size="14"><Female /></el-icon>
-                            <span>Quản lý Con nhỏ & Phúc lợi</span>
+                            <span>{{ $t('core_hr.children_welfare_link') }}</span>
                         </Link>
                         <button
                             @click="isCreateEmployeeModalOpen = true"
                             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center space-x-1.5 transition"
                         >
                             <el-icon :size="14"><Plus /></el-icon>
-                            <span>Tiếp nhận Nhân sự</span>
+                            <span>{{ $t('core_hr.btn_onboard_employee') }}</span>
                         </button>
                     </div>
                 </div>
@@ -681,12 +684,12 @@ const submitBranch = () => {
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                                    <th class="py-3 px-4">Nhân sự</th>
-                                    <th class="py-3 px-4">Đơn vị & Chức vụ</th>
-                                    <th class="py-3 px-4">Con nhỏ & Phụ thuộc</th>
-                                    <th class="py-3 px-4">Bảo hộ Thai sản (Đ.137)</th>
-                                    <th class="py-3 px-4">Trạng thái & Thâm niên</th>
-                                    <th class="py-3 px-4 text-center">Thao tác</th>
+                                    <th class="py-3 px-4">{{ $t('common.employee') }}</th>
+                                    <th class="py-3 px-4">{{ $t('core_hr.col_unit_position') }}</th>
+                                    <th class="py-3 px-4">{{ $t('core_hr.col_children_dependents') }}</th>
+                                    <th class="py-3 px-4">{{ $t('core_hr.col_maternity_protection') }}</th>
+                                    <th class="py-3 px-4">{{ $t('core_hr.col_status_seniority') }}</th>
+                                    <th class="py-3 px-4 text-center">{{ $t('common.actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -713,7 +716,7 @@ const submitBranch = () => {
                                                 </div>
                                                 <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
                                                     <span>{{ emp.email }}</span>
-                                                    <span v-if="emp.citizen_id">• CCCD: {{ emp.citizen_id }}</span>
+                                                    <span v-if="emp.citizen_id">• {{ $t('core_hr.ccid_label', { code: emp.citizen_id }) }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -737,12 +740,12 @@ const submitBranch = () => {
                                                 class="inline-flex items-center gap-1 text-[11px] font-semibold text-pink-600 dark:text-pink-400 hover:underline"
                                             >
                                                 <el-icon :size="13"><Female /></el-icon>
-                                                <span>{{ emp.children_count }} con nhỏ</span>
+                                                <span>{{ $t('core_hr.children_count', { count: emp.children_count }) }}</span>
                                             </Link>
-                                            <span v-else class="text-slate-400 text-[11px]">Chưa khai báo</span>
+                                            <span v-else class="text-slate-400 text-[11px]">{{ $t('core_hr.children_none') }}</span>
 
                                             <span v-if="emp.tax_dependents_count > 0" class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
-                                                Giảm trừ: {{ emp.tax_dependents_count }} người
+                                                {{ $t('core_hr.tax_dependents_count', { count: emp.tax_dependents_count }) }}
                                             </span>
                                         </div>
                                     </td>
@@ -754,25 +757,25 @@ const submitBranch = () => {
                                                 v-if="emp.is_child_under_12m"
                                                 class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 w-fit"
                                             >
-                                                Con &lt; 12T (Đ.137: 60p có lương)
+                                                {{ $t('core_hr.badge_child_under_12m') }}
                                             </span>
 
                                             <span
                                                 v-if="emp.is_pregnant"
                                                 class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800 w-fit"
                                             >
-                                                Mang thai {{ emp.pregnancy_weeks_at_start ? `(~${emp.pregnancy_weeks_at_start} tuần)` : '' }}
+                                                {{ $t('core_hr.badge_pregnant') }} {{ emp.pregnancy_weeks_at_start ? $t('core_hr.badge_pregnant_weeks', { weeks: emp.pregnancy_weeks_at_start }) : '' }}
                                             </span>
 
                                             <span
                                                 v-if="emp.is_pregnant_restricted"
                                                 class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 w-fit"
                                             >
-                                                Cấm làm đêm & OT (Hải đảo)
+                                                {{ $t('core_hr.badge_restricted') }}
                                             </span>
 
                                             <span v-if="!emp.is_child_under_12m && !emp.is_pregnant" class="text-slate-400 text-[11px]">
-                                                Bình thường
+                                                {{ $t('core_hr.badge_normal') }}
                                             </span>
                                         </div>
                                     </td>
@@ -787,7 +790,7 @@ const submitBranch = () => {
                                                     size="small"
                                                     class="!rounded-md"
                                                 >
-                                                    Chính thức
+                                                    {{ $t('core_hr.status_official') }}
                                                 </el-tag>
                                                 <el-tag
                                                     v-else-if="emp.status === 'PROBATION'"
@@ -795,7 +798,7 @@ const submitBranch = () => {
                                                     size="small"
                                                     class="!rounded-md"
                                                 >
-                                                    Thử việc
+                                                    {{ $t('core_hr.status_probation') }}
                                                 </el-tag>
                                                 <el-tag
                                                     v-else-if="emp.status === 'TERMINATED'"
@@ -803,7 +806,7 @@ const submitBranch = () => {
                                                     size="small"
                                                     class="!rounded-md"
                                                 >
-                                                    Đã thôi việc
+                                                    {{ $t('core_hr.status_terminated') }}
                                                 </el-tag>
                                                 <el-tag
                                                     v-else
@@ -815,10 +818,10 @@ const submitBranch = () => {
                                                 </el-tag>
                                             </div>
                                             <span class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                                                Thâm niên: {{ emp.seniority_text }}
+                                                {{ $t('core_hr.seniority_label', { text: emp.seniority_text }) }}
                                             </span>
                                             <span v-if="emp.status === 'TERMINATED' && emp.resigned_date" class="text-[10px] text-rose-500">
-                                                Nghỉ: {{ emp.resigned_date }}
+                                                {{ $t('core_hr.resigned_label', { date: emp.resigned_date }) }}
                                             </span>
                                         </div>
                                     </td>
@@ -829,14 +832,14 @@ const submitBranch = () => {
                                             <Link
                                                 :href="`/core-hr/employees/${emp.id}`"
                                                 class="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                                                title="Xem hồ sơ & Career Timeline"
+                                                :title="$t('core_hr.title_view_profile')"
                                             >
                                                 <el-icon :size="16"><Right /></el-icon>
                                             </Link>
                                             <button
                                                 @click="openEditEmployee(emp)"
                                                 class="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                                                title="Sửa hồ sơ nhân sự"
+                                                :title="$t('core_hr.title_edit_employee')"
                                             >
                                                 <el-icon :size="16"><Edit /></el-icon>
                                             </button>
@@ -844,7 +847,7 @@ const submitBranch = () => {
                                                 v-if="emp.status !== 'TERMINATED'"
                                                 @click="openOffboardModal(emp)"
                                                 class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                                                title="Thực hiện thôi việc (Offboarding)"
+                                                :title="$t('core_hr.title_offboard')"
                                             >
                                                 <el-icon :size="16"><CircleClose /></el-icon>
                                             </button>
@@ -862,18 +865,18 @@ const submitBranch = () => {
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                         <div>
-                            <h2 class="text-lg font-bold text-slate-800 dark:text-white">Sơ đồ Cây Cơ cấu Tổ chức Phân cấp (Tree Hierarchy)</h2>
-                            <p class="text-xs text-slate-400 mt-0.5">Mô hình phân cấp: Khối chức năng (Level 1) &rarr; Phòng ban (Level 2) &rarr; Đội nhóm / Team (Level 3)</p>
+                            <h2 class="text-lg font-bold text-slate-800 dark:text-white">{{ $t('core_hr.tree_title') }}</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">{{ $t('core_hr.tree_subtitle') }}</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-xs px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold border border-indigo-200">
-                                Khối cấp 1
+                                {{ $t('core_hr.legend_level_1') }}
                             </span>
                             <span class="text-xs px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-semibold border border-blue-200">
-                                Phòng ban cấp 2
+                                {{ $t('core_hr.legend_level_2') }}
                             </span>
                             <span class="text-xs px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold border border-emerald-200">
-                                Đội nhóm / Team cấp 3
+                                {{ $t('core_hr.legend_level_3') }}
                             </span>
                         </div>
                     </div>
@@ -901,11 +904,11 @@ const submitBranch = () => {
                                 </div>
                                 <div class="flex items-center gap-4 text-xs">
                                     <div v-if="rootNode.manager" class="flex items-center gap-2">
-                                        <span class="text-slate-400">Trưởng khối:</span>
+                                        <span class="text-slate-400">{{ $t('core_hr.manager_label_1') }}</span>
                                         <span class="font-semibold text-slate-800 dark:text-slate-200">{{ rootNode.manager.full_name }}</span>
                                     </div>
                                     <div class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 font-semibold text-slate-700 dark:text-slate-300">
-                                        {{ rootNode.employee_count }} nhân sự
+                                        {{ $t('core_hr.node_count', { count: rootNode.employee_count }) }}
                                     </div>
                                 </div>
                             </div>
@@ -935,11 +938,11 @@ const submitBranch = () => {
                                         </div>
                                         <div class="flex items-center gap-3 text-xs">
                                             <div v-if="deptNode.manager" class="flex items-center gap-1.5">
-                                                <span class="text-slate-400">Trưởng phòng:</span>
+                                                <span class="text-slate-400">{{ $t('core_hr.manager_label_2') }}</span>
                                                 <span class="font-semibold text-slate-700 dark:text-slate-300">{{ deptNode.manager.full_name }}</span>
                                             </div>
                                             <span class="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-semibold text-[11px]">
-                                                {{ deptNode.employee_count }} NV
+                                                {{ $t('core_hr.node_count_short', { count: deptNode.employee_count }) }}
                                             </span>
                                         </div>
                                     </div>
@@ -961,7 +964,7 @@ const submitBranch = () => {
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{{ teamNode.employee_count }} nhân sự</span>
+                                                <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">{{ $t('core_hr.node_count', { count: teamNode.employee_count }) }}</span>
                                                 <span v-if="teamNode.manager" class="text-[10px] text-slate-400 block">Lead: {{ teamNode.manager.full_name }}</span>
                                             </div>
                                         </div>
@@ -977,16 +980,16 @@ const submitBranch = () => {
             <div v-else-if="activeTab === 'departments'" class="space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
                     <div>
-                        <h3 class="font-bold text-slate-800 dark:text-white text-base">Danh mục Đơn vị & Phòng ban</h3>
-                        <p class="text-xs text-slate-400">Quản lý cơ cấu phòng ban, gán trưởng đơn vị và bảo toàn lịch sử Effective Dating.</p>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-base">{{ $t('core_hr.dept_catalog_title') }}</h3>
+                        <p class="text-xs text-slate-400">{{ $t('core_hr.dept_catalog_subtitle') }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <el-button
                             size="default"
                             :icon="Clock"
-                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Department', null, 'Nhật ký Kiểm toán Toàn bộ Phòng ban')"
+                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Department', null, $t('core_hr.audit_all_departments'))"
                         >
-                            Lịch sử Kiểm toán
+                            {{ $t('core_hr.btn_audit_history') }}
                         </el-button>
                         <el-button
                             type="primary"
@@ -994,7 +997,7 @@ const submitBranch = () => {
                             @click="openCreateDepartmentModal"
                             class="!rounded-xl shadow-xs"
                         >
-                            Thêm Phòng ban
+                            {{ $t('core_hr.btn_add_department') }}
                         </el-button>
                     </div>
                 </div>
@@ -1003,13 +1006,13 @@ const submitBranch = () => {
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                                <th class="py-3 px-4">Mã đơn vị</th>
-                                <th class="py-3 px-4">Tên đơn vị</th>
-                                <th class="py-3 px-4">Cấp bậc</th>
-                                <th class="py-3 px-4">Trưởng đơn vị</th>
-                                <th class="py-3 px-4">Chi nhánh</th>
-                                <th class="py-3 px-4">Trạng thái</th>
-                                <th class="py-3 px-4 text-center">Thao tác</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_dept_code') }}</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_dept_name') }}</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_level') }}</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_dept_head') }}</th>
+                                <th class="py-3 px-4">{{ $t('common.branch') }}</th>
+                                <th class="py-3 px-4">{{ $t('common.status') }}</th>
+                                <th class="py-3 px-4 text-center">{{ $t('common.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -1021,7 +1024,7 @@ const submitBranch = () => {
                                 </td>
                                 <td class="py-3.5 px-4">
                                     <el-tag :type="dept.level === 1 ? 'primary' : dept.level === 2 ? 'success' : 'warning'" size="small">
-                                        {{ dept.level === 1 ? 'Khối (L1)' : dept.level === 2 ? 'Phòng ban (L2)' : 'Team (L3)' }}
+                                        {{ dept.level === 1 ? $t('core_hr.level_tag_1') : dept.level === 2 ? $t('core_hr.level_tag_2') : $t('core_hr.level_tag_3') }}
                                     </el-tag>
                                 </td>
                                 <td class="py-3.5 px-4">
@@ -1029,12 +1032,12 @@ const submitBranch = () => {
                                         {{ dept.manager.full_name }}
                                         <span class="text-slate-400 font-mono text-[11px]">({{ dept.manager.user_code }})</span>
                                     </span>
-                                    <span v-else class="text-slate-400 italic">Chưa bổ nhiệm</span>
+                                    <span v-else class="text-slate-400 italic">{{ $t('core_hr.dept_no_manager') }}</span>
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-500">{{ dept.branch_name }}</td>
                                 <td class="py-3.5 px-4">
                                     <el-tag :type="dept.status === 'ACTIVE' ? 'success' : 'info'" size="small">
-                                        {{ dept.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm dừng' }}
+                                        {{ dept.status === 'ACTIVE' ? $t('core_hr.dept_status_active') : $t('core_hr.dept_status_inactive') }}
                                     </el-tag>
                                 </td>
                                 <td class="py-3.5 px-4">
@@ -1044,24 +1047,24 @@ const submitBranch = () => {
                                             :icon="Edit"
                                             circle
                                             @click="openEditDepartmentModal(dept)"
-                                            title="Sửa thông tin"
+                                            :title="$t('core_hr.title_edit_info')"
                                         />
                                         <el-button
                                             size="small"
                                             type="primary"
                                             plain
                                             @click="openDepartmentVersionModal(dept)"
-                                            title="Ban hành phiên bản Effective Dating"
+                                            :title="$t('core_hr.title_publish_version')"
                                             class="!text-[11px]"
                                         >
-                                            Phiên bản mới
+                                            {{ $t('core_hr.btn_new_version') }}
                                         </el-button>
                                         <el-button
                                             size="small"
                                             :icon="Clock"
                                             circle
-                                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Department', dept.id, 'Lịch sử kiểm toán: ' + dept.name)"
-                                            title="Lịch sử kiểm toán"
+                                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Department', dept.id, $t('core_hr.audit_department_title', { name: dept.name }))"
+                                            :title="$t('core_hr.title_audit_history')"
                                         />
                                         <el-button
                                             size="small"
@@ -1069,7 +1072,7 @@ const submitBranch = () => {
                                             :icon="Delete"
                                             circle
                                             @click="deleteDepartment(dept)"
-                                            title="Xóa phòng ban"
+                                            :title="$t('core_hr.title_delete_dept')"
                                         />
                                     </div>
                                 </td>
@@ -1083,16 +1086,16 @@ const submitBranch = () => {
             <div v-else-if="activeTab === 'positions'" class="space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
                     <div>
-                        <h3 class="font-bold text-slate-800 dark:text-white text-base">Danh mục Vị trí & Chức danh Công việc</h3>
-                        <p class="text-xs text-slate-400">Cấu hình cấp bậc chức danh, mức phụ cấp trách nhiệm và đãi ngộ bổ nhiệm.</p>
+                        <h3 class="font-bold text-slate-800 dark:text-white text-base">{{ $t('core_hr.pos_catalog_title') }}</h3>
+                        <p class="text-xs text-slate-400">{{ $t('core_hr.pos_catalog_subtitle') }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <el-button
                             size="default"
                             :icon="Clock"
-                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Position', null, 'Nhật ký Kiểm toán Toàn bộ Chức danh')"
+                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Position', null, $t('core_hr.audit_all_positions'))"
                         >
-                            Lịch sử Kiểm toán
+                            {{ $t('core_hr.btn_audit_history') }}
                         </el-button>
                         <el-button
                             type="primary"
@@ -1100,7 +1103,7 @@ const submitBranch = () => {
                             @click="openCreatePositionModal"
                             class="!rounded-xl shadow-xs"
                         >
-                            Thêm Chức danh
+                            {{ $t('core_hr.btn_add_position') }}
                         </el-button>
                     </div>
                 </div>
@@ -1109,14 +1112,14 @@ const submitBranch = () => {
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                                <th class="py-3 px-4">Mã vị trí</th>
-                                <th class="py-3 px-4">Tên chức danh</th>
-                                <th class="py-3 px-4">Cấp bậc</th>
-                                <th class="py-3 px-4">Phòng ban</th>
-                                <th class="py-3 px-4 text-right">Phụ cấp chức vụ</th>
-                                <th class="py-3 px-4 text-right">Thưởng bổ nhiệm</th>
-                                <th class="py-3 px-4">Mô tả công việc</th>
-                                <th class="py-3 px-4 text-center">Thao tác</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_position_code') }}</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_position_name') }}</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_level') }}</th>
+                                <th class="py-3 px-4">{{ $t('common.department') }}</th>
+                                <th class="py-3 px-4 text-right">{{ $t('core_hr.col_allowance') }}</th>
+                                <th class="py-3 px-4 text-right">{{ $t('core_hr.col_appointment_bonus') }}</th>
+                                <th class="py-3 px-4">{{ $t('core_hr.col_position_description') }}</th>
+                                <th class="py-3 px-4 text-center">{{ $t('common.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
@@ -1129,7 +1132,7 @@ const submitBranch = () => {
                                     </el-tag>
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                                    {{ departments.find(d => d.id === pos.department_id)?.name ?? 'Áp dụng toàn công ty' }}
+                                    {{ departments.find(d => d.id === pos.department_id)?.name ?? $t('core_hr.dept_all_company') }}
                                 </td>
                                 <td class="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                                     {{ Number(pos.allowance_amount || 0).toLocaleString('vi-VN') }} đ
@@ -1145,14 +1148,14 @@ const submitBranch = () => {
                                             :icon="Edit"
                                             circle
                                             @click="openEditPositionModal(pos)"
-                                            title="Chỉnh sửa chức danh"
+                                            :title="$t('core_hr.title_edit_position')"
                                         />
                                         <el-button
                                             size="small"
                                             :icon="Clock"
                                             circle
-                                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Position', pos.id, 'Lịch sử chức danh: ' + pos.name)"
-                                            title="Lịch sử kiểm toán"
+                                            @click="openAuditDrawer('App\\Modules\\CoreHR\\Models\\Position', pos.id, $t('core_hr.audit_position_title', { name: pos.name }))"
+                                            :title="$t('core_hr.title_audit_history')"
                                         />
                                         <el-button
                                             size="small"
@@ -1160,7 +1163,7 @@ const submitBranch = () => {
                                             :icon="Delete"
                                             circle
                                             @click="deletePosition(pos)"
-                                            title="Xóa chức danh"
+                                            :title="$t('core_hr.title_delete_position')"
                                         />
                                     </div>
                                 </td>
@@ -1178,7 +1181,7 @@ const submitBranch = () => {
                         class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center space-x-1.5 transition"
                     >
                         <el-icon :size="14"><Plus /></el-icon>
-                        <span>Thêm Chi nhánh</span>
+                        <span>{{ $t('core_hr.btn_add_branch') }}</span>
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1190,15 +1193,15 @@ const submitBranch = () => {
                         <div class="flex items-center justify-between">
                             <span class="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{{ branch.code }}</span>
                             <el-tag v-if="branch.is_remote_or_island" type="danger" size="small">
-                                Vùng sâu/Hải đảo (Đ.137)
+                                {{ $t('core_hr.branch_remote_tag') }}
                             </el-tag>
                         </div>
 
                         <h3 class="text-base font-bold text-slate-800 dark:text-white">{{ branch.name }}</h3>
-                        <p class="text-xs text-slate-400">{{ branch.address || 'Chưa cập nhật địa chỉ' }}</p>
+                        <p class="text-xs text-slate-400">{{ branch.address || $t('core_hr.branch_no_address') }}</p>
 
                         <div v-if="branch.is_remote_or_island" class="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 rounded-xl text-xs text-rose-800 dark:text-rose-300">
-                            <strong>Đặc thù pháp lý:</strong> Kích hoạt cấm làm thêm giờ và ca đêm đối với lao động nữ mang thai từ <strong>tháng thứ 6</strong> theo Điều 137.1.a BLLĐ 2019.
+                            <strong>{{ $t('core_hr.branch_legal_label') }}</strong> {{ $t('core_hr.branch_legal_prefix') }} <strong>{{ $t('core_hr.branch_legal_month') }}</strong> {{ $t('core_hr.branch_legal_suffix') }}
                         </div>
                     </div>
                 </div>
@@ -1208,7 +1211,7 @@ const submitBranch = () => {
         <!-- MODAL 1: TIẾP NHẬN NHÂN SỰ MỚI (CREATE) -->
         <el-dialog
             v-model="isCreateEmployeeModalOpen"
-            title="Tiếp nhận Nhân sự Mới & Kích hoạt Onboarding"
+            :title="$t('core_hr.dialog_onboard_title')"
             width="680px"
             class="!rounded-2xl"
         >
@@ -1216,33 +1219,33 @@ const submitBranch = () => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Mã Nhân viên <span class="text-rose-500">*</span>
+                            {{ $t('core_hr.label_emp_code') }} <span class="text-rose-500">*</span>
                         </label>
-                        <el-input v-model="employeeForm.user_code" placeholder="VD: EMP007" required />
+                        <el-input v-model="employeeForm.user_code" :placeholder="$t('core_hr.ph_emp_code')" required />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Mã Chấm công Vân tay (Enroll ID)
+                            {{ $t('core_hr.label_attendance_enroll') }}
                         </label>
-                        <el-input v-model="employeeForm.attendance_code" placeholder="VD: 1007" />
+                        <el-input v-model="employeeForm.attendance_code" :placeholder="$t('core_hr.ph_attendance_enroll')" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Họ và Tên <span class="text-rose-500">*</span>
+                            {{ $t('core_hr.label_full_name') }} <span class="text-rose-500">*</span>
                         </label>
-                        <el-input v-model="employeeForm.full_name" placeholder="VD: Hoàng Văn Bình" required />
+                        <el-input v-model="employeeForm.full_name" :placeholder="$t('core_hr.ph_full_name')" required />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Giới tính <span class="text-rose-500">*</span>
+                            {{ $t('core_hr.label_gender') }} <span class="text-rose-500">*</span>
                         </label>
                         <el-radio-group v-model="employeeForm.gender" class="w-full">
-                            <el-radio-button value="MALE">Nam</el-radio-button>
-                            <el-radio-button value="FEMALE">Nữ</el-radio-button>
-                            <el-radio-button value="OTHER">Khác</el-radio-button>
+                            <el-radio-button value="MALE">{{ $t('core_hr.gender_male') }}</el-radio-button>
+                            <el-radio-button value="FEMALE">{{ $t('core_hr.gender_female') }}</el-radio-button>
+                            <el-radio-button value="OTHER">{{ $t('core_hr.gender_other') }}</el-radio-button>
                         </el-radio-group>
                     </div>
                 </div>
@@ -1250,71 +1253,71 @@ const submitBranch = () => {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Ngày sinh <span class="text-rose-500">*</span>
+                            {{ $t('core_hr.label_birth_date') }} <span class="text-rose-500">*</span>
                         </label>
                         <el-date-picker v-model="employeeForm.birth_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Số CCCD (12 số)
+                            {{ $t('core_hr.label_citizen_id') }}
                         </label>
-                        <el-input v-model="employeeForm.citizen_id" placeholder="VD: 001099001234" />
+                        <el-input v-model="employeeForm.citizen_id" :placeholder="$t('core_hr.ph_citizen_id')" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_email') }} <span class="text-rose-500">*</span></label>
                         <el-input v-model="employeeForm.email" placeholder="binh.hoang@smarthr.vn" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Số điện thoại</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_phone') }}</label>
                         <el-input v-model="employeeForm.phone" placeholder="0987654321" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Quê quán</label>
-                        <el-input v-model="employeeForm.hometown" placeholder="VD: Hà Tĩnh" />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_hometown') }}</label>
+                        <el-input v-model="employeeForm.hometown" :placeholder="$t('core_hr.ph_hometown')" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thường trú</label>
-                        <el-input v-model="employeeForm.permanent_address" placeholder="Địa chỉ hộ khẩu..." />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_permanent_address') }}</label>
+                        <el-input v-model="employeeForm.permanent_address" :placeholder="$t('core_hr.ph_permanent_address')" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tạm trú</label>
-                        <el-input v-model="employeeForm.temporary_address" placeholder="Nơi ở hiện tại..." />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_temporary_address') }}</label>
+                        <el-input v-model="employeeForm.temporary_address" :placeholder="$t('core_hr.ph_temporary_address')" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày vào làm <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_join_date') }} <span class="text-rose-500">*</span></label>
                         <el-date-picker v-model="employeeForm.join_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hạn thử việc</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_probation_end') }}</label>
                         <el-date-picker v-model="employeeForm.probation_end_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trạng thái</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('common.status') }}</label>
                         <el-select v-model="employeeForm.status" class="w-full">
-                            <el-option label="Chính thức" value="OFFICIAL" />
-                            <el-option label="Thử việc" value="PROBATION" />
+                            <el-option :label="$t('core_hr.status_official')" value="OFFICIAL" />
+                            <el-option :label="$t('core_hr.status_probation')" value="PROBATION" />
                         </el-select>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phòng ban <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('common.department') }} <span class="text-rose-500">*</span></label>
                         <el-select v-model="employeeForm.department_id" class="w-full">
                             <el-option v-for="d in departments" :key="d.id" :label="d.name" :value="d.id" />
                         </el-select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Vị trí chức danh <span class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_position') }} <span class="text-rose-500">*</span></label>
                         <el-select v-model="employeeForm.position_id" class="w-full">
                             <el-option v-for="p in positions" :key="p.id" :label="p.name" :value="p.id" />
                         </el-select>
@@ -1326,27 +1329,27 @@ const submitBranch = () => {
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-pink-800 dark:text-pink-300 flex items-center gap-1.5">
                             <el-icon :size="14"><Female /></el-icon>
-                            Chế độ Bảo hộ Thai sản (Điều 137 BLLĐ 2019)
+                            {{ $t('core_hr.maternity_section_create') }}
                         </span>
                         <el-switch v-model="employeeForm.is_pregnant" />
                     </div>
 
                     <div v-if="employeeForm.is_pregnant" class="grid grid-cols-2 gap-3 pt-2 border-t border-pink-200/60">
                         <div>
-                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">Số tuần thai hiện tại</label>
+                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">{{ $t('core_hr.label_pregnancy_weeks_create') }}</label>
                             <el-input-number v-model="employeeForm.pregnancy_weeks_at_start" :min="1" :max="42" class="!w-full" />
                         </div>
                         <div>
-                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">Ngày dự sinh</label>
+                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">{{ $t('core_hr.label_due_date') }}</label>
                             <el-date-picker v-model="employeeForm.expected_due_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                         </div>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isCreateEmployeeModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isCreateEmployeeModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="employeeForm.processing">
-                        Tiếp nhận & Kích hoạt Onboarding
+                        {{ $t('core_hr.btn_onboard_confirm') }}
                     </el-button>
                 </div>
             </form>
@@ -1355,83 +1358,83 @@ const submitBranch = () => {
         <!-- MODAL 2: SỬA HỒ SƠ NHÂN SỰ (EDIT) -->
         <el-dialog
             v-model="isEditModalOpen"
-            title="Cập nhật Hồ sơ Nhân sự"
+            :title="$t('core_hr.dialog_edit_title')"
             width="680px"
             class="!rounded-2xl"
         >
             <form @submit.prevent="submitEditEmployee" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Họ và Tên *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_full_name') }} *</label>
                         <el-input v-model="editForm.full_name" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Giới tính</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_gender') }}</label>
                         <el-radio-group v-model="editForm.gender" class="w-full">
-                            <el-radio-button value="MALE">Nam</el-radio-button>
-                            <el-radio-button value="FEMALE">Nữ</el-radio-button>
-                            <el-radio-button value="OTHER">Khác</el-radio-button>
+                            <el-radio-button value="MALE">{{ $t('core_hr.gender_male') }}</el-radio-button>
+                            <el-radio-button value="FEMALE">{{ $t('core_hr.gender_female') }}</el-radio-button>
+                            <el-radio-button value="OTHER">{{ $t('core_hr.gender_other') }}</el-radio-button>
                         </el-radio-group>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày sinh *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_birth_date') }} *</label>
                         <el-date-picker v-model="editForm.birth_date" type="date" value-format="YYYY-MM-DD" class="!w-full" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã chấm công</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_attendance_code') }}</label>
                         <el-input v-model="editForm.attendance_code" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">CCCD (12 số)</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_citizen_short') }}</label>
                         <el-input v-model="editForm.citizen_id" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Email *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_email') }} *</label>
                         <el-input v-model="editForm.email" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Số điện thoại</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_phone') }}</label>
                         <el-input v-model="editForm.phone" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Quê quán</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_hometown') }}</label>
                         <el-input v-model="editForm.hometown" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thường trú</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_permanent_address') }}</label>
                         <el-input v-model="editForm.permanent_address" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tạm trú</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_temporary_address') }}</label>
                         <el-input v-model="editForm.temporary_address" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày vào làm *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_join_date') }} *</label>
                         <el-date-picker v-model="editForm.join_date" type="date" value-format="YYYY-MM-DD" class="!w-full" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hạn thử việc</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_probation_end') }}</label>
                         <el-date-picker v-model="editForm.probation_end_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trạng thái</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('common.status') }}</label>
                         <el-select v-model="editForm.status" class="w-full">
-                            <el-option label="Chính thức" value="OFFICIAL" />
-                            <el-option label="Thử việc" value="PROBATION" />
-                            <el-option label="Nghỉ phép" value="ON_LEAVE" />
-                            <el-option label="Đã thôi việc" value="TERMINATED" />
+                            <el-option :label="$t('core_hr.status_official')" value="OFFICIAL" />
+                            <el-option :label="$t('core_hr.status_probation')" value="PROBATION" />
+                            <el-option :label="$t('core_hr.status_on_leave')" value="ON_LEAVE" />
+                            <el-option :label="$t('core_hr.status_terminated')" value="TERMINATED" />
                         </el-select>
                     </div>
                 </div>
@@ -1439,26 +1442,26 @@ const submitBranch = () => {
                 <!-- Thai sản (chỉ hiện khi là Nữ) -->
                 <div v-if="editForm.gender === 'FEMALE'" class="p-4 bg-pink-50/60 dark:bg-pink-950/30 rounded-xl border border-pink-200 dark:border-pink-900/60 space-y-3">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-pink-800 dark:text-pink-300">Chế độ Bảo hộ Thai sản (Điều 137 BLLĐ)</span>
+                        <span class="text-xs font-bold text-pink-800 dark:text-pink-300">{{ $t('core_hr.maternity_section_edit') }}</span>
                         <el-switch v-model="editForm.is_pregnant" />
                     </div>
 
                     <div v-if="editForm.is_pregnant" class="grid grid-cols-2 gap-3 pt-2">
                         <div>
-                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">Số tuần thai</label>
+                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">{{ $t('core_hr.label_pregnancy_weeks') }}</label>
                             <el-input-number v-model="editForm.pregnancy_weeks_at_start" :min="1" :max="42" class="!w-full" />
                         </div>
                         <div>
-                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">Ngày dự sinh</label>
+                            <label class="block text-xs text-pink-800 dark:text-pink-300 mb-1">{{ $t('core_hr.label_due_date') }}</label>
                             <el-date-picker v-model="editForm.expected_due_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                         </div>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isEditModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isEditModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="editForm.processing">
-                        Cập nhật Hồ sơ
+                        {{ $t('core_hr.btn_save_profile') }}
                     </el-button>
                 </div>
             </form>
@@ -1467,46 +1470,46 @@ const submitBranch = () => {
         <!-- MODAL 3: THÔI VIỆC (OFFBOARDING) -->
         <el-dialog
             v-model="isOffboardModalOpen"
-            title="Quy trình Thôi việc Nhân sự (Offboarding)"
+            :title="$t('core_hr.dialog_offboard_title')"
             width="520px"
             class="!rounded-2xl"
         >
             <form @submit.prevent="submitOffboard" class="space-y-4" v-if="offboardingEmployee">
                 <div class="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-800 dark:text-rose-300">
-                    Thực hiện thôi việc cho nhân sự <strong>{{ offboardingEmployee.full_name }}</strong> ({{ offboardingEmployee.user_code }}).
-                    <div class="mt-1 font-medium">Thâm niên công tác: <strong>{{ offboardingEmployee.seniority_text }}</strong>. Hệ thống sẽ tự động tạo mốc Career Event <code>OFFBOARDING</code>.</div>
+                    {{ $t('core_hr.offboard_intro') }} <strong>{{ offboardingEmployee.full_name }}</strong> ({{ offboardingEmployee.user_code }}).
+                    <div class="mt-1 font-medium">{{ $t('core_hr.offboard_seniority_label') }} <strong>{{ offboardingEmployee.seniority_text }}</strong>. {{ $t('core_hr.offboard_event_note') }} <code>OFFBOARDING</code>.</div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày chính thức thôi việc <span class="text-rose-500">*</span></label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_resigned_date') }} <span class="text-rose-500">*</span></label>
                     <el-date-picker v-model="offboardForm.resigned_date" type="date" value-format="YYYY-MM-DD" class="!w-full" required />
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Lý do thôi việc <span class="text-rose-500">*</span></label>
-                    <el-input v-model="offboardForm.resignation_reason" placeholder="VD: Hết hạn hợp đồng, Nguyện vọng cá nhân..." required />
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_resignation_reason') }} <span class="text-rose-500">*</span></label>
+                    <el-input v-model="offboardForm.resignation_reason" :placeholder="$t('core_hr.ph_resignation_reason')" required />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Số quyết định thôi việc</label>
-                        <el-input v-model="offboardForm.decision_number" placeholder="QĐ-TV-..." />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_decision_number') }}</label>
+                        <el-input v-model="offboardForm.decision_number" :placeholder="$t('core_hr.ph_decision_number')" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày ký quyết định</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_decision_date') }}</label>
                         <el-date-picker v-model="offboardForm.decision_date" type="date" value-format="YYYY-MM-DD" class="!w-full" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ghi chú bàn giao</label>
-                    <el-input v-model="offboardForm.notes" type="textarea" :rows="2" placeholder="Đã bàn giao máy tính xách tay, thẻ ngân hàng, tài liệu kỹ thuật..." />
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_handover_notes') }}</label>
+                    <el-input v-model="offboardForm.notes" type="textarea" :rows="2" :placeholder="$t('core_hr.ph_handover_notes')" />
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isOffboardModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isOffboardModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="danger" native-type="submit" :loading="offboardForm.processing">
-                        Xác nhận Thôi việc
+                        {{ $t('core_hr.btn_confirm_offboard') }}
                     </el-button>
                 </div>
             </form>
@@ -1515,33 +1518,33 @@ const submitBranch = () => {
         <!-- MODAL 4: Ban hành Phiên bản Phòng ban Mới -->
         <el-dialog
             v-model="isDepartmentModalOpen"
-            title="Ban hành Phiên bản Phòng ban Mới (Effective Dating)"
+            :title="$t('core_hr.dialog_version_title')"
             width="500px"
         >
             <form @submit.prevent="submitDepartmentVersion" class="space-y-4">
                 <div class="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300">
-                    Hệ thống sẽ đóng phiên bản cũ vào ngày <code>(Ngày hiệu lực - 1)</code> và lưu vết lịch sử vĩnh viễn, bảo toàn tính đúng đắn cho các báo cáo trong quá khứ.
+                    {{ $t('core_hr.version_note_prefix') }} <code>{{ $t('core_hr.version_note_code') }}</code> {{ $t('core_hr.version_note_suffix') }}
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên phòng ban mới <span class="text-rose-500">*</span></label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_dept_name') }} <span class="text-rose-500">*</span></label>
                     <el-input v-model="departmentForm.name" required />
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày bắt đầu áp dụng <span class="text-rose-500">*</span></label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_effective_date') }} <span class="text-rose-500">*</span></label>
                     <el-date-picker v-model="departmentForm.effective_date" type="date" value-format="YYYY-MM-DD" class="!w-full" required />
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chức năng & Nhiệm vụ bổ sung</label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_version_functions') }}</label>
                     <el-input v-model="departmentForm.functions" type="textarea" :rows="3" />
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isDepartmentModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isDepartmentModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="departmentForm.processing">
-                        Ban hành Phiên bản Mới
+                        {{ $t('core_hr.btn_publish_version') }}
                     </el-button>
                 </div>
             </form>
@@ -1550,36 +1553,36 @@ const submitBranch = () => {
         <!-- MODAL 5: Khởi tạo Chi nhánh mới -->
         <el-dialog
             v-model="isBranchModalOpen"
-            title="Khởi tạo Chi nhánh mới"
+            :title="$t('core_hr.dialog_branch_title')"
             width="500px"
         >
             <form @submit.prevent="submitBranch" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã Chi nhánh <span class="text-rose-500">*</span></label>
-                        <el-input v-model="branchForm.code" placeholder="VD: CN_DANANG" required />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_branch_code') }} <span class="text-rose-500">*</span></label>
+                        <el-input v-model="branchForm.code" :placeholder="$t('core_hr.ph_branch_code')" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên Chi nhánh <span class="text-rose-500">*</span></label>
-                        <el-input v-model="branchForm.name" placeholder="VD: Chi nhánh Đà Nẵng" required />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_branch_name') }} <span class="text-rose-500">*</span></label>
+                        <el-input v-model="branchForm.name" :placeholder="$t('core_hr.ph_branch_name')" required />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Địa chỉ</label>
-                    <el-input v-model="branchForm.address" placeholder="Số nhà, đường, quận/huyện..." />
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_address') }}</label>
+                    <el-input v-model="branchForm.address" :placeholder="$t('core_hr.ph_branch_address')" />
                 </div>
 
                 <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
                     <el-checkbox v-model="branchForm.is_remote_or_island">
-                        <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">Vùng cao, vùng sâu, vùng xa, biên giới, hải đảo (Điều 137.1.a)</span>
+                        <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">{{ $t('core_hr.remote_island_check') }}</span>
                     </el-checkbox>
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isBranchModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isBranchModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="branchForm.processing">
-                        Tạo Chi nhánh
+                        {{ $t('core_hr.btn_create_branch') }}
                     </el-button>
                 </div>
             </form>
@@ -1588,33 +1591,33 @@ const submitBranch = () => {
         <!-- MODAL 6: Thêm Phòng ban mới -->
         <el-dialog
             v-model="isCreateDeptModalOpen"
-            title="Khởi tạo Phòng ban / Đơn vị mới"
+            :title="$t('core_hr.dialog_create_dept_title')"
             width="580px"
             class="!rounded-2xl"
         >
             <form @submit.prevent="submitCreateDepartment" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã đơn vị *</label>
-                        <el-input v-model="createDeptForm.code" placeholder="VD: TECH, MKT, HR..." required />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.col_dept_code') }} *</label>
+                        <el-input v-model="createDeptForm.code" :placeholder="$t('core_hr.ph_dept_code')" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên phòng ban *</label>
-                        <el-input v-model="createDeptForm.name" placeholder="VD: Phòng Công nghệ Thông tin" required />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_dept_name') }} *</label>
+                        <el-input v-model="createDeptForm.name" :placeholder="$t('core_hr.ph_dept_name')" required />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc đơn vị *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_dept_level') }} *</label>
                         <el-select v-model="createDeptForm.level" class="w-full">
-                            <el-option :value="1" label="Khối / Khối chức năng (Cấp 1)" />
-                            <el-option :value="2" label="Phòng ban (Cấp 2)" />
-                            <el-option :value="3" label="Đội nhóm / Team (Cấp 3)" />
+                            <el-option :value="1" :label="$t('core_hr.level_option_1')" />
+                            <el-option :value="2" :label="$t('core_hr.level_option_2')" />
+                            <el-option :value="3" :label="$t('core_hr.level_option_3')" />
                         </el-select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chi nhánh *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('common.branch') }} *</label>
                         <el-select v-model="createDeptForm.branch_id" class="w-full">
                             <el-option
                                 v-for="branch in branches"
@@ -1628,8 +1631,8 @@ const submitBranch = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Đơn vị cấp trên (Parent)</label>
-                        <el-select v-model="createDeptForm.parent_id" clearable placeholder="Không có (Là khối gốc)" class="w-full">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_parent_unit') }}</label>
+                        <el-select v-model="createDeptForm.parent_id" clearable :placeholder="$t('core_hr.ph_parent_none')" class="w-full">
                             <el-option
                                 v-for="d in departments"
                                 :key="d.id"
@@ -1639,8 +1642,8 @@ const submitBranch = () => {
                         </el-select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trưởng đơn vị</label>
-                        <el-select v-model="createDeptForm.manager_id" clearable filterable placeholder="Chọn nhân sự quản lý" class="w-full">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.col_dept_head') }}</label>
+                        <el-select v-model="createDeptForm.manager_id" clearable filterable :placeholder="$t('core_hr.ph_select_manager')" class="w-full">
                             <el-option
                                 v-for="emp in allEmployeesShort"
                                 :key="emp.id"
@@ -1652,14 +1655,14 @@ const submitBranch = () => {
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chức năng & Nhiệm vụ</label>
-                    <el-input v-model="createDeptForm.mission_function" type="textarea" :rows="2" placeholder="Mô tả chức năng nhiệm vụ chính của phòng ban..." />
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_mission_function') }}</label>
+                    <el-input v-model="createDeptForm.mission_function" type="textarea" :rows="2" :placeholder="$t('core_hr.ph_mission_function')" />
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isCreateDeptModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isCreateDeptModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="createDeptForm.processing">
-                        Tạo Phòng ban
+                        {{ $t('core_hr.btn_create_dept') }}
                     </el-button>
                 </div>
             </form>
@@ -1668,33 +1671,33 @@ const submitBranch = () => {
         <!-- MODAL 7: Sửa thông tin Phòng ban -->
         <el-dialog
             v-model="isEditDeptModalOpen"
-            title="Chỉnh sửa Thông tin Phòng ban"
+            :title="$t('core_hr.dialog_edit_dept_title')"
             width="580px"
             class="!rounded-2xl"
         >
             <form @submit.prevent="submitEditDepartment" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã đơn vị *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.col_dept_code') }} *</label>
                         <el-input v-model="editDeptForm.code" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên phòng ban *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_dept_name') }} *</label>
                         <el-input v-model="editDeptForm.name" required />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc đơn vị *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_dept_level') }} *</label>
                         <el-select v-model="editDeptForm.level" class="w-full">
-                            <el-option :value="1" label="Khối / Khối chức năng (Cấp 1)" />
-                            <el-option :value="2" label="Phòng ban (Cấp 2)" />
-                            <el-option :value="3" label="Đội nhóm / Team (Cấp 3)" />
+                            <el-option :value="1" :label="$t('core_hr.level_option_1')" />
+                            <el-option :value="2" :label="$t('core_hr.level_option_2')" />
+                            <el-option :value="3" :label="$t('core_hr.level_option_3')" />
                         </el-select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chi nhánh *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('common.branch') }} *</label>
                         <el-select v-model="editDeptForm.branch_id" class="w-full">
                             <el-option
                                 v-for="branch in branches"
@@ -1708,8 +1711,8 @@ const submitBranch = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Đơn vị cấp trên</label>
-                        <el-select v-model="editDeptForm.parent_id" clearable placeholder="Không có (Gốc)" class="w-full">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_parent_unit_short') }}</label>
+                        <el-select v-model="editDeptForm.parent_id" clearable :placeholder="$t('core_hr.ph_parent_root')" class="w-full">
                             <el-option
                                 v-for="d in departments.filter(d => d.id !== editingDeptId)"
                                 :key="d.id"
@@ -1719,8 +1722,8 @@ const submitBranch = () => {
                         </el-select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trưởng đơn vị</label>
-                        <el-select v-model="editDeptForm.manager_id" clearable filterable placeholder="Chọn nhân sự quản lý" class="w-full">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.col_dept_head') }}</label>
+                        <el-select v-model="editDeptForm.manager_id" clearable filterable :placeholder="$t('core_hr.ph_select_manager')" class="w-full">
                             <el-option
                                 v-for="emp in allEmployeesShort"
                                 :key="emp.id"
@@ -1733,27 +1736,27 @@ const submitBranch = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Trạng thái hoạt động</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_operating_status') }}</label>
                         <el-select v-model="editDeptForm.status" class="w-full">
-                            <el-option value="ACTIVE" label="Hoạt động bình thường" />
-                            <el-option value="INACTIVE" label="Tạm ngừng / Đang giải thể" />
+                            <el-option value="ACTIVE" :label="$t('core_hr.dept_status_option_active')" />
+                            <el-option value="INACTIVE" :label="$t('core_hr.dept_status_option_inactive')" />
                         </el-select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thứ tự hiển thị</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_display_order') }}</label>
                         <el-input-number v-model="editDeptForm.order" :min="0" class="!w-full" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chức năng & Nhiệm vụ</label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_mission_function') }}</label>
                     <el-input v-model="editDeptForm.mission_function" type="textarea" :rows="2" />
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isEditDeptModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isEditDeptModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="editDeptForm.processing">
-                        Lưu Thay Đổi
+                        {{ $t('core_hr.btn_save_changes') }}
                     </el-button>
                 </div>
             </form>
@@ -1762,30 +1765,30 @@ const submitBranch = () => {
         <!-- MODAL 8: Thêm Chức danh mới -->
         <el-dialog
             v-model="isCreatePosModalOpen"
-            title="Khởi tạo Vị trí / Chức danh mới"
+            :title="$t('core_hr.dialog_create_pos_title')"
             width="540px"
             class="!rounded-2xl"
         >
             <form @submit.prevent="submitCreatePosition" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã chức danh *</label>
-                        <el-input v-model="createPosForm.code" placeholder="VD: DEV_LEAD, HR_MGR..." required />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_code') }} *</label>
+                        <el-input v-model="createPosForm.code" :placeholder="$t('core_hr.ph_pos_code')" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên chức danh *</label>
-                        <el-input v-model="createPosForm.name" placeholder="VD: Trưởng nhóm Lập trình" required />
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_name') }} *</label>
+                        <el-input v-model="createPosForm.name" :placeholder="$t('core_hr.ph_pos_name')" required />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc (Level 1..10) *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_level') }} *</label>
                         <el-input-number v-model="createPosForm.level" :min="1" :max="10" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phòng ban áp dụng</label>
-                        <el-select v-model="createPosForm.department_id" clearable placeholder="Áp dụng toàn công ty" class="w-full">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_applicable_dept') }}</label>
+                        <el-select v-model="createPosForm.department_id" clearable :placeholder="$t('core_hr.dept_all_company')" class="w-full">
                             <el-option
                                 v-for="d in departments"
                                 :key="d.id"
@@ -1798,24 +1801,24 @@ const submitBranch = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phụ cấp chức vụ (VNĐ/tháng)</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_position_allowance') }}</label>
                         <el-input-number v-model="createPosForm.allowance_amount" :min="0" :step="100000" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thưởng bổ nhiệm 1 lần (VNĐ)</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_appointment_bonus') }}</label>
                         <el-input-number v-model="createPosForm.bonus_one_time" :min="0" :step="500000" class="!w-full" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mô tả vị trí & Tiêu chuẩn tuyển dụng</label>
-                    <el-input v-model="createPosForm.description" type="textarea" :rows="2" placeholder="Yêu cầu kỹ năng, trách nhiệm chính..." />
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_description') }}</label>
+                    <el-input v-model="createPosForm.description" type="textarea" :rows="2" :placeholder="$t('core_hr.ph_pos_description')" />
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isCreatePosModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isCreatePosModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="createPosForm.processing">
-                        Tạo Chức danh
+                        {{ $t('core_hr.btn_create_position') }}
                     </el-button>
                 </div>
             </form>
@@ -1824,30 +1827,30 @@ const submitBranch = () => {
         <!-- MODAL 9: Sửa Chức danh -->
         <el-dialog
             v-model="isEditPosModalOpen"
-            title="Chỉnh sửa Thông tin Chức danh"
+            :title="$t('core_hr.dialog_edit_pos_title')"
             width="540px"
             class="!rounded-2xl"
         >
             <form @submit.prevent="submitEditPosition" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mã chức danh *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_code') }} *</label>
                         <el-input v-model="editPosForm.code" required />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên chức danh *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_name') }} *</label>
                         <el-input v-model="editPosForm.name" required />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Cấp bậc (Level 1..10) *</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_pos_level') }} *</label>
                         <el-input-number v-model="editPosForm.level" :min="1" :max="10" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phòng ban áp dụng</label>
-                        <el-select v-model="editPosForm.department_id" clearable placeholder="Áp dụng toàn công ty" class="w-full">
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_applicable_dept') }}</label>
+                        <el-select v-model="editPosForm.department_id" clearable :placeholder="$t('core_hr.dept_all_company')" class="w-full">
                             <el-option
                                 v-for="d in departments"
                                 :key="d.id"
@@ -1860,24 +1863,24 @@ const submitBranch = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Phụ cấp chức vụ (VNĐ/tháng)</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_position_allowance') }}</label>
                         <el-input-number v-model="editPosForm.allowance_amount" :min="0" :step="100000" class="!w-full" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Thưởng bổ nhiệm 1 lần (VNĐ)</label>
+                        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_appointment_bonus') }}</label>
                         <el-input-number v-model="editPosForm.bonus_one_time" :min="0" :step="500000" class="!w-full" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Mô tả công việc</label>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">{{ $t('core_hr.label_job_description') }}</label>
                     <el-input v-model="editPosForm.description" type="textarea" :rows="2" />
                 </div>
 
                 <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <el-button @click="isEditPosModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isEditPosModalOpen = false">{{ $t('core_hr.btn_cancel') }}</el-button>
                     <el-button type="primary" native-type="submit" :loading="editPosForm.processing">
-                        Lưu Thay Đổi
+                        {{ $t('core_hr.btn_save_changes') }}
                     </el-button>
                 </div>
             </form>

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ElMessage } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import {
     User,
     CircleCheck,
@@ -74,12 +75,14 @@ const props = defineProps<{
     policyVersion: string;
 }>();
 
+const { t } = useThemeAndLocale();
+
 // Dynamic metrics from backend
-const stats = ref([
-    { title: 'Tổng số Nhân sự', value: props.metrics.totalEmployees.toLocaleString(), change: 'Cơ sở dữ liệu thực tế', icon: User, color: 'indigo' },
-    { title: 'Lượt quẹt thẻ hôm nay', value: props.metrics.todayPunchesCount.toLocaleString(), change: 'Đồng bộ từ Edge Daemon', icon: CircleCheck, color: 'emerald' },
-    { title: 'Đơn chờ phê duyệt', value: props.metrics.pendingRequestsCount.toLocaleString(), change: 'Quy trình đa cấp', icon: MessageBox, color: 'amber' },
-    { title: 'Cảnh báo Tuân thủ (BLLĐ)', value: props.metrics.activeComplianceAlertsCount.toLocaleString(), change: 'Giám sát trần OT & HĐLĐ', icon: Warning, color: 'rose' },
+const stats = computed(() => [
+    { title: t('dashboard.kpi_total_employees'), value: props.metrics.totalEmployees.toLocaleString(), change: t('dashboard.actual_db'), icon: User, color: 'indigo' },
+    { title: t('dashboard.kpi_active_today'), value: props.metrics.todayPunchesCount.toLocaleString(), change: t('dashboard.realtime_synced'), icon: CircleCheck, color: 'emerald' },
+    { title: t('dashboard.kpi_pending_approvals'), value: props.metrics.pendingRequestsCount.toLocaleString(), change: t('dashboard.multi_level_approval'), icon: MessageBox, color: 'amber' },
+    { title: t('dashboard.system_alerts'), value: props.metrics.activeComplianceAlertsCount.toLocaleString(), change: t('dashboard.ot_contract_monitor'), icon: Warning, color: 'rose' },
 ]);
 
 // Attendance & Career data from backend
@@ -140,17 +143,17 @@ const openConsentModal = () => {
 
 const submitConsent = () => {
     if (!isConsented.value) {
-        ElMessage.error('Người lao động bắt buộc phải tích cam kết tự nguyện!');
+        ElMessage.error(t('dashboard.consent_required_error'));
         return;
     }
     isConsentModalOpen.value = false;
-    ElMessage.success('Đã ghi nhận cam kết tự nguyện tuân thủ Điều 137 BLLĐ 2019.');
+    ElMessage.success(t('dashboard.consent_saved_success'));
 };
 </script>
 
 <template>
     <AppLayout>
-        <Head title="Tổng quan Điều hành Nhân sự" />
+        <Head :title="t('dashboard.title')" />
 
         <div class="space-y-6">
             <!-- Hero Header -->
@@ -158,11 +161,11 @@ const submitConsent = () => {
                 <div class="space-y-2 relative z-10">
                     <div class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium text-indigo-200">
                         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        <span>Smart-HR Enterprise • Quản trị Nhân sự & Phân ca Thông minh</span>
+                        <span>{{ t('dashboard.hero_tag') }}</span>
                     </div>
-                    <h1 class="text-2xl md:text-3xl font-bold tracking-tight">Trung tâm Điều hành Nguồn Nhân lực</h1>
+                    <h1 class="text-2xl md:text-3xl font-bold tracking-tight">{{ t('dashboard.hero_title') }}</h1>
                     <p class="text-sm text-indigo-200/90 max-w-2xl leading-relaxed">
-                        Chấm công lũy tiến tự động, phân ca thông minh bảo đảm tuyệt đối quy định BLLĐ 2019 và biểu thuế TNCN 5 bậc mới.
+                        {{ t('dashboard.hero_subtitle') }}
                     </p>
                 </div>
                 <div class="flex items-center space-x-3 relative z-10">
@@ -173,14 +176,14 @@ const submitConsent = () => {
                         :icon="EditPen"
                         @click="openConsentModal"
                     >
-                        Ký cam kết Điều 137 (Demo)
+                        {{ t('dashboard.consent_btn') }}
                     </el-button>
                     <el-button
                         type="primary"
                         class="!bg-indigo-500 hover:!bg-indigo-600 !border-none !rounded-xl !shadow-md font-semibold"
                         :icon="Lightning"
                     >
-                        Phân ca Tự động
+                        {{ t('dashboard.auto_roster_btn') }}
                     </el-button>
                 </div>
             </div>
@@ -223,13 +226,13 @@ const submitConsent = () => {
                     <div>
                         <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                             <el-icon class="text-indigo-600 dark:text-indigo-400"><TrendCharts /></el-icon>
-                            Phân tích Điều hành & Giám sát Tuân thủ Lao động
+                            {{ t('dashboard.analytics_title') }}
                         </h2>
                         <p class="text-xs text-slate-400">
-                            Số liệu trực quan tổng hợp theo tháng & chu kỳ thực tế, hỗ trợ ra quyết định phân bổ nhân sự và phòng ngừa rủi ro
+                            {{ t('dashboard.analytics_subtitle') }}
                         </p>
                     </div>
-                    <el-tag type="info" size="small" round effect="plain">Kỳ phân tích: 09/2026</el-tag>
+                    <el-tag type="info" size="small" round effect="plain">{{ t('dashboard.analytics_period', { period: '09/2026' }) }}</el-tag>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -239,16 +242,16 @@ const submitConsent = () => {
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                     <el-icon class="text-rose-500"><Odometer /></el-icon>
-                                    Nguy cơ Quá tải Lao động
+                                    {{ t('dashboard.burnout_title') }}
                                 </span>
-                                <el-tag size="small" type="danger" round effect="light">Trần 40h/th</el-tag>
+                                <el-tag size="small" type="danger" round effect="light">{{ t('dashboard.burnout_cap_label') }}</el-tag>
                             </div>
                             <p class="text-[11px] text-slate-400 leading-tight mb-4">
-                                Giám sát sát ngưỡng trần làm thêm giờ theo Điều 107 Khoản 2 Điểm b BLLĐ 2019
+                                {{ t('dashboard.burnout_desc') }}
                             </p>
 
                             <div v-if="burnoutList.length === 0" class="py-6 text-center text-xs text-slate-400">
-                                Không có nhân sự phát sinh làm thêm giờ trong kỳ
+                                {{ t('dashboard.burnout_empty') }}
                             </div>
 
                             <div v-else class="space-y-3.5">
@@ -273,18 +276,18 @@ const submitConsent = () => {
                                         :show-text="false"
                                     />
                                     <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1.5">
-                                        <span>Đã dùng {{ item.percentage }}% định mức</span>
-                                        <span v-if="item.status === 'BREACH'" class="text-rose-600 dark:text-rose-400 font-medium">⚠️ Vượt trần 40h</span>
-                                        <span v-else-if="item.status === 'ALERT'" class="text-amber-600 dark:text-amber-400 font-medium">Cận trần (&gt;35h)</span>
-                                        <span v-else class="text-emerald-600 dark:text-emerald-400">An toàn</span>
+                                        <span>{{ t('dashboard.burnout_used_quota', { percentage: item.percentage }) }}</span>
+                                        <span v-if="item.status === 'BREACH'" class="text-rose-600 dark:text-rose-400 font-medium">{{ t('dashboard.burnout_status_breach') }}</span>
+                                        <span v-else-if="item.status === 'ALERT'" class="text-amber-600 dark:text-amber-400 font-medium">{{ t('dashboard.burnout_status_alert') }}</span>
+                                        <span v-else class="text-emerald-600 dark:text-emerald-400">{{ t('dashboard.burnout_status_safe') }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Bảo vệ sức khỏe & Luật lao động</span>
-                            <span class="font-medium text-indigo-600 dark:text-indigo-400">Điều 107 BLLĐ</span>
+                            <span>{{ t('dashboard.burnout_footer_health') }}</span>
+                            <span class="font-medium text-indigo-600 dark:text-indigo-400">{{ t('dashboard.burnout_footer_article') }}</span>
                         </div>
                     </div>
 
@@ -294,19 +297,19 @@ const submitConsent = () => {
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                     <el-icon class="text-indigo-500"><Histogram /></el-icon>
-                                    Biến động Nhân sự 2026
+                                    {{ t('dashboard.turnover_title') }}
                                 </span>
                                 <div class="flex items-center gap-2 text-[10px]">
                                     <span class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                        <span class="w-2 h-2 rounded-sm bg-emerald-500 inline-block"></span> Vào
+                                        <span class="w-2 h-2 rounded-sm bg-emerald-500 inline-block"></span> {{ t('dashboard.turnover_legend_in') }}
                                     </span>
                                     <span class="flex items-center gap-1 text-rose-500">
-                                        <span class="w-2 h-2 rounded-sm bg-rose-500 inline-block"></span> Nghỉ
+                                        <span class="w-2 h-2 rounded-sm bg-rose-500 inline-block"></span> {{ t('dashboard.turnover_legend_out') }}
                                     </span>
                                 </div>
                             </div>
                             <p class="text-[11px] text-slate-400 leading-tight mb-4">
-                                Tương quan Tuyển mới (Onboarding) và Thôi việc (Offboarding) 9 tháng đầu năm
+                                {{ t('dashboard.turnover_desc') }}
                             </p>
 
                             <!-- Custom CSS Bar Chart -->
@@ -318,7 +321,7 @@ const submitConsent = () => {
                                 >
                                     <!-- Tooltip hover -->
                                     <div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition pointer-events-none z-20 bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow whitespace-nowrap">
-                                        {{ item.month }}: +{{ item.onboarding }} / -{{ item.offboarding }} (Ròng: {{ item.net_growth >= 0 ? '+' + item.net_growth : item.net_growth }})
+                                        {{ item.month }}: +{{ item.onboarding }} / -{{ item.offboarding }} ({{ t('dashboard.turnover_net_label') }}: {{ item.net_growth >= 0 ? '+' + item.net_growth : item.net_growth }})
                                     </div>
 
                                     <!-- Bars Container -->
@@ -343,8 +346,8 @@ const submitConsent = () => {
                         </div>
 
                         <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Tăng trưởng quy mô nhân sự</span>
-                            <span class="font-medium text-emerald-600 dark:text-emerald-400">+25% ròng năm 2026</span>
+                            <span>{{ t('dashboard.turnover_footer_growth') }}</span>
+                            <span class="font-medium text-emerald-600 dark:text-emerald-400">{{ t('dashboard.turnover_footer_net') }}</span>
                         </div>
                     </div>
 
@@ -354,12 +357,12 @@ const submitConsent = () => {
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                     <el-icon class="text-indigo-500"><OfficeBuilding /></el-icon>
-                                    Cơ cấu Nhân sự theo Khối
+                                    {{ t('dashboard.headcount_title') }}
                                 </span>
-                                <el-tag size="small" type="primary" round effect="light">{{ totalHeadcount }} NV</el-tag>
+                                <el-tag size="small" type="primary" round effect="light">{{ t('dashboard.headcount_tag', { count: totalHeadcount }) }}</el-tag>
                             </div>
                             <p class="text-[11px] text-slate-400 leading-tight mb-4">
-                                Phân bổ tỷ trọng định biên giữa các Khối chức năng và Chi nhánh
+                                {{ t('dashboard.headcount_desc') }}
                             </p>
 
                             <!-- Horizontal Multi-segment Bar -->
@@ -370,7 +373,7 @@ const submitConsent = () => {
                                     class="h-full transition-all"
                                     :class="departmentColors[idx % departmentColors.length].bg"
                                     :style="{ width: `${(dept.count / totalHeadcount) * 100}%` }"
-                                    :title="`${dept.name}: ${dept.count} người`"
+                                    :title="t('dashboard.headcount_bar_tooltip', { name: dept.name, count: dept.count })"
                                 ></div>
                             </div>
 
@@ -396,8 +399,8 @@ const submitConsent = () => {
                         </div>
 
                         <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Mô hình phân cấp 3 tầng</span>
-                            <span class="font-medium text-slate-600 dark:text-slate-300">Khối &gt; Phòng &gt; Team</span>
+                            <span>{{ t('dashboard.headcount_footer_model') }}</span>
+                            <span class="font-medium text-slate-600 dark:text-slate-300">{{ t('dashboard.headcount_footer_levels') }}</span>
                         </div>
                     </div>
 
@@ -407,43 +410,43 @@ const submitConsent = () => {
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                                     <el-icon class="text-emerald-500"><PieChart /></el-icon>
-                                    Chỉ số Sức khỏe Kỷ luật
+                                    {{ t('dashboard.health_title') }}
                                 </span>
-                                <el-tag size="small" type="success" round effect="light">Hạng A (Tốt)</el-tag>
+                                <el-tag size="small" type="success" round effect="light">{{ t('dashboard.health_grade_tag') }}</el-tag>
                             </div>
                             <p class="text-[11px] text-slate-400 leading-tight mb-4">
-                                Tỷ lệ tuân thủ giờ giấc làm việc & kỷ luật công tác toàn đơn vị
+                                {{ t('dashboard.health_desc') }}
                             </p>
 
                             <!-- Visual Rings / Multi-segment circle or metric bars -->
                             <div class="grid grid-cols-2 gap-3 mb-3">
                                 <div class="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 text-center">
                                     <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{{ health.on_time }}%</div>
-                                    <div class="text-[10px] font-medium text-emerald-700 dark:text-emerald-300 mt-0.5">Đúng giờ chuẩn</div>
+                                    <div class="text-[10px] font-medium text-emerald-700 dark:text-emerald-300 mt-0.5">{{ t('dashboard.health_on_time_label') }}</div>
                                 </div>
                                 <div class="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 text-center">
                                     <div class="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono">{{ health.late_early }}%</div>
-                                    <div class="text-[10px] font-medium text-amber-700 dark:text-amber-300 mt-0.5">Muộn / Về sớm</div>
+                                    <div class="text-[10px] font-medium text-amber-700 dark:text-amber-300 mt-0.5">{{ t('dashboard.health_late_label') }}</div>
                                 </div>
                                 <div class="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 text-center">
                                     <div class="text-xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">{{ health.leave }}%</div>
-                                    <div class="text-[10px] font-medium text-indigo-700 dark:text-indigo-300 mt-0.5">Phép có duyệt</div>
+                                    <div class="text-[10px] font-medium text-indigo-700 dark:text-indigo-300 mt-0.5">{{ t('dashboard.health_leave_label') }}</div>
                                 </div>
                                 <div class="p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-center">
                                     <div class="text-xl font-bold text-rose-600 dark:text-rose-400 font-mono">{{ health.absent }}%</div>
-                                    <div class="text-[10px] font-medium text-rose-700 dark:text-rose-300 mt-0.5">Vắng mặt</div>
+                                    <div class="text-[10px] font-medium text-rose-700 dark:text-rose-300 mt-0.5">{{ t('dashboard.health_absent_label') }}</div>
                                 </div>
                             </div>
 
                             <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                 <el-icon class="text-emerald-500 flex-shrink-0"><SuccessFilled /></el-icon>
-                                <span>Tỷ lệ vi phạm giờ công tác duy trì dưới mức cảnh báo quy chế 15%.</span>
+                                <span>{{ t('dashboard.health_notice') }}</span>
                             </div>
                         </div>
 
                         <div class="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Đánh giá mức độ chấp hành</span>
-                            <span class="font-medium text-emerald-600 dark:text-emerald-400">Đạt chuẩn ISO/HR</span>
+                            <span>{{ t('dashboard.health_footer_rating') }}</span>
+                            <span class="font-medium text-emerald-600 dark:text-emerald-400">{{ t('dashboard.health_footer_standard') }}</span>
                         </div>
                     </div>
                 </div>
@@ -455,42 +458,42 @@ const submitConsent = () => {
                 <div class="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h2 class="text-base font-bold text-slate-800 dark:text-white">Điểm danh & Quẹt thẻ Hôm nay</h2>
-                            <p class="text-xs text-slate-400">Dữ liệu thời gian thực từ Edge Collector Daemon qua HMAC-SHA256</p>
+                            <h2 class="text-base font-bold text-slate-800 dark:text-white">{{ t('dashboard.today_title') }}</h2>
+                            <p class="text-xs text-slate-400">{{ t('dashboard.today_subtitle') }}</p>
                         </div>
                         <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-medium">
-                            Live Sync Active
+                            {{ t('dashboard.live_sync_badge') }}
                         </span>
                     </div>
 
                     <el-table :data="todayAttendances" size="small" style="width: 100%" stripe>
-                        <el-table-column prop="code" label="Mã NV" width="100">
+                        <el-table-column prop="code" :label="t('dashboard.col_employee_code')" width="100">
                             <template #default="{ row }">
                                 <span class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{{ row.code }}</span>
                             </template>
                         </el-table-column>
-                        <el-table-column label="Họ và Tên">
+                        <el-table-column :label="t('dashboard.col_employee_name')">
                             <template #default="{ row }">
                                 <span class="font-medium text-slate-800 dark:text-slate-200 text-sm">{{ row.name }}</span>
                                 <span class="block text-[11px] text-slate-400">{{ row.dept }}</span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="in" label="Giờ Vào" width="90">
+                        <el-table-column prop="in" :label="t('dashboard.col_check_in')" width="90">
                             <template #default="{ row }">
                                 <span class="font-mono text-xs">{{ row.in }}</span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="out" label="Giờ Ra" width="90">
+                        <el-table-column prop="out" :label="t('dashboard.col_check_out')" width="90">
                             <template #default="{ row }">
                                 <span class="font-mono text-xs">{{ row.out }}</span>
                             </template>
                         </el-table-column>
-                        <el-table-column label="Trạng thái" width="140">
+                        <el-table-column :label="t('dashboard.col_status')" width="140">
                             <template #default="{ row }">
-                                <el-tag v-if="row.status === 'ON_TIME'" type="success" size="small" round>Đúng giờ</el-tag>
-                                <el-tag v-else-if="row.status === 'LATE'" type="warning" size="small" round>Đi muộn (12p)</el-tag>
-                                <el-tag v-else-if="row.status === 'WORKING'" type="primary" size="small" round>Đang làm việc</el-tag>
-                                <el-tag v-else-if="row.status === 'OVERTIME'" type="danger" size="small" round>OT 2.5h</el-tag>
+                                <el-tag v-if="row.status === 'ON_TIME'" type="success" size="small" round>{{ t('dashboard.attend_status_on_time') }}</el-tag>
+                                <el-tag v-else-if="row.status === 'LATE'" type="warning" size="small" round>{{ t('dashboard.attend_status_late') }}</el-tag>
+                                <el-tag v-else-if="row.status === 'WORKING'" type="primary" size="small" round>{{ t('dashboard.attend_status_working') }}</el-tag>
+                                <el-tag v-else-if="row.status === 'OVERTIME'" type="danger" size="small" round>{{ t('dashboard.attend_status_overtime') }}</el-tag>
                                 <el-tag v-else type="info" size="small" round>{{ row.status }}</el-tag>
                             </template>
                         </el-table-column>
@@ -500,8 +503,8 @@ const submitConsent = () => {
                 <!-- Career Timeline Preview (1 Col) -->
                 <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-5">
                     <div class="mb-4">
-                        <h2 class="text-base font-bold text-slate-800 dark:text-white">Cây Timeline Sự nghiệp</h2>
-                        <p class="text-xs text-slate-400">Effective Dating: Quản lý lịch sử nhân sự đa thời điểm</p>
+                        <h2 class="text-base font-bold text-slate-800 dark:text-white">{{ t('dashboard.career_title') }}</h2>
+                        <p class="text-xs text-slate-400">{{ t('dashboard.career_subtitle') }}</p>
                     </div>
 
                     <el-timeline class="text-xs">
@@ -525,43 +528,43 @@ const submitConsent = () => {
         <!-- Consent Modal (Article 137.1.b Labor Code 2019) -->
         <el-dialog
             v-model="isConsentModalOpen"
-            title="Đơn Thỏa thuận Đồng thuận Tự nguyện (Điều 137 BLLĐ 2019)"
+            :title="t('dashboard.consent_dialog_title')"
             width="560px"
         >
             <div class="space-y-4 text-sm text-slate-600 dark:text-slate-300">
                 <div class="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-200 text-xs leading-relaxed">
-                    <p class="font-semibold mb-1">CĂN CỨ ĐIỀU 137 KHOẢN 1 ĐIỂM B BỘ LUẬT LAO ĐỘNG 2019:</p>
-                    Người sử dụng lao động không được bố trí làm việc ban đêm (22:00 - 06:00) hoặc làm thêm giờ đối với người lao động đang nuôi con dưới 12 tháng tuổi, <strong>TRỪ TRƯỜNG HỢP ĐƯỢC NGƯỜI LAO ĐỘNG ĐỒNG Ý</strong>.
+                    <p class="font-semibold mb-1">{{ t('dashboard.consent_legal_heading') }}</p>
+                    {{ t('dashboard.consent_legal_body_1') }} <strong>{{ t('dashboard.consent_legal_emphasis') }}</strong>{{ t('dashboard.consent_legal_body_2') }}
                 </div>
 
                 <div class="space-y-2">
                     <el-checkbox v-model="isConsented">
                         <span class="text-xs leading-relaxed text-slate-800 dark:text-slate-200 font-medium whitespace-normal">
-                            Tôi xác nhận tự nguyện đồng thuận làm thêm giờ / làm việc ban đêm trong thời gian nuôi con dưới 12 tháng tuổi theo quy định tại Điều 137 BLLĐ 2019.
+                            {{ t('dashboard.consent_checkbox_text') }}
                         </span>
                     </el-checkbox>
                 </div>
 
                 <div class="space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Đường dẫn URL văn bản thỏa thuận (Tùy chọn - Giảm tải lưu trữ):
+                        {{ t('dashboard.consent_url_label') }}
                     </label>
                     <el-input
                         v-model="consentUrl"
-                        placeholder="https://drive.google.com/file/d/... hoặc link OneDrive nội bộ"
+                        :placeholder="t('dashboard.consent_url_placeholder')"
                         size="small"
                     />
                     <span class="text-[11px] text-slate-400">
-                        Hỗ trợ đính kèm URL Google Drive/OneDrive hoặc tải tệp trực tiếp để người duyệt đối soát.
+                        {{ t('dashboard.consent_url_hint') }}
                     </span>
                 </div>
             </div>
 
             <template #footer>
                 <div class="flex items-center justify-end space-x-2">
-                    <el-button @click="isConsentModalOpen = false">Hủy bỏ</el-button>
+                    <el-button @click="isConsentModalOpen = false">{{ t('dashboard.consent_btn_cancel') }}</el-button>
                     <el-button type="primary" :disabled="!isConsented" @click="submitConsent">
-                        Xác nhận & Gửi cam kết
+                        {{ t('dashboard.consent_btn_submit') }}
                     </el-button>
                 </div>
             </template>

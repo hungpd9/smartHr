@@ -1,7 +1,12 @@
 import { ref, computed } from 'vue';
 import axios from 'axios';
-import vi from 'element-plus/es/locale/lang/vi';
-import en from 'element-plus/es/locale/lang/en';
+import viEl from 'element-plus/es/locale/lang/vi';
+import enEl from 'element-plus/es/locale/lang/en';
+import { vi as viDict } from '../locales/vi';
+import { en as enDict } from '../locales/en';
+import type { SupportedLocale } from '../locales';
+
+export type { SupportedLocale };
 
 // Theme state
 const isDark = ref(false);
@@ -38,10 +43,9 @@ export const toggleTheme = () => {
 };
 
 // Language state
-export type SupportedLocale = 'vi' | 'en';
-const currentLang = ref<SupportedLocale>((localStorage.getItem('smart_hr_lang') as SupportedLocale) || 'vi');
+export const currentLang = ref<SupportedLocale>((localStorage.getItem('smart_hr_lang') as SupportedLocale) || 'vi');
 
-export const currentElLocale = computed(() => (currentLang.value === 'en' ? en : vi));
+export const currentElLocale = computed(() => (currentLang.value === 'en' ? enEl : viEl));
 
 export const setLanguage = (lang: SupportedLocale) => {
     currentLang.value = lang;
@@ -49,40 +53,67 @@ export const setLanguage = (lang: SupportedLocale) => {
     syncPreferenceToServer({ locale_preference: lang });
 };
 
-// Từ điển dịch thuật gọn gàng cho giao diện dùng chung
-const translations: Record<string, Record<SupportedLocale, string>> = {
-    // Navigation
-    dashboard: { vi: 'Bàn làm việc', en: 'Dashboard' },
-    core_hr: { vi: 'Hồ sơ & Tổ chức (CoreHR)', en: 'Core HR & Career' },
-    employee_children: { vi: 'Con nhỏ & Phúc lợi', en: 'Children & Family Welfare' },
-    policy: { vi: 'Quy chế & Thuế (Policy)', en: 'Policy & Tax Engine' },
-    attendance: { vi: 'Chấm công (Attendance)', en: 'Time & Attendance' },
-    rostering: { vi: 'Phân ca (Rostering)', en: 'Rostering & Shift' },
-    leaves: { vi: 'Nghỉ phép & OT', en: 'Leave & Overtime' },
-    workflow: { vi: 'Phê duyệt (Workflow)', en: 'Approval Workflow' },
-    payroll: { vi: 'Bảng lương (Payroll)', en: 'Payroll Engine' },
-    compliance: { vi: 'Tuân thủ (Compliance)', en: 'Compliance & Audit' },
-    access_control: { vi: 'Phân quyền & Tài nguyên', en: 'Access Control & Matrix' },
-    notifications: { vi: 'Thông báo', en: 'Notifications' },
-    reports: { vi: 'Báo cáo & Phân tích', en: 'Reports & Analytics' },
-    licensing: { vi: 'Bản quyền & Máy chấm công', en: 'Licensing & Edge' },
+// Tra cứu giá trị theo key phẳng, dot-notation, hoặc tự động quét các nhóm phổ biến
+const getNestedValue = (obj: any, path: string): string | undefined => {
+    if (!obj || typeof obj !== 'object') return undefined;
 
-    // Header & Actions
-    headquarters: { vi: 'Hội sở chính (HN)', en: 'Hanoi HQ Branch' },
-    compliance_badge: { vi: 'Tuân thủ Bộ luật Lao động & Thuế 2026', en: 'Labor Code 2019 & Tax 2026 Compliant' },
-    light_mode: { vi: 'Chuyển giao diện Sáng', en: 'Switch to Light Mode' },
-    dark_mode: { vi: 'Chuyển giao diện Tối', en: 'Switch to Dark Mode' },
-    system_notifications: { vi: 'Thông báo hệ thống', en: 'System Notifications' },
-    mark_all_read: { vi: 'Đánh dấu đã đọc', en: 'Mark all as read' },
-    no_new_notifications: { vi: 'Hiện không có thông báo mới', en: 'No new notifications' },
+    // 1. Kiểm tra trực tiếp nếu giá trị là string
+    if (path in obj && typeof obj[path] === 'string') {
+        return obj[path];
+    }
 
-    // License footer
-    enterprise_licensed: { vi: 'Bản quyền Doanh nghiệp', en: 'Enterprise Licensed' },
-    data_anchored: { vi: 'Bảo mật & Toàn vẹn CSDL', en: 'Cryptographically Secured' },
+    // 2. Tra cứu phân cấp theo dot-notation (ví dụ: 'nav.dashboard', 'common.save')
+    if (path.includes('.')) {
+        const keys = path.split('.');
+        let current = obj;
+        for (const k of keys) {
+            if (current && typeof current === 'object' && k in current) {
+                current = current[k];
+            } else {
+                current = undefined;
+                break;
+            }
+        }
+        if (typeof current === 'string') return current;
+    }
+
+    // 3. Hỗ trợ tra cứu nhanh khóa đơn trong các nhóm phổ biến (Auto-lookup)
+    const scanSections = ['nav', 'header', 'footer', 'common', 'status', 'auth', 'dashboard', 'attendance', 'payroll', 'licensing', 'ot_caps', 'leave', 'workflow', 'core_hr', 'rostering', 'policy', 'compliance', 'employee_children', 'access_control', 'notifications', 'reports', 'help'];
+    for (const sec of scanSections) {
+        if (obj[sec] && typeof obj[sec] === 'object' && typeof obj[sec][path] === 'string') {
+            return obj[sec][path];
+        }
+    }
+
+    return undefined;
 };
 
-export const t = (key: string): string => {
-    return translations[key]?.[currentLang.value] || key;
+// Hàm dịch thuật chuẩn mực, hỗ trợ fallback và tham số nội suy
+export const t = (key: string, params?: Record<string, string | number>, fallback?: string): string => {
+    const lang = currentLang.value;
+    const currentDict = lang === 'en' ? enDict : viDict;
+
+    // Tra cứu trong ngôn ngữ hiện tại
+    let text = getNestedValue(currentDict, key);
+
+    // Tự động fallback sang tiếng Việt nếu không có bản dịch tiếng Anh
+    if (!text && lang !== 'vi') {
+        text = getNestedValue(viDict, key);
+    }
+
+    // Nếu vẫn không có, trả về fallback hoặc chính key
+    if (!text) {
+        text = fallback !== undefined ? fallback : key;
+    }
+
+    // Thay thế tham số {paramName} nếu có
+    if (params && typeof text === 'string') {
+        Object.entries(params).forEach(([paramKey, paramVal]) => {
+            text = (text as string).replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramVal));
+        });
+    }
+
+    return text;
 };
 
 export function useThemeAndLocale() {

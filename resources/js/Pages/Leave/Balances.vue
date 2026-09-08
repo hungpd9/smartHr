@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import {
     Briefcase,
     Calendar,
@@ -66,23 +67,17 @@ interface DepartmentItem {
 
 const props = defineProps<{
     balances: LeaveBalanceItem[];
-    kpis: {
-        total_statutory_allocated: number;
-        total_seniority_bonus: number;
-        total_welfare_bonus: number;
-        total_carried_over: number;
-        total_used: number;
-        total_remaining: number;
-        total_comp_off_remaining: number;
-    };
+    kpis: LeaveKpis;
     departments: DepartmentItem[];
-    employeesList: { id: number; user_code: string; full_name: string }[];
+    employeesList: { id: number; name: string; user_code: string }[];
     filters: {
         year: number;
         department_id: number | null;
         search: string | null;
     };
 }>();
+
+const { t } = useThemeAndLocale();
 
 // Filter State
 const selectedYear = ref<number>(props.filters.year);
@@ -136,18 +131,18 @@ const openAdjustDialog = (balance: LeaveBalanceItem) => {
 
 const submitAdjust = () => {
     if (!adjustForm.description) {
-        ElMessage.warning('Vui lòng nhập lý do điều chỉnh để lưu vết kiểm toán.');
+        ElMessage.warning(t('leave.adjust_reason_required'));
         return;
     }
 
     adjustForm.post('/leave/adjust', {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Điều chỉnh quỹ phép thành công!');
+            ElMessage.success(t('leave.adjust_success'));
             adjustDialogVisible.value = false;
         },
         onError: (err) => {
-            ElMessage.error(Object.values(err)[0] as string || 'Có lỗi xảy ra khi điều chỉnh quỹ phép.');
+            ElMessage.error(Object.values(err)[0] as string || t('leave.adjust_error'));
         },
     });
 };
@@ -189,18 +184,18 @@ const estimatedCompOffDays = computed(() => {
 
 const submitConvertOt = () => {
     if (!convertForm.employee_id) {
-        ElMessage.warning('Vui lòng chọn nhân viên cần quy đổi.');
+        ElMessage.warning(t('leave.convert_employee_required'));
         return;
     }
 
     convertForm.post('/leave/convert-ot', {
         preserveScroll: true,
         onSuccess: () => {
-            ElMessage.success('Quy đổi làm thêm giờ sang nghỉ bù thành công!');
+            ElMessage.success(t('leave.convert_success'));
             convertOtDialogVisible.value = false;
         },
         onError: (err) => {
-            ElMessage.error(Object.values(err)[0] as string || 'Có lỗi xảy ra khi quy đổi.');
+            ElMessage.error(Object.values(err)[0] as string || t('leave.convert_error'));
         },
     });
 };
@@ -209,11 +204,11 @@ const submitConvertOt = () => {
 const isRecalculating = ref(false);
 const handleRecalculate = () => {
     ElMessageBox.confirm(
-        `Thao tác này sẽ tự động tính lại phép thâm niên, ngày phép phúc lợi và cập nhật hạn dùng phép tồn cho toàn bộ nhân sự năm ${selectedYear.value}. Bạn có chắc chắn muốn thực hiện?`,
-        'Xác nhận Tính toán lại Quỹ Phép',
+        t('leave.confirm_recalc_msg', { year: selectedYear.value }),
+        t('leave.confirm_recalc_title'),
         {
-            confirmButtonText: 'Đồng ý',
-            cancelButtonText: 'Hủy',
+            confirmButtonText: t('common.confirm'),
+            cancelButtonText: t('common.cancel'),
             type: 'warning',
         }
     ).then(() => {
@@ -224,11 +219,11 @@ const handleRecalculate = () => {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    ElMessage.success('Đã tính toán và cập nhật quỹ phép thành công!');
+                    ElMessage.success(t('leave.recalc_success'));
                     isRecalculating.value = false;
                 },
                 onError: () => {
-                    ElMessage.error('Có lỗi xảy ra khi tính toán quỹ phép.');
+                    ElMessage.error(t('common.error'));
                     isRecalculating.value = false;
                 },
             }
@@ -255,15 +250,15 @@ const getTransactionTagType = (type: string): string => {
 const formatTransactionName = (type: string): string => {
     switch (type) {
         case 'ACCRUAL':
-            return 'Tích lũy phép';
+            return t('leave.txn_accrual');
         case 'USAGE':
-            return 'Nghỉ phép';
+            return t('leave.txn_usage');
         case 'EXPIRATION':
-            return 'Hết hạn phép tồn';
+            return t('leave.txn_expiration');
         case 'ADJUSTMENT':
-            return 'Điều chỉnh thủ công';
+            return t('leave.txn_adjustment');
         case 'COMPENSATION_CONVERT':
-            return 'Đổi OT sang nghỉ bù';
+            return t('leave.txn_comp_convert');
         default:
             return type;
     }
@@ -272,7 +267,7 @@ const formatTransactionName = (type: string): string => {
 
 <template>
     <AppLayout>
-        <Head title="Quản trị Quỹ Phép Năm & Nghỉ Bù - Smart-HR Enterprise" />
+        <Head :title="t('leave.page_title')" />
 
         <div class="space-y-6">
             <!-- Header Banner Doanh nghiệp Chuyên nghiệp -->
@@ -285,10 +280,10 @@ const formatTransactionName = (type: string): string => {
                             </div>
                             <div>
                                 <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                                    Quản trị Quỹ Phép Năm & Nghỉ Bù
+                                    {{ t('leave.title') }}
                                 </h1>
                                 <p class="mt-1 text-sm text-emerald-100/80">
-                                    Smart-HR Enterprise • Tự động tăng phép thâm niên (Đ.114 BLLĐ), tích hợp phúc lợi doanh nghiệp & quy đổi làm thêm giờ sang nghỉ bù
+                                    {{ t('leave.subtitle') }}
                                 </p>
                             </div>
                         </div>
@@ -304,7 +299,7 @@ const formatTransactionName = (type: string): string => {
                             @click="handleRecalculate"
                             class="!rounded-xl"
                         >
-                            Tính toán & Khởi tạo Năm {{ selectedYear }}
+                            {{ t('leave.recalculate_btn', { year: selectedYear }) }}
                         </el-button>
 
                         <el-button
@@ -314,7 +309,7 @@ const formatTransactionName = (type: string): string => {
                             @click="openConvertOtDialog()"
                             class="!rounded-xl !text-slate-900 !font-semibold"
                         >
-                            Quy đổi OT sang Nghỉ bù
+                            {{ t('leave.convert_ot_btn') }}
                         </el-button>
                     </div>
                 </div>
@@ -327,68 +322,68 @@ const formatTransactionName = (type: string): string => {
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition-all hover:shadow-md">
                     <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-                        <span>Định mức Chuẩn (Đ.113)</span>
+                        <span>{{ t('leave.kpi_statutory') }}</span>
                         <el-icon class="text-blue-500"><Document /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-slate-800 dark:text-slate-100">
-                        {{ kpis.total_statutory_allocated }} <span class="text-xs font-normal text-slate-400">ngày</span>
+                        {{ kpis.total_statutory_allocated }} <span class="text-xs font-normal text-slate-400">{{ t('leave.days_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-slate-400">12 - 14 ngày/năm</div>
+                    <div class="mt-1 text-[11px] text-slate-400">{{ t('leave.statutory_range') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition-all hover:shadow-md">
                     <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-                        <span>Phép Thâm Niên (Đ.114)</span>
+                        <span>{{ t('leave.kpi_seniority') }}</span>
                         <el-icon class="text-emerald-500"><Timer /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                        +{{ kpis.total_seniority_bonus }} <span class="text-xs font-normal text-slate-400">ngày</span>
+                        +{{ kpis.total_seniority_bonus }} <span class="text-xs font-normal text-slate-400">{{ t('leave.days_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">+1 ngày / mỗi 5 năm</div>
+                    <div class="mt-1 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">{{ t('leave.seniority_rule') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition-all hover:shadow-md">
                     <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-                        <span>Phép Phúc Lợi Cty</span>
+                        <span>{{ t('leave.kpi_welfare') }}</span>
                         <el-icon class="text-indigo-500"><Collection /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">
-                        +{{ kpis.total_welfare_bonus }} <span class="text-xs font-normal text-slate-400">ngày</span>
+                        +{{ kpis.total_welfare_bonus }} <span class="text-xs font-normal text-slate-400">{{ t('leave.days_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-indigo-600/80 dark:text-indigo-400/80">Từ welfare_schemes</div>
+                    <div class="mt-1 text-[11px] text-indigo-600/80 dark:text-indigo-400/80">{{ t('leave.from_welfare') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition-all hover:shadow-md">
                     <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-                        <span>Phép Tồn Chuyển Sang</span>
+                        <span>{{ t('leave.kpi_carried') }}</span>
                         <el-icon class="text-amber-500"><Calendar /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-                        {{ kpis.total_carried_over }} <span class="text-xs font-normal text-slate-400">ngày</span>
+                        {{ kpis.total_carried_over }} <span class="text-xs font-normal text-slate-400">{{ t('leave.days_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-amber-600/80 dark:text-amber-400/80">Hạn chót 31/03</div>
+                    <div class="mt-1 text-[11px] text-amber-600/80 dark:text-amber-400/80">{{ t('leave.deadline_march') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition-all hover:shadow-md">
                     <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-                        <span>Đã Dùng / Khả Dụng</span>
+                        <span>{{ t('leave.kpi_used_available') }}</span>
                         <el-icon class="text-cyan-500"><Histogram /></el-icon>
                     </div>
                     <div class="mt-2 text-xl font-extrabold text-slate-800 dark:text-slate-100">
                         <span class="text-rose-500">{{ kpis.total_used }}</span> / <span class="text-emerald-600">{{ kpis.total_remaining }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-slate-400">Số dư phép năm</div>
+                    <div class="mt-1 text-[11px] text-slate-400">{{ t('leave.annual_leave_balance') }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm transition-all hover:shadow-md">
                     <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-                        <span>Quỹ Nghỉ Bù (Comp-off)</span>
+                        <span>{{ t('leave.kpi_comp_off') }}</span>
                         <el-icon class="text-purple-500"><Coin /></el-icon>
                     </div>
                     <div class="mt-2 text-2xl font-extrabold text-purple-600 dark:text-purple-400">
-                        {{ kpis.total_comp_off_remaining }} <span class="text-xs font-normal text-slate-400">ngày</span>
+                        {{ kpis.total_comp_off_remaining }} <span class="text-xs font-normal text-slate-400">{{ t('leave.days_unit') }}</span>
                     </div>
-                    <div class="mt-1 text-[11px] text-purple-600/80 dark:text-purple-400/80">Tích lũy từ làm thêm giờ</div>
+                    <div class="mt-1 text-[11px] text-purple-600/80 dark:text-purple-400/80">{{ t('leave.ot_accumulated') }}</div>
                 </div>
             </div>
 
@@ -397,7 +392,7 @@ const formatTransactionName = (type: string): string => {
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div class="flex flex-wrap items-center gap-3">
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Năm:</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ t('ot_caps.filter_year') }}</span>
                             <el-select
                                 v-model="selectedYear"
                                 @change="handleYearChange"
@@ -411,10 +406,10 @@ const formatTransactionName = (type: string): string => {
                         </div>
 
                         <div class="flex items-center gap-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Phòng ban:</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ t('ot_caps.filter_dept') }}</span>
                             <el-select
                                 v-model="selectedDepartment"
-                                placeholder="Tất cả phòng ban"
+                                :placeholder="t('ot_caps.all_departments')"
                                 clearable
                                 @change="applyFilters"
                                 class="!w-48"
@@ -432,7 +427,7 @@ const formatTransactionName = (type: string): string => {
                     <div class="flex items-center gap-3">
                         <el-input
                             v-model="searchKeyword"
-                            placeholder="Tìm kiếm mã NV, họ tên..."
+                            :placeholder="t('leave.search_placeholder')"
                             :prefix-icon="Search"
                             clearable
                             @clear="applyFilters"
@@ -440,7 +435,7 @@ const formatTransactionName = (type: string): string => {
                             class="!w-64"
                         />
                         <el-button type="primary" :icon="Search" @click="applyFilters" class="!rounded-xl">
-                            Tìm
+                            {{ t('leave.search_btn') }}
                         </el-button>
                     </div>
                 </div>
@@ -452,9 +447,9 @@ const formatTransactionName = (type: string): string => {
                     :data="balances"
                     stripe
                     style="width: 100%"
-                    empty-text="Chưa có dữ liệu quỹ phép cho năm này. Vui lòng bấm 'Tính toán & Khởi tạo' phía trên."
+                    :empty-text="t('leave.empty_balances')"
                 >
-                    <el-table-column label="Nhân viên" min-width="220">
+                    <el-table-column :label="t('leave.col_employee')" min-width="220">
                         <template #default="{ row }">
                             <div class="flex items-center gap-3 py-1">
                                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-sm border border-slate-200 dark:border-slate-700">
@@ -472,76 +467,76 @@ const formatTransactionName = (type: string): string => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Phòng ban / Vị trí" min-width="180">
+                    <el-table-column :label="t('leave.col_dept_position')" min-width="180">
                         <template #default="{ row }">
                             <div class="text-xs text-slate-700 dark:text-slate-200 font-medium">
-                                {{ row.employee?.current_timeline?.department?.name || 'Chưa phân bổ' }}
+                                {{ row.employee?.current_timeline?.department?.name || t('leave.unassigned') }}
                             </div>
                             <div class="text-[11px] text-slate-400">
-                                {{ row.employee?.current_timeline?.position?.name || 'Nhân viên' }}
+                                {{ row.employee?.current_timeline?.position?.name || t('leave.position_default') }}
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Thâm niên" min-width="130">
+                    <el-table-column :label="t('leave.col_seniority')" min-width="130">
                         <template #default="{ row }">
                             <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                {{ row.employee?.seniority_text || 'Chưa rõ' }}
+                                {{ row.employee?.seniority_text || t('leave.seniority_unknown') }}
                             </div>
                             <div v-if="row.seniority_bonus_days > 0" class="mt-0.5">
                                 <el-tag size="small" type="success" effect="plain" class="!text-[10px] !px-1.5">
-                                    +{{ row.seniority_bonus_days }}d thâm niên
+                                    +{{ row.seniority_bonus_days }}d {{ t('leave.col_seniority') }}
                                 </el-tag>
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Loại quỹ" width="140">
+                    <el-table-column :label="t('leave.col_fund_type')" width="140">
                         <template #default="{ row }">
                             <el-tag
                                 :type="row.leave_type === 'ANNUAL' ? 'primary' : 'warning'"
                                 effect="light"
                                 class="!rounded-lg font-semibold"
                             >
-                                {{ row.leave_type === 'ANNUAL' ? 'Phép Năm' : 'Nghỉ Bù OT' }}
+                                {{ row.leave_type === 'ANNUAL' ? t('leave.fund_annual') : t('leave.fund_comp_off') }}
                             </el-tag>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Cơ cấu định mức" min-width="210">
+                    <el-table-column :label="t('leave.col_allocation')" min-width="210">
                         <template #default="{ row }">
                             <div v-if="row.leave_type === 'ANNUAL'" class="text-xs space-y-0.5">
                                 <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
-                                    <span>Chuẩn (Đ.113):</span>
+                                    <span>{{ t('leave.statutory_abbr') }}</span>
                                     <span class="font-medium text-slate-800 dark:text-slate-200">{{ row.statutory_allocated_days }}d</span>
                                 </div>
                                 <div v-if="row.seniority_bonus_days > 0" class="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
-                                    <span>Thâm niên (Đ.114):</span>
+                                    <span>{{ t('leave.seniority_abbr') }}</span>
                                     <span class="font-medium">+{{ row.seniority_bonus_days }}d</span>
                                 </div>
                                 <div v-if="row.welfare_bonus_days > 0" class="flex items-center justify-between text-indigo-600 dark:text-indigo-400">
-                                    <span>Phúc lợi Cty:</span>
+                                    <span>{{ t('leave.welfare_abbr') }}</span>
                                     <span class="font-medium">+{{ row.welfare_bonus_days }}d</span>
                                 </div>
                                 <div class="border-t border-slate-100 dark:border-slate-800 pt-0.5 flex items-center justify-between font-bold text-slate-900 dark:text-white">
-                                    <span>Tổng hưởng:</span>
+                                    <span>{{ t('leave.total_entitled_abbr') }}</span>
                                     <span>{{ row.total_entitled_days }}d</span>
                                 </div>
                             </div>
                             <div v-else class="text-xs text-purple-600 dark:text-purple-400 font-semibold">
-                                {{ row.comp_off_hours }} giờ OT quy đổi = {{ row.total_entitled_days }} ngày nghỉ bù
+                                {{ row.comp_off_hours }} {{ t('leave.hours_unit') }} OT = {{ row.total_entitled_days }} {{ t('leave.days_unit') }}
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Phép tồn (Carry-over)" min-width="150">
+                    <el-table-column :label="t('leave.col_carried_over')" min-width="150">
                         <template #default="{ row }">
                             <div v-if="row.carried_over_days > 0">
                                 <div class="font-bold text-amber-600 dark:text-amber-400">
-                                    {{ row.carried_over_days }} ngày
+                                    {{ row.carried_over_days }} {{ t('leave.days_unit') }}
                                 </div>
                                 <div class="text-[11px] text-slate-400">
-                                    Hạn: {{ row.carried_over_expiry_date || '31/03' }}
+                                    {{ t('leave.expiry_label') }} {{ row.carried_over_expiry_date || '31/03' }}
                                 </div>
                             </div>
                             <div v-else class="text-xs text-slate-400">
@@ -550,7 +545,7 @@ const formatTransactionName = (type: string): string => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Đã dùng" width="100">
+                    <el-table-column :label="t('leave.col_used')" width="100">
                         <template #default="{ row }">
                             <span class="font-semibold text-rose-500">
                                 {{ row.used_days }}
@@ -559,21 +554,21 @@ const formatTransactionName = (type: string): string => {
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Khả dụng còn lại" width="140" align="right">
+                    <el-table-column :label="t('leave.col_remaining')" width="140" align="right">
                         <template #default="{ row }">
                             <div class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                                {{ row.remaining_days }} <span class="text-xs font-normal text-slate-400">ngày</span>
+                                {{ row.remaining_days }} <span class="text-xs font-normal text-slate-400">{{ t('leave.days_unit') }}</span>
                             </div>
                             <div v-if="row.pending_days > 0" class="text-[11px] text-amber-500">
-                                (Đang duyệt: {{ row.pending_days }}d)
+                                ({{ t('leave.pending_review') }} {{ row.pending_days }}d)
                             </div>
                         </template>
                     </el-table-column>
 
-                    <el-table-column label="Thao tác" width="180" align="center" fixed="right">
+                    <el-table-column :label="t('leave.col_actions')" width="180" align="center" fixed="right">
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-1">
-                                <el-tooltip content="Điều chỉnh số dư quỹ phép" placement="top">
+                                <el-tooltip :content="t('leave.tooltip_adjust')" placement="top">
                                     <el-button
                                         size="small"
                                         type="primary"
@@ -584,7 +579,7 @@ const formatTransactionName = (type: string): string => {
                                     />
                                 </el-tooltip>
 
-                                <el-tooltip content="Xem lịch sử biến động quỹ phép" placement="top">
+                                <el-tooltip :content="t('leave.tooltip_history')" placement="top">
                                     <el-button
                                         size="small"
                                         type="info"
@@ -595,7 +590,7 @@ const formatTransactionName = (type: string): string => {
                                     />
                                 </el-tooltip>
 
-                                <el-tooltip content="Quy đổi giờ làm thêm sang nghỉ bù" placement="top">
+                                <el-tooltip :content="t('leave.tooltip_convert')" placement="top">
                                     <el-button
                                         size="small"
                                         type="warning"
@@ -615,7 +610,7 @@ const formatTransactionName = (type: string): string => {
         <!-- Dialog: Điều chỉnh Quỹ Phép Thủ Công -->
         <el-dialog
             v-model="adjustDialogVisible"
-            title="Điều chỉnh Quỹ Phép Thủ Công"
+            :title="t('leave.adjust_dialog_title')"
             width="520px"
             destroy-on-close
             class="!rounded-2xl"
@@ -623,30 +618,30 @@ const formatTransactionName = (type: string): string => {
             <div v-if="activeBalanceForAdjust" class="space-y-4">
                 <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-sm">
                     <div class="flex justify-between">
-                        <span class="text-slate-500">Nhân viên:</span>
+                        <span class="text-slate-500">{{ t('leave.label_employee') }}:</span>
                         <span class="font-bold text-slate-800 dark:text-slate-200">{{ activeBalanceForAdjust.employee?.full_name }} ({{ activeBalanceForAdjust.employee?.user_code }})</span>
                     </div>
                     <div class="flex justify-between mt-1">
-                        <span class="text-slate-500">Loại quỹ / Năm:</span>
-                        <span class="font-semibold text-emerald-600">{{ activeBalanceForAdjust.leave_type === 'ANNUAL' ? 'Phép Năm' : 'Nghỉ Bù' }} - Năm {{ activeBalanceForAdjust.year }}</span>
+                        <span class="text-slate-500">{{ t('leave.fund_year_label') }}</span>
+                        <span class="font-semibold text-emerald-600">{{ activeBalanceForAdjust.leave_type === 'ANNUAL' ? t('leave.fund_annual') : t('leave.fund_comp_off') }} - {{ t('leave.year_prefix') }} {{ activeBalanceForAdjust.year }}</span>
                     </div>
                     <div class="flex justify-between mt-1">
-                        <span class="text-slate-500">Số dư khả dụng hiện tại:</span>
-                        <span class="font-bold text-base text-slate-900 dark:text-white">{{ activeBalanceForAdjust.remaining_days }} ngày</span>
+                        <span class="text-slate-500">{{ t('leave.current_balance_label') }}</span>
+                        <span class="font-bold text-base text-slate-900 dark:text-white">{{ activeBalanceForAdjust.remaining_days }} {{ t('leave.days_unit') }}</span>
                     </div>
                 </div>
 
                 <el-form label-position="top">
-                    <el-form-item label="Loại biến động">
+                    <el-form-item :label="t('leave.tx_type_label')">
                         <el-select v-model="adjustForm.transaction_type" class="w-full">
-                            <el-option value="ADJUSTMENT" label="Điều chỉnh thủ công (ADJUSTMENT)" />
-                            <el-option value="ACCRUAL" label="Cộng bù tích lũy (ACCRUAL)" />
-                            <el-option value="USAGE" label="Trừ ngày phép đã dùng (USAGE)" />
-                            <el-option value="EXPIRATION" label="Thu hồi hết hạn phép tồn (EXPIRATION)" />
+                            <el-option value="ADJUSTMENT" :label="t('leave.tx_option_adjustment')" />
+                            <el-option value="ACCRUAL" :label="t('leave.tx_option_accrual')" />
+                            <el-option value="USAGE" :label="t('leave.tx_option_usage')" />
+                            <el-option value="EXPIRATION" :label="t('leave.tx_option_expiration')" />
                         </el-select>
                     </el-form-item>
 
-                    <el-form-item label="Số ngày biến động (+ tăng thêm, - trừ bớt)">
+                    <el-form-item :label="t('leave.adjust_days_label')">
                         <el-input-number
                             v-model="adjustForm.days"
                             :step="0.5"
@@ -654,16 +649,16 @@ const formatTransactionName = (type: string): string => {
                             class="!w-full"
                         />
                         <div class="mt-1 text-xs text-slate-400">
-                            Ví dụ: Nhập 1.0 để cộng thêm 1 ngày; nhập -0.5 để giảm trừ nửa ngày.
+                            {{ t('leave.adjust_days_helper') }}
                         </div>
                     </el-form-item>
 
-                    <el-form-item label="Lý do điều chỉnh (Bắt buộc lưu vết kiểm toán Audit Trail)" required>
+                    <el-form-item :label="t('leave.adjust_reason_label')" required>
                         <el-input
                             v-model="adjustForm.description"
                             type="textarea"
                             :rows="3"
-                            placeholder="Ghi rõ căn cứ quyết định, đơn từ đính kèm hoặc sai số cần hiệu chỉnh..."
+                            :placeholder="t('leave.adjust_reason_placeholder')"
                         />
                     </el-form-item>
                 </el-form>
@@ -671,9 +666,9 @@ const formatTransactionName = (type: string): string => {
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="adjustDialogVisible = false">Hủy</el-button>
+                    <el-button @click="adjustDialogVisible = false">{{ t('common.cancel') }}</el-button>
                     <el-button type="primary" :loading="adjustForm.processing" @click="submitAdjust">
-                        Xác nhận Điều chỉnh
+                        {{ t('leave.btn_confirm_adjust') }}
                     </el-button>
                 </div>
             </template>
@@ -682,7 +677,7 @@ const formatTransactionName = (type: string): string => {
         <!-- Drawer: Lịch sử Biến động Quỹ Phép -->
         <el-drawer
             v-model="historyDrawerVisible"
-            title="Lịch sử Biến động Quỹ Phép"
+            :title="t('leave.history_drawer_title')"
             size="480px"
             destroy-on-close
         >
@@ -692,7 +687,7 @@ const formatTransactionName = (type: string): string => {
                         {{ activeBalanceForHistory.employee?.full_name }} ({{ activeBalanceForHistory.employee?.user_code }})
                     </div>
                     <div class="text-xs text-slate-500 mt-0.5">
-                        Quỹ: {{ activeBalanceForHistory.leave_type }} • Năm: {{ activeBalanceForHistory.year }} • Số dư: {{ activeBalanceForHistory.remaining_days }} ngày
+                        {{ t('leave.history_summary', { pool: activeBalanceForHistory.leave_type, year: activeBalanceForHistory.year, balance: activeBalanceForHistory.remaining_days, days: t('leave.days_unit') }) }}
                     </div>
                 </div>
 
@@ -711,18 +706,18 @@ const formatTransactionName = (type: string): string => {
                                         {{ formatTransactionName(trans.transaction_type) }}
                                     </el-tag>
                                     <span class="font-bold font-mono text-sm" :class="Number(trans.days) >= 0 ? 'text-emerald-600' : 'text-rose-500'">
-                                        {{ Number(trans.days) >= 0 ? '+' : '' }}{{ trans.days }} ngày
+                                        {{ Number(trans.days) >= 0 ? '+' : '' }}{{ trans.days }} {{ t('leave.days_unit') }}
                                     </span>
                                 </div>
                                 <div class="mt-2 text-xs text-slate-600 dark:text-slate-300">
-                                    {{ trans.description || 'Không có mô tả' }}
+                                    {{ trans.description || t('leave.no_description') }}
                                 </div>
                             </div>
                         </el-timeline-item>
                     </el-timeline>
                 </div>
                 <div v-else class="text-center py-8 text-slate-400 text-sm">
-                    Chưa có giao dịch biến động nào được ghi nhận.
+                    {{ t('leave.no_transactions') }}
                 </div>
             </div>
         </el-drawer>
@@ -730,18 +725,18 @@ const formatTransactionName = (type: string): string => {
         <!-- Dialog: Quy đổi OT sang Nghỉ bù -->
         <el-dialog
             v-model="convertOtDialogVisible"
-            title="Quy đổi Giờ Làm Thêm (OT) sang Nghỉ Bù"
+            :title="t('leave.convert_dialog_title')"
             width="500px"
             destroy-on-close
             class="!rounded-2xl"
         >
             <div class="space-y-4">
                 <el-form label-position="top">
-                    <el-form-item label="Nhân viên" required>
+                    <el-form-item :label="t('leave.label_employee')" required>
                         <el-select
                             v-model="convertForm.employee_id"
                             filterable
-                            placeholder="Chọn nhân sự"
+                            :placeholder="t('leave.select_employee_placeholder')"
                             class="w-full"
                         >
                             <el-option
@@ -754,16 +749,16 @@ const formatTransactionName = (type: string): string => {
                     </el-form-item>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <el-form-item label="Năm áp dụng" required>
+                        <el-form-item :label="t('leave.convert_year_label')" required>
                             <el-input-number v-model="convertForm.year" :min="2020" :max="2030" class="!w-full" />
                         </el-form-item>
 
-                        <el-form-item label="Tỷ lệ quy đổi (giờ/ngày)" required>
+                        <el-form-item :label="t('leave.convert_rate_label')" required>
                             <el-input-number v-model="convertForm.conversion_rate" :min="1" :max="24" class="!w-full" />
                         </el-form-item>
                     </div>
 
-                    <el-form-item label="Số giờ làm thêm (OT) quy đổi" required>
+                    <el-form-item :label="t('leave.convert_hours_label')" required>
                         <el-input-number
                             v-model="convertForm.ot_hours"
                             :step="1.0"
@@ -775,14 +770,14 @@ const formatTransactionName = (type: string): string => {
 
                     <!-- Kết quả xem trước -->
                     <div class="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 text-sm flex items-center justify-between">
-                        <span>Số ngày nghỉ bù tích lũy:</span>
-                        <span class="text-lg font-bold text-purple-700 dark:text-purple-300">+{{ estimatedCompOffDays }} ngày công</span>
+                        <span>{{ t('leave.convert_preview_label') }}</span>
+                        <span class="text-lg font-bold text-purple-700 dark:text-purple-300">+{{ estimatedCompOffDays }} {{ t('leave.workdays_unit') }}</span>
                     </div>
 
-                    <el-form-item label="Ghi chú quy đổi">
+                    <el-form-item :label="t('leave.convert_note_label')">
                         <el-input
                             v-model="convertForm.description"
-                            placeholder="VD: Nhân viên đăng ký nghỉ bù thay vì nhận lương OT..."
+                            :placeholder="t('leave.convert_note_placeholder')"
                         />
                     </el-form-item>
                 </el-form>
@@ -790,9 +785,9 @@ const formatTransactionName = (type: string): string => {
 
             <template #footer>
                 <div class="flex justify-end gap-2">
-                    <el-button @click="convertOtDialogVisible = false">Hủy</el-button>
+                    <el-button @click="convertOtDialogVisible = false">{{ t('common.cancel') }}</el-button>
                     <el-button type="primary" :loading="convertForm.processing" @click="submitConvertOt">
-                        Thực hiện Quy đổi
+                        {{ t('leave.btn_submit_convert') }}
                     </el-button>
                 </div>
             </template>

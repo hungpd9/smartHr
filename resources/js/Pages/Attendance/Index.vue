@@ -4,6 +4,7 @@ import { Head, router, useForm } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
 import {
     Clock,
     Calendar,
@@ -200,6 +201,8 @@ const props = defineProps<{
     canApprove: boolean;
 }>();
 
+const { t } = useThemeAndLocale();
+
 // State điều hướng View
 const currentView = ref(props.view || 'workmonth');
 const currentMonth = ref(props.monthYear);
@@ -283,25 +286,29 @@ const handleApproveSingle = (attendanceId?: number | null) => {
     if (!attendanceId) return;
     router.post(`/attendance/approve/${attendanceId}`, {}, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success('Đã phê duyệt bảng công thành công!'),
+        onSuccess: () => ElMessage.success(t('attendance.batch_approve_success')),
     });
 };
 
 // Phê duyệt hàng loạt
 const handleBulkApprove = () => {
     if (!selectedRowIds.value.length) return;
-    ElMessageBox.confirm(`Bạn có chắc chắn muốn phê duyệt đồng loạt ${selectedRowIds.value.length} bảng công đã chọn?`, 'Xác nhận duyệt hàng loạt', {
-        type: 'warning',
-        confirmButtonText: 'Duyệt tất cả',
-        cancelButtonText: 'Hủy',
-    }).then(() => {
+    ElMessageBox.confirm(
+        t('attendance.batch_approve_confirm_msg', { count: selectedRowIds.value.length }),
+        t('attendance.batch_approve_confirm_title'),
+        {
+            type: 'warning',
+            confirmButtonText: t('common.confirm'),
+            cancelButtonText: t('common.cancel'),
+        }
+    ).then(() => {
         router.post('/attendance/bulk-approve', {
             ids: selectedRowIds.value,
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 selectedRowIds.value = [];
-                ElMessage.success('Đã phê duyệt hàng loạt thành công!');
+                ElMessage.success(t('attendance.batch_approve_success'));
             },
         });
     }).catch(() => {});
@@ -328,7 +335,7 @@ const handleConfirmReject = () => {
         onSuccess: () => {
             isRejectDialogVisible.value = false;
             rejectForm.reset();
-            ElMessage.success('Đã từ chối bảng công và yêu cầu nhân viên giải trình/bổ sung đơn.');
+            ElMessage.success(t('attendance.dialog_reject_success'));
         },
     });
 };
@@ -340,7 +347,7 @@ const handleSubmitTimesheet = (empId?: number | null) => {
         employee_id: empId || selectedEmpId.value,
     }, {
         preserveScroll: true,
-        onSuccess: () => ElMessage.success(`Đã nộp bảng công tháng ${props.monthYear} lên Quản lý phê duyệt!`),
+        onSuccess: () => ElMessage.success(t('attendance.submit_confirm_msg', { month: props.monthYear })),
     });
 };
 
@@ -348,12 +355,12 @@ const handleSubmitTimesheet = (empId?: number | null) => {
 const handleToggleLock = () => {
     const nextLockState = !props.isLocked;
     const confirmText = nextLockState
-        ? `Bạn có chắc chắn muốn KHÓA kỳ công tháng ${props.monthYear}? Sau khi khóa, dữ liệu sẽ bất biến và chuyển sang tính lương.`
-        : `Bạn có chắc chắn muốn MỞ KHÓA kỳ công tháng ${props.monthYear}?`;
+        ? t('attendance.lock_confirm_text', { month: props.monthYear })
+        : t('attendance.unlock_confirm_text', { month: props.monthYear });
 
-    ElMessageBox.confirm(confirmText, 'Xác nhận thay đổi trạng thái kỳ công', {
-        confirmButtonText: 'Đồng ý',
-        cancelButtonText: 'Hủy',
+    ElMessageBox.confirm(confirmText, t('attendance.lock_confirm_title'), {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: nextLockState ? 'warning' : 'info',
     }).then(() => {
         router.post('/attendance/lock-month', {
@@ -361,7 +368,7 @@ const handleToggleLock = () => {
             lock: nextLockState,
         }, {
             preserveScroll: true,
-            onSuccess: () => ElMessage.success(nextLockState ? 'Đã khóa kỳ công!' : 'Đã mở khóa kỳ công!'),
+            onSuccess: () => ElMessage.success(nextLockState ? t('attendance.lock_success') : t('attendance.unlock_success')),
         });
     }).catch(() => {});
 };
@@ -378,7 +385,7 @@ const handleRunCalculate = () => {
     calculateForm.post('/attendance/calculate', {
         onSuccess: () => {
             isCalculateDialogVisible.value = false;
-            ElMessage.success('Đã hoàn thành tính toán lại bảng công qua 7-Pipe Pipeline!');
+            ElMessage.success(t('attendance.dialog_calculate_success'));
         },
     });
 };
@@ -404,7 +411,7 @@ const handleViewRawLogs = async (dateStr: string) => {
         });
         rawLogsList.value = res.data.logs || [];
     } catch (e) {
-        ElMessage.error('Không thể nạp dữ liệu log thô từ máy chấm công.');
+        ElMessage.error(t('attendance.raw_logs_empty'));
     } finally {
         rawLogsLoading.value = false;
     }
@@ -426,36 +433,36 @@ const formatDateStr = (dateStr: string) => {
 const getSubmissionBadge = (status: string) => {
     switch (status) {
         case 'EMPLOYEE_REVIEW':
-            return { label: 'Rà soát', type: 'info', class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
+            return { label: t('attendance.badge_review'), type: 'info', class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
         case 'SUBMITTED':
-            return { label: 'Chờ duyệt', type: 'warning', class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-semibold' };
+            return { label: t('attendance.badge_submitted'), type: 'warning', class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-semibold' };
         case 'MANAGER_APPROVED':
-            return { label: 'Quản lý duyệt', type: 'success', class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-medium' };
+            return { label: t('attendance.badge_manager_approved'), type: 'success', class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 font-medium' };
         case 'HIGHER_MANAGER_APPROVED':
-            return { label: 'Khối đã duyệt', type: 'success', class: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 font-bold' };
+            return { label: t('attendance.badge_higher_approved'), type: 'success', class: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 font-bold' };
         case 'REJECTED':
-            return { label: 'Từ chối / Bổ sung', type: 'danger', class: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 font-bold' };
+            return { label: t('attendance.badge_rejected'), type: 'danger', class: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 font-bold' };
         case 'HR_LOCKED':
-            return { label: 'Đã khóa kỳ', type: 'primary', class: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400' };
+            return { label: t('attendance.badge_locked'), type: 'primary', class: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400' };
         default:
-            return { label: status || 'Chưa nộp', type: 'info', class: 'bg-slate-100 text-slate-600' };
+            return { label: status || t('status.draft'), type: 'info', class: 'bg-slate-100 text-slate-600' };
     }
 };
 
 const getStatusBadge = (status: string) => {
     switch (status) {
         case 'PRESENT':
-            return { text: 'Đúng giờ', class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' };
+            return { text: t('attendance.badge_on_time'), class: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' };
         case 'LATE_EARLY':
-            return { text: 'Muộn / Sớm', class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400' };
+            return { text: t('attendance.badge_late_early'), class: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400' };
         case 'ABSENT':
-            return { text: 'Vắng mặt', class: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400' };
+            return { text: t('attendance.badge_absent'), class: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400' };
         case 'LEAVE_PAID':
-            return { text: 'Nghỉ phép (Có lương)', class: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400' };
+            return { text: t('attendance.badge_paid_leave'), class: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400' };
         case 'LEAVE_UNPAID':
-            return { text: 'Nghỉ không lương', class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
+            return { text: t('attendance.badge_unpaid_leave'), class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
         case 'HOLIDAY':
-            return { text: 'Nghỉ Lễ / Tết (Đ.112)', class: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 font-bold' };
+            return { text: t('attendance.badge_holiday'), class: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 font-bold' };
         default:
             return { text: status, class: 'bg-slate-100 text-slate-600' };
     }
@@ -464,7 +471,7 @@ const getStatusBadge = (status: string) => {
 
 <template>
     <AppLayout>
-        <Head title="Bảng Chấm công & Quản lý Ngày công - Smart-HR" />
+        <Head :title="`${$t('attendance.title')} - Smart-HR Enterprise`" />
 
         <div class="space-y-6">
             <!-- Header & Banner Tiến trình Chu trình Đóng công (Monthly Lifecycle Banner) -->
@@ -478,18 +485,18 @@ const getStatusBadge = (status: string) => {
                             </span>
                             <span v-if="isLocked" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
                                 <Lock class="w-3 h-3" />
-                                Kỳ công đã khóa
+                                {{ $t('status.locked') }}
                             </span>
                             <span v-else class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
                                 <Unlock class="w-3 h-3" />
-                                Kỳ công đang mở
+                                {{ $t('status.unlocked') }}
                             </span>
                         </div>
                         <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-                            Bảng Chấm Công & Quản Lý Công Tháng {{ monthYear }}
+                            {{ $t('attendance.title') }} - {{ monthYear }}
                         </h1>
                         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                            Hệ thống tự động đồng bộ máy chấm công LAN/Cloud • Pipeline 7-Pipe bóc tách công lũy tiến theo BLLĐ 2019.
+                            {{ $t('attendance.subtitle') }}
                         </p>
                     </div>
 
@@ -504,7 +511,7 @@ const getStatusBadge = (status: string) => {
                             @click="handleSubmitTimesheet()"
                             class="!rounded-xl"
                         >
-                            Nộp bảng công tháng
+                            {{ $t('attendance.submit_month_btn') }}
                         </el-button>
 
                         <!-- Tính toán công -->
@@ -515,7 +522,7 @@ const getStatusBadge = (status: string) => {
                             @click="isCalculateDialogVisible = true"
                             class="!rounded-xl shadow-xs"
                         >
-                            Tính toán công
+                            {{ $t('attendance.calculate_btn') }}
                         </el-button>
 
                         <!-- Khóa / Mở khóa -->
@@ -527,7 +534,7 @@ const getStatusBadge = (status: string) => {
                             plain
                             class="!rounded-xl shadow-xs"
                         >
-                            {{ isLocked ? 'Mở khóa kỳ công' : 'Khóa kỳ công' }}
+                            {{ isLocked ? $t('attendance.unlock_month_btn') : $t('attendance.lock_month_btn') }}
                         </el-button>
                     </div>
                 </div>
@@ -538,7 +545,7 @@ const getStatusBadge = (status: string) => {
                         <div class="flex items-center gap-2">
                             <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
                             <span class="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                                Tiến Trình Chu Trình Chốt Công & Lương Tháng {{ lifecyclePhase?.target_month }}:
+                                {{ $t('attendance.lifecycle_stepper_title', { month: lifecyclePhase?.target_month }) }}
                             </span>
                             <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                                 {{ lifecyclePhase?.phase_title }}
@@ -559,10 +566,10 @@ const getStatusBadge = (status: string) => {
                                 : (lifecyclePhase?.current_step > 1 ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500')"
                         >
                             <div class="flex items-center justify-between text-[11px]">
-                                <span>B1: Rà soát & Đơn</span>
+                                <span>{{ $t('attendance.step_1_title') }}</span>
                                 <span class="font-mono text-[10px]">1-{{ lifecyclePhase?.configs?.emp_review_deadline_day }}</span>
                             </div>
-                            <div class="text-[10px] mt-1 truncate">NV nộp bổ sung đơn</div>
+                            <div class="text-[10px] mt-1 truncate">{{ $t('attendance.step_1_sub') }}</div>
                         </div>
 
                         <!-- Bước 2 -->
@@ -573,10 +580,10 @@ const getStatusBadge = (status: string) => {
                                 : (lifecyclePhase?.current_step > 2 ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500')"
                         >
                             <div class="flex items-center justify-between text-[11px]">
-                                <span>B2: Tự động gửi</span>
-                                <span class="font-mono text-[10px]">Ngày {{ lifecyclePhase?.configs?.auto_submit_day }}</span>
+                                <span>{{ $t('attendance.step_2_title') }}</span>
+                                <span class="font-mono text-[10px]">{{ $t('common.date') }} {{ lifecyclePhase?.configs?.auto_submit_day }}</span>
                             </div>
-                            <div class="text-[10px] mt-1 truncate">Hệ thống auto-submit</div>
+                            <div class="text-[10px] mt-1 truncate">{{ $t('attendance.step_2_sub') }}</div>
                         </div>
 
                         <!-- Bước 3 -->
@@ -587,10 +594,10 @@ const getStatusBadge = (status: string) => {
                                 : (lifecyclePhase?.current_step > 3 ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500')"
                         >
                             <div class="flex items-center justify-between text-[11px]">
-                                <span>B3: Quản lý duyệt</span>
-                                <span class="font-mono text-[10px]">Đến {{ lifecyclePhase?.configs?.manager_approval_deadline_day }}</span>
+                                <span>{{ $t('attendance.step_3_title') }}</span>
+                                <span class="font-mono text-[10px]">≤ {{ lifecyclePhase?.configs?.manager_approval_deadline_day }}</span>
                             </div>
-                            <div class="text-[10px] mt-1 truncate">Trực tiếp phê duyệt</div>
+                            <div class="text-[10px] mt-1 truncate">{{ $t('attendance.step_3_sub') }}</div>
                         </div>
 
                         <!-- Bước 4 -->
@@ -601,10 +608,10 @@ const getStatusBadge = (status: string) => {
                                 : (lifecyclePhase?.current_step > 4 ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500')"
                         >
                             <div class="flex items-center justify-between text-[11px]">
-                                <span>B4: Khối rà soát</span>
-                                <span class="font-mono text-[10px]">Đến {{ lifecyclePhase?.configs?.higher_manager_deadline_day }}</span>
+                                <span>{{ $t('attendance.step_4_title') }}</span>
+                                <span class="font-mono text-[10px]">≤ {{ lifecyclePhase?.configs?.higher_manager_deadline_day }}</span>
                             </div>
-                            <div class="text-[10px] mt-1 truncate">Lãnh đạo bộ phận</div>
+                            <div class="text-[10px] mt-1 truncate">{{ $t('attendance.step_4_sub') }}</div>
                         </div>
 
                         <!-- Bước 5 -->
@@ -615,10 +622,10 @@ const getStatusBadge = (status: string) => {
                                 : (lifecyclePhase?.current_step > 5 ? 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500')"
                         >
                             <div class="flex items-center justify-between text-[11px]">
-                                <span>B5: HR Khóa công</span>
-                                <span class="font-mono text-[10px]">Ngày {{ lifecyclePhase?.configs?.hr_lock_deadline_day }}</span>
+                                <span>{{ $t('attendance.step_5_title') }}</span>
+                                <span class="font-mono text-[10px]">{{ $t('common.date') }} {{ lifecyclePhase?.configs?.hr_lock_deadline_day }}</span>
                             </div>
-                            <div class="text-[10px] mt-1 truncate">Chốt bất biến lịch sử</div>
+                            <div class="text-[10px] mt-1 truncate">{{ $t('attendance.step_5_sub') }}</div>
                         </div>
 
                         <!-- Bước 6 -->
@@ -629,10 +636,10 @@ const getStatusBadge = (status: string) => {
                                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'"
                         >
                             <div class="flex items-center justify-between text-[11px]">
-                                <span>B6: Trả lương</span>
-                                <span class="font-mono text-[10px]">Ngày {{ lifecyclePhase?.configs?.payroll_payment_day }}</span>
+                                <span>{{ $t('attendance.step_6_title') }}</span>
+                                <span class="font-mono text-[10px]">{{ $t('common.date') }} {{ lifecyclePhase?.configs?.payroll_payment_day }}</span>
                             </div>
-                            <div class="text-[10px] mt-1 truncate">Quyết toán chi trả</div>
+                            <div class="text-[10px] mt-1 truncate">{{ $t('attendance.step_6_sub') }}</div>
                         </div>
                     </div>
                 </div>
@@ -652,7 +659,7 @@ const getStatusBadge = (status: string) => {
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
                         >
                             <Calendar class="w-4 h-4" />
-                            Ma Trận Tháng (WorkMonth)
+                            {{ $t('attendance.view_workmonth') }}
                         </button>
 
                         <button
@@ -664,7 +671,7 @@ const getStatusBadge = (status: string) => {
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
                         >
                             <Clock class="w-4 h-4" />
-                            Điểm Danh Theo Ngày (WorkDate)
+                            {{ $t('attendance.view_workdate') }}
                         </button>
 
                         <button
@@ -676,7 +683,7 @@ const getStatusBadge = (status: string) => {
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
                         >
                             <User class="w-4 h-4" />
-                            Chi Tiết Cá Nhân (Personal)
+                            {{ $t('attendance.view_detail') }}
                         </button>
                     </div>
 
@@ -684,11 +691,11 @@ const getStatusBadge = (status: string) => {
                     <div class="flex items-center gap-2.5 flex-wrap">
                         <!-- Chọn tháng (cho workmonth & detail) -->
                         <div v-if="currentView !== 'workdate'" class="flex items-center gap-1.5">
-                            <span class="text-xs text-slate-500 font-medium">Kỳ công:</span>
+                            <span class="text-xs text-slate-500 font-medium">{{ $t('common.month') }}:</span>
                             <el-date-picker
                                 v-model="currentMonth"
                                 type="month"
-                                placeholder="Chọn tháng"
+                                :placeholder="$t('common.month')"
                                 format="YYYY-MM"
                                 value-format="YYYY-MM"
                                 @change="handleNavigate()"
@@ -699,11 +706,11 @@ const getStatusBadge = (status: string) => {
 
                         <!-- Chọn ngày (cho workdate) -->
                         <div v-if="currentView === 'workdate'" class="flex items-center gap-1.5">
-                            <span class="text-xs text-slate-500 font-medium">Ngày xem:</span>
+                            <span class="text-xs text-slate-500 font-medium">{{ $t('common.date') }}:</span>
                             <el-date-picker
                                 v-model="currentWorkDate"
                                 type="date"
-                                placeholder="Chọn ngày"
+                                :placeholder="$t('common.date')"
                                 format="DD/MM/YYYY"
                                 value-format="YYYY-MM-DD"
                                 @change="handleNavigate()"
@@ -716,7 +723,7 @@ const getStatusBadge = (status: string) => {
                         <el-select
                             v-if="currentView !== 'detail'"
                             v-model="filterBranchId"
-                            placeholder="Tất cả chi nhánh"
+                            :placeholder="$t('attendance.filter_all_branches')"
                             clearable
                             @change="handleNavigate()"
                             class="w-40"
@@ -734,7 +741,7 @@ const getStatusBadge = (status: string) => {
                         <el-select
                             v-if="currentView !== 'detail'"
                             v-model="filterDepartmentId"
-                            placeholder="Tất cả phòng ban"
+                            :placeholder="$t('attendance.filter_all_departments')"
                             clearable
                             @change="handleNavigate()"
                             class="w-44"
@@ -752,7 +759,7 @@ const getStatusBadge = (status: string) => {
                         <el-input
                             v-if="currentView !== 'detail'"
                             v-model="searchQuery"
-                            placeholder="Tìm mã, họ tên NV..."
+                            :placeholder="$t('attendance.filter_search_placeholder')"
                             :prefix-icon="Search"
                             clearable
                             @keyup.enter="handleNavigate()"
@@ -766,7 +773,7 @@ const getStatusBadge = (status: string) => {
                             v-if="currentView === 'detail'"
                             v-model="selectedEmpId"
                             @change="handleNavigate()"
-                            placeholder="Chọn nhân viên"
+                            :placeholder="$t('common.employee')"
                             class="w-60"
                             size="default"
                         >
@@ -786,7 +793,7 @@ const getStatusBadge = (status: string) => {
                                 class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
                                 :class="currentMode === 'official' ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs' : 'text-slate-500'"
                             >
-                                Đã duyệt
+                                {{ $t('status.approved') }}
                             </button>
                             <button
                                 type="button"
@@ -794,7 +801,7 @@ const getStatusBadge = (status: string) => {
                                 class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1"
                                 :class="currentMode === 'preview' ? 'bg-amber-500 text-white shadow-xs font-bold' : 'text-slate-500'"
                             >
-                                <span>Tạm tính</span>
+                                <span>{{ $t('status.draft') }}</span>
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-200 animate-ping"></span>
                             </button>
                         </div>
@@ -812,12 +819,12 @@ const getStatusBadge = (status: string) => {
                             @change="handleToggleSelectAll"
                         >
                             <span class="text-xs font-semibold text-indigo-950 dark:text-indigo-200">
-                                Chọn tất cả ({{ selectedRowIds.length }} / {{ workMonthData?.rows?.length || 0 }} nhân sự)
+                                {{ $t('common.select_all') }} ({{ selectedRowIds.length }} / {{ workMonthData?.rows?.length || 0 }})
                             </span>
                         </el-checkbox>
 
                         <span v-if="selectedRowIds.length > 0" class="text-xs text-indigo-600 dark:text-indigo-400">
-                            • Đã chọn <strong>{{ selectedRowIds.length }}</strong> bảng công
+                            • {{ $t('common.selected_count', { count: selectedRowIds.length }) }}
                         </span>
                     </div>
 
@@ -829,7 +836,7 @@ const getStatusBadge = (status: string) => {
                             :icon="CircleCheck"
                             @click="handleBulkApprove"
                         >
-                            Phê duyệt các bảng công đã chọn ({{ selectedRowIds.length }})
+                            {{ $t('attendance.btn_batch_approve', { count: selectedRowIds.length }) }}
                         </el-button>
                     </div>
                 </div>
@@ -850,20 +857,20 @@ const getStatusBadge = (status: string) => {
                                     </th>
                                     <!-- Cột cố định: Nhân viên -->
                                     <th class="p-2.5 min-w-[200px] sticky left-10 z-30 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
-                                        Nhân viên & Phòng ban
+                                        {{ $t('attendance.col_dept_branch') }}
                                     </th>
                                     <!-- Cột tổng kết nhanh -->
                                     <th class="p-2 text-center w-14 border-r border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300">
-                                        Công
+                                        {{ $t('attendance.col_total_std_days') }}
                                     </th>
                                     <th class="p-2 text-center w-14 border-r border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300">
-                                        OT
+                                        {{ $t('attendance.col_total_ot') }}
                                     </th>
                                     <th class="p-2 text-center w-14 border-r border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300">
-                                        Muộn
+                                        {{ $t('attendance.col_total_late') }}
                                     </th>
                                     <th class="p-2 text-center w-28 border-r border-slate-200 dark:border-slate-700 font-semibold text-slate-600 dark:text-slate-300">
-                                        Trạng thái
+                                        {{ $t('attendance.col_status') }}
                                     </th>
                                     <!-- Các cột ngày trong tháng (28 - 31 cột) -->
                                     <th
@@ -877,7 +884,7 @@ const getStatusBadge = (status: string) => {
                                     </th>
                                     <!-- Thao tác -->
                                     <th class="p-2.5 text-center min-w-[130px] sticky right-0 z-30 bg-slate-50 dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-200">
-                                        Thao tác
+                                        {{ $t('common.actions') }}
                                     </th>
                                 </tr>
                             </thead>
@@ -946,7 +953,7 @@ const getStatusBadge = (status: string) => {
                                             {{ getSubmissionBadge(row.submission_status).label }}
                                         </span>
                                         <div v-if="row.submission_type === 'AUTO_SUBMITTED'" class="text-[9px] text-indigo-500 font-semibold mt-0.5">
-                                            (Tự động gửi)
+                                            ({{ $t('attendance.step_2_title') }})
                                         </div>
                                     </td>
 
@@ -966,7 +973,7 @@ const getStatusBadge = (status: string) => {
                                                 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 font-bold': row.days[cal.date].symbol === 'V',
                                                 'text-slate-400': row.days[cal.date].symbol === 'OFF' || row.days[cal.date].symbol === '-',
                                             }"
-                                            :title="`${cal.date}: ${row.days[cal.date].actual_in || 'Chưa in'} -> ${row.days[cal.date].actual_out || 'Chưa out'}`"
+                                            :title="`${cal.date}: ${row.days[cal.date].actual_in || '--:--'} -> ${row.days[cal.date].actual_out || '--:--'}`"
                                         >
                                             <span>{{ row.days[cal.date].symbol }}</span>
                                             <span v-if="row.days[cal.date].is_late" class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-0.5"></span>
@@ -984,7 +991,7 @@ const getStatusBadge = (status: string) => {
                                                 size="small"
                                                 circle
                                                 :icon="Check"
-                                                title="Phê duyệt bảng công"
+                                                :title="$t('common.confirm')"
                                                 @click="handleApproveSingle(row.attendance_id)"
                                             />
 
@@ -995,7 +1002,7 @@ const getStatusBadge = (status: string) => {
                                                 size="small"
                                                 circle
                                                 :icon="Close"
-                                                title="Từ chối yêu cầu giải trình"
+                                                :title="$t('attendance.btn_reject')"
                                                 @click="openRejectDialog(row.attendance_id)"
                                             />
 
@@ -1005,7 +1012,7 @@ const getStatusBadge = (status: string) => {
                                                 size="small"
                                                 circle
                                                 :icon="View"
-                                                title="Xem chi tiết 31 ngày"
+                                                :title="$t('common.detail')"
                                                 @click="viewEmployeeDetail(row.employee_id)"
                                             />
                                         </div>
@@ -1022,27 +1029,27 @@ const getStatusBadge = (status: string) => {
                 <!-- Thẻ thống kê điểm danh ngày -->
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 font-medium">Tổng nhân sự</div>
+                        <div class="text-xs text-slate-500 font-medium">{{ $t('attendance.kpi_total_employees') }}</div>
                         <div class="text-xl font-bold text-slate-800 dark:text-white mt-1">{{ workDateData?.stats?.total_employees || 0 }}</div>
                     </div>
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 font-medium">Có mặt (Đúng giờ)</div>
+                        <div class="text-xs text-slate-500 font-medium">{{ $t('attendance.kpi_present') }}</div>
                         <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ workDateData?.stats?.present_count || 0 }}</div>
                     </div>
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 font-medium">Đi muộn</div>
+                        <div class="text-xs text-slate-500 font-medium">{{ $t('attendance.kpi_late') }}</div>
                         <div class="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ workDateData?.stats?.late_count || 0 }}</div>
                     </div>
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 font-medium">Về sớm</div>
+                        <div class="text-xs text-slate-500 font-medium">{{ $t('attendance.kpi_early') }}</div>
                         <div class="text-xl font-bold text-orange-600 dark:text-orange-400 mt-1">{{ workDateData?.stats?.early_count || 0 }}</div>
                     </div>
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 font-medium">Vắng mặt</div>
+                        <div class="text-xs text-slate-500 font-medium">{{ $t('attendance.kpi_absent') }}</div>
                         <div class="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">{{ workDateData?.stats?.absent_count || 0 }}</div>
                     </div>
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 font-medium">Làm thêm giờ (OT)</div>
+                        <div class="text-xs text-slate-500 font-medium">{{ $t('attendance.kpi_ot') }}</div>
                         <div class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{{ workDateData?.stats?.ot_count || 0 }}</div>
                     </div>
                 </div>
@@ -1055,47 +1062,47 @@ const getStatusBadge = (status: string) => {
                         style="width: 100%"
                         size="default"
                     >
-                        <el-table-column label="Mã NV" prop="user_code" width="110">
+                        <el-table-column :label="$t('attendance.col_user_code')" prop="user_code" width="110">
                             <template #default="{ row }">
                                 <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">{{ row.user_code }}</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Họ và tên" min-width="180">
+                        <el-table-column :label="$t('attendance.col_full_name')" min-width="180">
                             <template #default="{ row }">
                                 <div class="font-medium text-slate-800 dark:text-white">{{ row.full_name }}</div>
                                 <div class="text-xs text-slate-400">{{ row.department_name }} • {{ row.position_title }}</div>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Ca làm việc" min-width="160">
+                        <el-table-column :label="$t('attendance.col_shift')" min-width="160">
                             <template #default="{ row }">
                                 <div class="text-xs font-semibold text-slate-700 dark:text-slate-300">{{ row.shift_name }}</div>
                                 <div class="text-[11px] text-slate-400 font-mono">{{ row.shift_time }}</div>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Vào thực tế" width="120">
+                        <el-table-column :label="$t('attendance.col_actual_in')" width="120">
                             <template #default="{ row }">
                                 <span v-if="row.actual_in" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{{ row.actual_in }}</span>
                                 <span v-else class="text-slate-300 font-mono">--:--:--</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Ra thực tế" width="120">
+                        <el-table-column :label="$t('attendance.col_actual_out')" width="120">
                             <template #default="{ row }">
                                 <span v-if="row.actual_out" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{{ row.actual_out }}</span>
                                 <span v-else class="text-slate-300 font-mono">--:--:--</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Giờ công" width="90" align="center">
+                        <el-table-column :label="$t('attendance.col_std_hours')" width="90" align="center">
                             <template #default="{ row }">
                                 <span class="font-bold text-slate-800 dark:text-white">{{ row.standard_hours }}h</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Muộn/Sớm" width="110" align="center">
+                        <el-table-column :label="$t('attendance.col_late_early')" width="110" align="center">
                             <template #default="{ row }">
                                 <span v-if="row.late_minutes > 0 || row.early_minutes > 0" class="text-rose-600 font-semibold font-mono">
                                     {{ row.late_minutes + row.early_minutes }}p
@@ -1104,14 +1111,14 @@ const getStatusBadge = (status: string) => {
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Giờ OT" width="90" align="center">
+                        <el-table-column :label="$t('attendance.col_ot_hours')" width="90" align="center">
                             <template #default="{ row }">
                                 <span v-if="row.ot_hours > 0" class="text-amber-600 font-bold font-mono">+{{ row.ot_hours }}h</span>
                                 <span v-else class="text-slate-300 font-mono">-</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Trạng thái" width="130" align="center">
+                        <el-table-column :label="$t('attendance.col_status')" width="130" align="center">
                             <template #default="{ row }">
                                 <span
                                     class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium"
@@ -1122,7 +1129,7 @@ const getStatusBadge = (status: string) => {
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Thao tác" width="100" align="center">
+                        <el-table-column :label="$t('common.actions')" width="100" align="center">
                             <template #default="{ row }">
                                 <el-button
                                     type="primary"
@@ -1131,7 +1138,7 @@ const getStatusBadge = (status: string) => {
                                     :icon="View"
                                     @click="viewEmployeeDetail(row.employee_id)"
                                 >
-                                    Chi tiết
+                                    {{ $t('common.detail') }}
                                 </el-button>
                             </template>
                         </el-table-column>
@@ -1144,43 +1151,43 @@ const getStatusBadge = (status: string) => {
                 <!-- KPI Cards Thống kê Tháng cá nhân -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Tổng ngày công chuẩn</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('attendance.summary_std_days') }}</div>
                         <div class="text-2xl font-bold text-slate-800 dark:text-white mt-1">
-                            {{ summary?.total_standard_days || 0 }} <span class="text-xs font-normal text-slate-400">công</span>
+                            {{ summary?.total_standard_days || 0 }} <span class="text-xs font-normal text-slate-400">{{ $t('attendance.summary_unit_workday') }}</span>
                         </div>
-                        <div class="text-xs text-slate-400 mt-1 font-mono">({{ summary?.total_standard_hours || 0 }} giờ)</div>
+                        <div class="text-xs text-slate-400 mt-1 font-mono">({{ summary?.total_standard_hours || 0 }} {{ $t('common.hours') }})</div>
                     </div>
 
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Làm thêm giờ (OT)</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('attendance.summary_ot_hours') }}</div>
                         <div class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-                            {{ summary?.total_ot_hours || 0 }} <span class="text-xs font-normal text-slate-400">giờ</span>
+                            {{ summary?.total_ot_hours || 0 }} <span class="text-xs font-normal text-slate-400">{{ $t('common.hours') }}</span>
                         </div>
-                        <div class="text-xs text-slate-400 mt-1">Đã bóc tách 3 tầng theo NĐ 145</div>
+                        <div class="text-xs text-slate-400 mt-1">{{ $t('attendance.summary_ot_desc') }}</div>
                     </div>
 
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Vi phạm Muộn / Sớm</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('attendance.summary_late_mins') }}</div>
                         <div class="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">
-                            {{ summary?.total_late_minutes || 0 }} <span class="text-xs font-normal text-slate-400">phút</span>
+                            {{ summary?.total_late_minutes || 0 }} <span class="text-xs font-normal text-slate-400">{{ $t('common.minutes') }}</span>
                         </div>
-                        <div class="text-xs text-slate-400 mt-1">Lũy kế vi phạm trong tháng</div>
+                        <div class="text-xs text-slate-400 mt-1">{{ $t('attendance.summary_late_desc') }}</div>
                     </div>
 
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Khấu trừ tiền phạt kỷ luật</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('attendance.summary_penalty') }}</div>
                         <div class="text-2xl font-bold text-slate-800 dark:text-white mt-1">
                             {{ formatVND(summary?.total_penalty_amount || 0) }}
                         </div>
-                        <div class="text-xs text-slate-400 mt-1">Nấc phạt lũy tiến động theo policy</div>
+                        <div class="text-xs text-slate-400 mt-1">{{ $t('attendance.summary_penalty_desc') }}</div>
                     </div>
 
                     <div class="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">Đơn từ đang chờ duyệt</div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $t('attendance.summary_pending_requests') }}</div>
                         <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
                             {{ summary?.pending_requests_count || 0 }}
                         </div>
-                        <div class="text-xs text-slate-400 mt-1">Nghỉ phép, OT & giải trình</div>
+                        <div class="text-xs text-slate-400 mt-1">{{ $t('attendance.summary_pending_desc') }}</div>
                     </div>
                 </div>
 
@@ -1189,10 +1196,10 @@ const getStatusBadge = (status: string) => {
                     <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <span class="font-bold text-slate-800 dark:text-white text-sm">
-                                Chi Tiết Ngày Công Của: {{ selectedEmployee?.full_name }} ({{ selectedEmployee?.user_code }})
+                                {{ $t('attendance.detail_heading', { name: selectedEmployee?.full_name, code: selectedEmployee?.user_code }) }}
                             </span>
                             <span v-if="mode === 'preview'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                                Đang xem Tạm tính
+                                {{ $t('attendance.preview_badge') }}
                             </span>
                         </div>
                         <el-button
@@ -1201,7 +1208,7 @@ const getStatusBadge = (status: string) => {
                             plain
                             @click="handleSubmitTimesheet(selectedEmployee?.id)"
                         >
-                            Nộp bảng công này
+                            {{ $t('attendance.single_submit_btn') }}
                         </el-button>
                     </div>
 
@@ -1211,44 +1218,44 @@ const getStatusBadge = (status: string) => {
                         style="width: 100%"
                         size="small"
                     >
-                        <el-table-column label="Ngày làm việc" width="130">
+                        <el-table-column :label="$t('attendance.col_work_date')" width="130">
                             <template #default="{ row }">
                                 <div class="font-mono font-semibold text-slate-800 dark:text-white">{{ formatDateStr(row.work_date) }}</div>
                                 <div class="text-[11px] text-slate-400">{{ row.day_name }}</div>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Ca làm việc" min-width="150">
+                        <el-table-column :label="$t('attendance.col_shift')" min-width="150">
                             <template #default="{ row }">
                                 <div v-if="row.roster?.shift">
                                     <span class="font-semibold text-slate-700 dark:text-slate-300">{{ row.roster.shift.name }}</span>
                                     <div class="text-[11px] text-slate-400 font-mono">{{ row.roster.shift.start_time }} - {{ row.roster.shift.end_time }}</div>
                                 </div>
-                                <span v-else class="text-slate-400 italic">Không phân ca</span>
+                                <span v-else class="text-slate-400 italic">{{ $t('attendance.col_no_shift') }}</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Vào thực tế" width="110">
+                        <el-table-column :label="$t('attendance.col_actual_in')" width="110">
                             <template #default="{ row }">
                                 <span v-if="row.actual_in" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{{ row.actual_in }}</span>
                                 <span v-else class="text-slate-300 font-mono">--:--:--</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Ra thực tế" width="110">
+                        <el-table-column :label="$t('attendance.col_actual_out')" width="110">
                             <template #default="{ row }">
                                 <span v-if="row.actual_out" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{{ row.actual_out }}</span>
                                 <span v-else class="text-slate-300 font-mono">--:--:--</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Số giờ chuẩn" width="100" align="center">
+                        <el-table-column :label="$t('attendance.col_std_hours')" width="100" align="center">
                             <template #default="{ row }">
                                 <span class="font-bold text-slate-800 dark:text-white">{{ row.standard_hours }}h</span>
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Muộn / Sớm" width="110" align="center">
+                        <el-table-column :label="$t('attendance.col_late_early')" width="110" align="center">
                             <template #default="{ row }">
                                 <div v-if="row.late_minutes > 0 || row.early_minutes > 0">
                                     <span class="text-rose-600 font-semibold font-mono">{{ row.late_minutes + row.early_minutes }}p</span>
@@ -1258,7 +1265,7 @@ const getStatusBadge = (status: string) => {
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Làm thêm (OT)" width="110" align="center">
+                        <el-table-column :label="$t('attendance.col_overtime')" width="110" align="center">
                             <template #default="{ row }">
                                 <div v-if="row.ot_day_hours > 0 || row.ot_night_hours > 0 || row.ot_weekend_hours > 0 || row.ot_holiday_hours > 0">
                                     <span class="text-amber-600 font-bold font-mono">+{{ (row.ot_day_hours + row.ot_night_hours + row.ot_weekend_hours + row.ot_holiday_hours).toFixed(1) }}h</span>
@@ -1267,7 +1274,7 @@ const getStatusBadge = (status: string) => {
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Trạng thái" width="140" align="center">
+                        <el-table-column :label="$t('attendance.col_status')" width="140" align="center">
                             <template #default="{ row }">
                                 <span
                                     class="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
@@ -1278,7 +1285,7 @@ const getStatusBadge = (status: string) => {
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="Đối soát" width="90" align="center">
+                        <el-table-column :label="$t('attendance.col_reconcile')" width="90" align="center">
                             <template #default="{ row }">
                                 <el-button
                                     size="small"
@@ -1298,30 +1305,30 @@ const getStatusBadge = (status: string) => {
             <!-- Dialog: Từ chối Bảng công -->
             <el-dialog
                 v-model="isRejectDialogVisible"
-                title="Từ chối Bảng công & Yêu cầu Bổ sung"
+                :title="$t('attendance.dialog_reject_title')"
                 width="460px"
             >
                 <div class="space-y-4">
                     <p class="text-xs text-slate-500">
-                        Vui lòng nhập lý do từ chối bảng công để nhân viên biết và nộp bổ sung đơn từ / giải trình:
+                        {{ $t('attendance.dialog_reject_label') }}
                     </p>
                     <el-input
                         v-model="rejectForm.reason"
                         type="textarea"
                         :rows="4"
-                        placeholder="Ví dụ: Chưa có đơn xin nghỉ phép ngày 12/09, vui lòng bổ sung đơn..."
+                        :placeholder="$t('attendance.dialog_reject_placeholder')"
                     />
                 </div>
                 <template #footer>
                     <div class="flex items-center justify-end gap-2">
-                        <el-button @click="isRejectDialogVisible = false">Hủy</el-button>
+                        <el-button @click="isRejectDialogVisible = false">{{ $t('common.cancel') }}</el-button>
                         <el-button
                             type="danger"
                             :loading="rejectForm.processing"
                             :disabled="!rejectForm.reason.trim()"
                             @click="handleConfirmReject"
                         >
-                            Xác nhận từ chối
+                            {{ $t('attendance.dialog_reject_confirm_btn') }}
                         </el-button>
                     </div>
                 </template>
@@ -1330,17 +1337,17 @@ const getStatusBadge = (status: string) => {
             <!-- Dialog: Tính toán công lại -->
             <el-dialog
                 v-model="isCalculateDialogVisible"
-                title="Tính toán Bảng công (7-Pipe Progressive Engine)"
+                :title="$t('attendance.dialog_calculate_title')"
                 width="480px"
             >
                 <div class="space-y-4">
                     <div class="p-3 rounded-xl bg-indigo-50/70 text-indigo-900 text-xs leading-relaxed">
-                        Động cơ sẽ chạy tuần tự qua 7 ống xử lý (Ghép cặp In/Out, Khớp ca, Phúc lợi con nhỏ, OT lũy tiến 3 tầng, Nấc phạt muộn & Tần suất).
+                        {{ $t('attendance.dialog_calculate_desc') }}
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1">
-                            <label class="text-xs font-semibold text-slate-700">Từ ngày:</label>
+                            <label class="text-xs font-semibold text-slate-700">{{ $t('common.from_date') }}:</label>
                             <el-date-picker
                                 v-model="calculateForm.from_date"
                                 type="date"
@@ -1350,7 +1357,7 @@ const getStatusBadge = (status: string) => {
                             />
                         </div>
                         <div class="space-y-1">
-                            <label class="text-xs font-semibold text-slate-700">Đến ngày:</label>
+                            <label class="text-xs font-semibold text-slate-700">{{ $t('common.to_date') }}:</label>
                             <el-date-picker
                                 v-model="calculateForm.to_date"
                                 type="date"
@@ -1362,10 +1369,10 @@ const getStatusBadge = (status: string) => {
                     </div>
 
                     <div class="space-y-1">
-                        <label class="text-xs font-semibold text-slate-700">Đối tượng:</label>
+                        <label class="text-xs font-semibold text-slate-700">{{ $t('attendance.calculate_scope_label') }}:</label>
                         <el-select
                             v-model="calculateForm.employee_id"
-                            placeholder="Tất cả nhân viên"
+                            :placeholder="$t('attendance.dialog_calculate_scope_all')"
                             clearable
                             class="w-full"
                         >
@@ -1381,13 +1388,13 @@ const getStatusBadge = (status: string) => {
 
                 <template #footer>
                     <div class="flex items-center justify-end gap-2">
-                        <el-button @click="isCalculateDialogVisible = false">Hủy</el-button>
+                        <el-button @click="isCalculateDialogVisible = false">{{ $t('common.cancel') }}</el-button>
                         <el-button
                             type="primary"
                             :loading="calculateForm.processing"
                             @click="handleRunCalculate"
                         >
-                            Bắt đầu tính toán
+                            {{ $t('attendance.dialog_calculate_btn') }}
                         </el-button>
                     </div>
                 </template>
@@ -1396,12 +1403,12 @@ const getStatusBadge = (status: string) => {
             <!-- Dialog: Xem Log quẹt thẻ thô từ Máy chấm công -->
             <el-dialog
                 v-model="isRawLogsDialogVisible"
-                :title="`Nhật ký Quẹt thẻ Thô Ngày ${currentLogDate}`"
+                :title="$t('attendance.dialog_raw_logs_date', { date: currentLogDate })"
                 width="520px"
             >
                 <div v-loading="rawLogsLoading" class="space-y-3 min-h-[160px]">
                     <div v-if="rawLogsList.length === 0 && !rawLogsLoading" class="text-center py-8 text-slate-400 text-xs">
-                        Không có lượt quẹt thẻ nào được ghi nhận trên máy chấm công trong ngày này.
+                        {{ $t('attendance.raw_logs_empty') }}
                     </div>
 
                     <div v-else class="space-y-2">
@@ -1416,18 +1423,18 @@ const getStatusBadge = (status: string) => {
                                 </span>
                                 <div>
                                     <span class="font-mono font-bold text-slate-800 dark:text-white">{{ log.punch_time }}</span>
-                                    <div class="text-[10px] text-slate-400">Thiết bị ID: {{ log.device_id || 'LAN Machine' }}</div>
+                                    <div class="text-[10px] text-slate-400">{{ $t('attendance.raw_logs_device') }}: {{ log.device_id || 'LAN Machine' }}</div>
                                 </div>
                             </div>
                             <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
-                                {{ log.verify_type || 'Vân tay / Khuôn mặt' }}
+                                {{ log.verify_type || $t('attendance.raw_logs_verify') }}
                             </span>
                         </div>
                     </div>
                 </div>
 
                 <template #footer>
-                    <el-button @click="isRawLogsDialogVisible = false">Đóng</el-button>
+                    <el-button @click="isRawLogsDialogVisible = false">{{ $t('common.close') }}</el-button>
                 </template>
             </el-dialog>
         </div>
