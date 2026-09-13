@@ -132,7 +132,7 @@ func RunSetupWizard(lic *license.LicensePayload) (*AppConfig, error) {
 
 	absPath, _ := filepath.Abs(ConfigFileName)
 	fmt.Printf("\n✓ ĐÃ KHỞI TẠO CẤU HÌNH THÀNH CÔNG TẠI: %s\n", absPath)
-	fmt.Println("======================================================================\n")
+	fmt.Println("======================================================================")
 
 	return cfg, nil
 }

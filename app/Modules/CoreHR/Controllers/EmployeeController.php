@@ -34,6 +34,7 @@ class EmployeeController extends Controller
         $status = $request->query('status');
 
         $query = Employee::query()
+            ->where('tenant_id', $tenantId)
             ->with([
                 'currentTimeline.department.currentVersion',
                 'currentTimeline.position',
@@ -238,12 +239,14 @@ class EmployeeController extends Controller
 
     public function show(int $id): Response
     {
-        $employee = Employee::with([
-            'careerTimelines.department.currentVersion',
-            'careerTimelines.position',
-            'careerTimelines.manager',
-            'contracts',
-        ])->findOrFail($id);
+        $tenantId = (int) (request()->user()?->tenant_id ?? 1);
+        $employee = Employee::where('tenant_id', $tenantId)
+            ->with([
+                'careerTimelines.department.currentVersion',
+                'careerTimelines.position',
+                'careerTimelines.manager',
+                'contracts',
+            ])->findOrFail($id);
 
         $now = Carbon::now();
         $isChildUnder12m = $employee->hasChildUnder12MonthsAt($now);

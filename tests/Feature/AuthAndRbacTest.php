@@ -26,7 +26,7 @@ class AuthAndRbacTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->component('Auth/Login')
-            ->has('demoUsers')
+            ->has('demoUsers', 5)
         );
     }
 

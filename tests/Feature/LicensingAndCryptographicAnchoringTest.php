@@ -82,19 +82,58 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
             'role' => 'SUPER_ADMIN',
             'tenant_id' => $this->tenant->id,
         ]);
+
+        $this->ensureCanonicalLicense();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->ensureCanonicalLicense();
+        parent::tearDown();
+    }
+
+    private function ensureCanonicalLicense(): void
+    {
+        $licPath = base_path('smart-hr.lic');
+        $storageDir = storage_path('license');
+        File::ensureDirectoryExists($storageDir);
+        File::put($licPath, self::CANONICAL_TEST_LICENSE);
+        File::put($storageDir . '/smart-hr.lic', self::CANONICAL_TEST_LICENSE);
+        config(['licensing.author_public_key' => LicenseService::AUTHOR_PUBLIC_KEY]);
+        $this->licenseService->clearCache();
+    }
+
+    private const CANONICAL_TEST_LICENSE = '{
+    "format": "SMARTHR-LIC-V1",
+    "payload": "eyJhbGxvd2VkX2RvbWFpbiI6InNtYXJ0LWhyLnRlc3QiLCJjdXN0b21lcl9uYW1lIjoiQ8O0bmcgVHkgU21hcnQtSFIgVmnhu4d0IE5hbSIsImV4cGlyZXNfYXQiOiIyMDMwLTEyLTMxIiwic2hhcmVkX2htYWNfc2VjcmV0IjoiY2VjYmQ0MDI1YWVlYWQyYTNmOWFjMTYxOTg5YTBhMTg3YjE2Mzc1MGI0MzRlMmE3NDExNGU3MmY0MTI2NjU4MyIsImlzc3VlZF9hdCI6IjIwMjYtMDktMDkgMDg6MzE6MzkifQ==",
+    "signature": "10f94eb01fd4223faa8c44183ddcb687fef7f3bff16451adcdc6d8d7263278607a6a719a31eba0344ab3f355608e6776d200601d2ef88e71684de4836068c60e"
+}';
+
+    /**
+     * Helper sinh keypair Ed25519 cục bộ phục vụ các ca kiểm thử mock
+     */
+    private function generateKeyPair(): array
+    {
+        $keypair = sodium_crypto_sign_keypair();
+        $publicKey = sodium_crypto_sign_publickey($keypair);
+        $secretKey = sodium_crypto_sign_secretkey($keypair);
+
+        return [
+            'public_key' => bin2hex($publicKey),
+            'private_key' => bin2hex($secretKey),
+        ];
     }
 
     /**
-     * 1. Kiểm thử sinh cặp khóa Ed25519
+     * 1. Kiểm thử khóa tác giả Ed25519 nhúng cố định trong hệ thống
      */
-    public function test_author_can_generate_valid_ed25519_keypair(): void
+    public function test_author_public_key_is_valid_ed25519_constant(): void
     {
-        $keys = $this->licenseService->generateKeyPair();
+        $pubKey = LicenseService::AUTHOR_PUBLIC_KEY;
 
-        $this->assertArrayHasKey('public_key', $keys);
-        $this->assertArrayHasKey('private_key', $keys);
-        $this->assertEquals(64, strlen($keys['public_key'])); // 32 bytes hex = 64 ký tự
-        $this->assertEquals(128, strlen($keys['private_key'])); // 64 bytes hex = 128 ký tự
+        $this->assertNotEmpty($pubKey);
+        $this->assertEquals(64, strlen($pubKey)); // 32 bytes hex = 64 ký tự
+        $this->assertTrue(ctype_xdigit($pubKey));
     }
 
     /**
@@ -102,7 +141,7 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
      */
     public function test_create_and_verify_valid_license_file(): void
     {
-        $keys = $this->licenseService->generateKeyPair();
+        $keys = $this->generateKeyPair();
 
         $licenseJson = $this->licenseService->createLicense(
             domain: 'hrm.testcompany.vn',
@@ -126,7 +165,7 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
      */
     public function test_tampered_license_is_rejected(): void
     {
-        $keys = $this->licenseService->generateKeyPair();
+        $keys = $this->generateKeyPair();
 
         $licenseJson = $this->licenseService->createLicense(
             domain: 'hrm.legit.com',
@@ -152,7 +191,7 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
      */
     public function test_expired_license_detection(): void
     {
-        $keys = $this->licenseService->generateKeyPair();
+        $keys = $this->generateKeyPair();
 
         $pastDate = date('Y-m-d', strtotime('-10 days'));
         $licenseJson = $this->licenseService->createLicense(
@@ -243,7 +282,7 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
      */
     public function test_edge_collector_batch_sync_api_succeeds_with_valid_hmac(): void
     {
-        $keys = $this->licenseService->generateKeyPair();
+        $keys = $this->generateKeyPair();
         $licContent = $this->licenseService->createLicense(
             domain: 'hrm.smarthr.vn',
             customerName: 'Kiểm thử Edge Sync',
@@ -402,7 +441,7 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
      */
     public function test_upload_valid_license_content_activates_system(): void
     {
-        $keys = $this->licenseService->generateKeyPair();
+        $keys = $this->generateKeyPair();
         $licContent = $this->licenseService->createLicense(
             domain: 'hrm.upload-test.com',
             customerName: 'Doanh Nghiệp Kích Hoạt Mới',
@@ -433,4 +472,64 @@ class LicensingAndCryptographicAnchoringTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('error');
     }
+
+    /**
+     * 15. Kiểm thử Middleware Tầng 1 cho phép truy cập hệ thống khi license ACTIVE
+     */
+    public function test_middleware_allows_access_when_license_is_active(): void
+    {
+        $response = $this->actingAs($this->adminUser)->get('/dashboard');
+        // Không bị redirect về /licensing
+        $this->assertNotEquals(302, $response->getStatusCode());
+    }
+
+    /**
+     * 16. Kiểm thử Middleware Tầng 1 chặn và chuyển hướng về /licensing khi không có license
+     */
+    public function test_middleware_redirects_to_licensing_when_license_missing_or_expired(): void
+    {
+        // Trỏ đường dẫn license sang file không tồn tại
+        config(['licensing.license_path' => base_path('non_existent.lic')]);
+        config(['licensing.storage_license_path' => storage_path('license/non_existent.lic')]);
+        $this->licenseService->clearCache();
+
+        $response = $this->actingAs($this->adminUser)->get('/dashboard');
+
+        $response->assertRedirect(route('licensing.index'));
+        $response->assertSessionHas('warning');
+    }
+
+    /**
+     * 17. Kiểm thử trang /licensing luôn truy cập được ngay cả khi chưa có license
+     */
+    public function test_licensing_routes_always_accessible_regardless_of_license(): void
+    {
+        config(['licensing.license_path' => base_path('non_existent.lic')]);
+        config(['licensing.storage_license_path' => storage_path('license/non_existent.lic')]);
+        $this->licenseService->clearCache();
+
+        $response = $this->actingAs($this->adminUser)->get('/licensing');
+
+        $response->assertStatus(200);
+    }
+
+    /**
+     * 18. Kiểm thử API request trả về JSON 403 LICENSE_REQUIRED khi license không hợp lệ
+     */
+    public function test_middleware_returns_403_json_for_api_requests_when_license_invalid(): void
+    {
+        config(['licensing.license_path' => base_path('non_existent.lic')]);
+        config(['licensing.storage_license_path' => storage_path('license/non_existent.lic')]);
+        $this->licenseService->clearCache();
+
+        $response = $this->actingAs($this->adminUser)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->get('/dashboard');
+
+        $response->assertStatus(403);
+        $response->assertJson([
+            'error' => 'LICENSE_REQUIRED',
+        ]);
+    }
 }
+

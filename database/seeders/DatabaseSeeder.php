@@ -1666,5 +1666,10 @@ class DatabaseSeeder extends Seeder
         $monthlyService->aggregateMonth($tenantId, $emp3Id, '2026-09');
         $monthlyService->aggregateMonth($tenantId, $emp4Id, '2026-09');
         $monthlyService->aggregateMonth($tenantId, $emp5Id, '2026-09');
+
+        // 22. Bổ sung bộ kịch bản dữ liệu doanh nghiệp thực tế quy mô lớn (Enterprise Scenario Seeder)
+        if (!app()->runningUnitTests()) {
+            $this->call(EnterpriseScenarioSeeder::class);
+        }
     }
 }

@@ -19,8 +19,8 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// --- Authenticated App Routes ---
-Route::middleware('auth')->group(function () {
+// --- Authenticated App Routes (Bảo vệ bởi Auth & License Middleware) ---
+Route::middleware(['auth', 'license'])->group(function () {
     // 1. Dashboard trung tâm
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index']);

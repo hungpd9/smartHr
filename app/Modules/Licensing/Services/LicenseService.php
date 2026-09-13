@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\File;
 
 class LicenseService
 {
+    /**
+     * Khóa công khai của Tác giả (Author Ed25519 Public Key) được nhúng cứng vào mã nguồn lõi.
+     * Khách hàng dù có toàn bộ mã nguồn cũng không thể tự sinh chữ ký hợp lệ nếu không có Private Key.
+     */
+    public const AUTHOR_PUBLIC_KEY = 'd26114cc88643c69ae8534b63442f35808b6d59cc02da54d8dbbe49ebd63ee80';
+
     protected ?array $cachedLicense = null;
 
     /**
@@ -20,22 +26,7 @@ class LicenseService
     }
 
     /**
-     * Sinh cặp khóa Ed25519 (Tác giả giữ Private Key, Public Key nhúng vào Go và Laravel)
-     */
-    public function generateKeyPair(): array
-    {
-        $keypair = sodium_crypto_sign_keypair();
-        $publicKey = sodium_crypto_sign_publickey($keypair);
-        $secretKey = sodium_crypto_sign_secretkey($keypair);
-
-        return [
-            'public_key' => bin2hex($publicKey),
-            'private_key' => bin2hex($secretKey),
-        ];
-    }
-
-    /**
-     * Tác giả tạo tệp bản quyền duy nhất smart-hr.lic cho khách hàng
+     * Tác giả tạo tệp bản quyền duy nhất smart-hr.lic cho khách hàng (dành cho kiểm thử nội bộ/test fixtures)
      */
     public function createLicense(
         string $domain,
@@ -71,10 +62,11 @@ class LicenseService
     public function verifyLicense(string $licenseContent, ?string $publicKeyHex = null): ?array
     {
         try {
-            $publicKeyHex = $publicKeyHex ?? config(
-                'licensing.author_public_key',
-                '2459e6b349932dfcfaa04db0130bc2a197ac46de32354b8e93b068367c81ac2c'
-            );
+            // Hằng số AUTHOR_PUBLIC_KEY là nguồn chân lý bất biến (Source of Truth)
+            // Chỉ cho phép ghi đè qua config trong môi trường kiểm thử tự động (testing)
+            $publicKeyHex = $publicKeyHex 
+                ?? (app()->environment('testing') ? config('licensing.author_public_key') : null)
+                ?? self::AUTHOR_PUBLIC_KEY;
 
             $data = json_decode($licenseContent, true);
             if (!isset($data['payload'], $data['signature']) || ($data['format'] ?? '') !== 'SMARTHR-LIC-V1') {

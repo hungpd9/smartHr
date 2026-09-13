@@ -5,8 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Modules\Licensing\Commands\GenerateKeypairCommand;
-use App\Modules\Licensing\Commands\GenerateLicenseCommand;
+use App\Http\Middleware\EnsureLicenseActiveMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,8 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
-        GenerateKeypairCommand::class,
-        GenerateLicenseCommand::class,
         \App\Modules\Attendance\Commands\AutoSubmitTimesheetsCommand::class,
         \App\Modules\Compliance\Commands\ScanComplianceAlertsCommand::class,
     ])
@@ -28,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserRole::class,
             'perm' => \App\Http\Middleware\CheckMatrixPermission::class,
+            'license' => EnsureLicenseActiveMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

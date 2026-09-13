@@ -13,7 +13,7 @@ return [
     */
     'author_public_key' => env(
         'SMARTHR_AUTHOR_PUBLIC_KEY',
-        '2459e6b349932dfcfaa04db0130bc2a197ac46de32354b8e93b068367c81ac2c'
+        \App\Modules\Licensing\Services\LicenseService::AUTHOR_PUBLIC_KEY
     ),
 
     /*

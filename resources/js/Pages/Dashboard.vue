@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { ElMessage } from 'element-plus';
 import { useThemeAndLocale } from '@/Composables/useThemeAndLocale';
@@ -20,6 +20,7 @@ import {
     SuccessFilled,
     InfoFilled,
     WarningFilled,
+    Right,
 } from '@element-plus/icons-vue';
 
 const props = defineProps<{
@@ -28,9 +29,16 @@ const props = defineProps<{
         todayPunchesCount: number;
         pendingRequestsCount: number;
         activeComplianceAlertsCount: number;
+        urls?: {
+            employees: string;
+            attendance: string;
+            requests: string;
+            compliance: string;
+        };
     };
     analytics?: {
         burnoutData: Array<{
+            employee_id?: number;
             employee_name: string;
             user_code: string;
             ot_hours: number;
@@ -57,6 +65,7 @@ const props = defineProps<{
         };
     };
     todayAttendances: Array<{
+        employee_id?: number;
         code: string;
         name: string;
         dept: string;
@@ -73,16 +82,63 @@ const props = defineProps<{
         desc: string;
     }>;
     policyVersion: string;
+    activeAlertsList?: Array<{
+        id: number;
+        alert_type: string;
+        severity: string;
+        title: string;
+        description: string;
+        employee_name: string;
+        employee_id?: number;
+        user_code?: string;
+        created_at: string;
+    }>;
 }>();
 
 const { t } = useThemeAndLocale();
 
-// Dynamic metrics from backend
+// Dynamic metrics with navigation URLs
 const stats = computed(() => [
-    { title: t('dashboard.kpi_total_employees'), value: props.metrics.totalEmployees.toLocaleString(), change: t('dashboard.actual_db'), icon: User, color: 'indigo' },
-    { title: t('dashboard.kpi_active_today'), value: props.metrics.todayPunchesCount.toLocaleString(), change: t('dashboard.realtime_synced'), icon: CircleCheck, color: 'emerald' },
-    { title: t('dashboard.kpi_pending_approvals'), value: props.metrics.pendingRequestsCount.toLocaleString(), change: t('dashboard.multi_level_approval'), icon: MessageBox, color: 'amber' },
-    { title: t('dashboard.system_alerts'), value: props.metrics.activeComplianceAlertsCount.toLocaleString(), change: t('dashboard.ot_contract_monitor'), icon: Warning, color: 'rose' },
+    {
+        id: 'employees',
+        title: t('dashboard.kpi_total_employees'),
+        value: props.metrics.totalEmployees.toLocaleString(),
+        change: t('dashboard.actual_db'),
+        icon: User,
+        color: 'indigo',
+        url: props.metrics.urls?.employees || '/core-hr',
+        isAlert: false,
+    },
+    {
+        id: 'attendance',
+        title: t('dashboard.kpi_active_today'),
+        value: props.metrics.todayPunchesCount.toLocaleString(),
+        change: t('dashboard.realtime_synced'),
+        icon: CircleCheck,
+        color: 'emerald',
+        url: props.metrics.urls?.attendance || '/attendance',
+        isAlert: false,
+    },
+    {
+        id: 'requests',
+        title: t('dashboard.kpi_pending_approvals'),
+        value: props.metrics.pendingRequestsCount.toLocaleString(),
+        change: t('dashboard.multi_level_approval'),
+        icon: MessageBox,
+        color: 'amber',
+        url: props.metrics.urls?.requests || '/workflow/requests',
+        isAlert: false,
+    },
+    {
+        id: 'alerts',
+        title: t('dashboard.system_alerts'),
+        value: props.metrics.activeComplianceAlertsCount.toLocaleString(),
+        change: t('dashboard.ot_contract_monitor'),
+        icon: Warning,
+        color: 'rose',
+        url: props.metrics.urls?.compliance || '/compliance',
+        isAlert: true,
+    },
 ]);
 
 // Attendance & Career data from backend
@@ -99,6 +155,27 @@ const health = computed(() => props.analytics?.healthIndex || {
     leave: 4,
     absent: 1,
 });
+
+// Navigation helper
+const navigateTo = (url: string) => {
+    router.visit(url);
+};
+
+const navigateToAttendance = (empId?: number) => {
+    if (empId) {
+        router.visit(`/attendance?employee_id=${empId}`);
+    } else {
+        router.visit('/attendance');
+    }
+};
+
+// Compliance Alerts Explanation Modal
+const isAlertsModalOpen = ref(false);
+
+const openAlertsModal = (e?: Event) => {
+    if (e) e.stopPropagation();
+    isAlertsModalOpen.value = true;
+};
 
 // Max value for turnover chart scaling
 const maxTurnoverVal = computed(() => {
@@ -188,31 +265,48 @@ const submitConsent = () => {
                 </div>
             </div>
 
-            <!-- Stats Grid -->
+            <!-- Stats Grid (Clickable Cards with Deep Navigation) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <div
                     v-for="stat in stats"
                     :key="stat.title"
-                    class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md transition"
+                    @click="navigateTo(stat.url)"
+                    class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-500/80 dark:hover:border-indigo-500/80 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
                 >
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ stat.title }}</span>
-                        <div
-                            class="w-10 h-10 rounded-xl flex items-center justify-center"
-                            :class="{
-                                'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400': stat.color === 'indigo',
-                                'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400': stat.color === 'emerald',
-                                'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400': stat.color === 'amber',
-                                'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400': stat.color === 'rose',
-                            }"
-                        >
-                            <el-icon :size="20">
-                                <component :is="stat.icon" />
-                            </el-icon>
+                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">{{ stat.title }}</span>
+                        <div class="flex items-center space-x-1.5">
+                            <button
+                                v-if="stat.isAlert"
+                                @click="openAlertsModal"
+                                class="text-[11px] px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900 transition font-semibold flex items-center gap-1 shrink-0"
+                                :title="t('dashboard.explain_alert_btn')"
+                            >
+                                <el-icon :size="12"><InfoFilled /></el-icon>
+                                <span>Giải thích</span>
+                            </button>
+                            <div
+                                class="w-10 h-10 rounded-xl flex items-center justify-center transition group-hover:scale-105"
+                                :class="{
+                                    'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400': stat.color === 'indigo',
+                                    'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400': stat.color === 'emerald',
+                                    'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400': stat.color === 'amber',
+                                    'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400': stat.color === 'rose',
+                                }"
+                            >
+                                <el-icon :size="20">
+                                    <component :is="stat.icon" />
+                                </el-icon>
+                            </div>
                         </div>
                     </div>
                     <div class="mt-3">
-                        <div class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">{{ stat.value }}</div>
+                        <div class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight flex items-baseline justify-between">
+                            <span>{{ stat.value }}</span>
+                            <span class="text-xs text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition font-medium flex items-center gap-0.5">
+                                Xem ngay <el-icon :size="12"><Right /></el-icon>
+                            </span>
+                        </div>
                         <div class="text-xs text-slate-400 mt-1 flex items-center space-x-1">
                             <span>{{ stat.change }}</span>
                         </div>
@@ -258,11 +352,13 @@ const submitConsent = () => {
                                 <div
                                     v-for="item in burnoutList"
                                     :key="item.user_code"
-                                    class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80"
+                                    @click="navigateToAttendance(item.employee_id)"
+                                    class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-xs transition cursor-pointer group/item"
+                                    title="Nhấn để xem chi tiết chấm công của nhân sự này"
                                 >
                                     <div class="flex items-center justify-between text-xs mb-1.5">
                                         <div class="flex items-center gap-1.5">
-                                            <span class="font-semibold text-slate-800 dark:text-slate-200">{{ item.employee_name }}</span>
+                                            <span class="font-semibold text-slate-800 dark:text-slate-200 group-hover/item:text-indigo-600 dark:group-hover/item:text-indigo-400 transition">{{ item.employee_name }}</span>
                                             <span class="text-[10px] font-mono text-slate-400">({{ item.user_code }})</span>
                                         </div>
                                         <span class="font-mono font-bold" :class="item.percentage >= 90 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'">
@@ -467,14 +563,26 @@ const submitConsent = () => {
                     </div>
 
                     <el-table :data="todayAttendances" size="small" style="width: 100%" stripe>
-                        <el-table-column prop="code" :label="t('dashboard.col_employee_code')" width="100">
+                        <el-table-column prop="code" :label="t('dashboard.col_employee_code')" width="110">
                             <template #default="{ row }">
-                                <span class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{{ row.code }}</span>
+                                <span
+                                    @click="navigateToAttendance(row.employee_id)"
+                                    class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                                    title="Nhấn để xem bảng chấm công của nhân sự này"
+                                >
+                                    {{ row.code }}
+                                </span>
                             </template>
                         </el-table-column>
                         <el-table-column :label="t('dashboard.col_employee_name')">
                             <template #default="{ row }">
-                                <span class="font-medium text-slate-800 dark:text-slate-200 text-sm">{{ row.name }}</span>
+                                <div
+                                    @click="navigateToAttendance(row.employee_id)"
+                                    class="font-medium text-slate-800 dark:text-slate-200 text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer"
+                                    title="Nhấn để xem bảng chấm công của nhân sự này"
+                                >
+                                    {{ row.name }}
+                                </div>
                                 <span class="block text-[11px] text-slate-400">{{ row.dept }}</span>
                             </template>
                         </el-table-column>
@@ -566,6 +674,91 @@ const submitConsent = () => {
                     <el-button type="primary" :disabled="!isConsented" @click="submitConsent">
                         {{ t('dashboard.consent_btn_submit') }}
                     </el-button>
+                </div>
+            </template>
+        </el-dialog>
+
+        <!-- Compliance Alerts Explanation Modal -->
+        <el-dialog
+            v-model="isAlertsModalOpen"
+            :title="t('dashboard.alerts_dialog_title')"
+            width="680px"
+        >
+            <div class="space-y-4">
+                <div class="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-800 dark:text-rose-200 leading-relaxed flex items-start space-x-2.5">
+                    <el-icon :size="18" class="text-rose-600 shrink-0 mt-0.5"><WarningFilled /></el-icon>
+                    <div>
+                        <p class="font-bold mb-0.5">Giám sát Tuân thủ & Phòng ngừa Rủi ro Pháp lý</p>
+                        <p class="text-[11px] opacity-90">{{ t('dashboard.alerts_dialog_desc') }}</p>
+                    </div>
+                </div>
+
+                <div v-if="!activeAlertsList || activeAlertsList.length === 0" class="py-8 text-center text-xs text-slate-400">
+                    Hiện không có cảnh báo vi phạm nào đang kích hoạt. Toàn hệ thống đang tuân thủ tốt Bộ luật Lao động.
+                </div>
+
+                <div v-else class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                    <div
+                        v-for="alert in activeAlertsList"
+                        :key="alert.id"
+                        class="p-3.5 rounded-xl border transition-all"
+                        :class="{
+                            'bg-rose-50/60 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/70': alert.severity === 'CRITICAL',
+                            'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/70': alert.severity === 'WARNING',
+                            'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800': alert.severity === 'INFO',
+                        }"
+                    >
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <el-tag
+                                    :type="alert.severity === 'CRITICAL' ? 'danger' : (alert.severity === 'WARNING' ? 'warning' : 'info')"
+                                    size="small"
+                                    round
+                                    effect="dark"
+                                >
+                                    {{ alert.severity }}
+                                </el-tag>
+                                <span class="font-bold text-xs text-slate-800 dark:text-slate-100">{{ alert.title }}</span>
+                            </div>
+                            <span class="text-[10px] text-slate-400 shrink-0">{{ alert.created_at }}</span>
+                        </div>
+
+                        <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-2">
+                            {{ alert.description }}
+                        </p>
+
+                        <div class="flex items-center justify-between text-[11px] pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
+                            <div class="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <span>Đối tượng:</span>
+                                <span class="font-semibold text-slate-700 dark:text-slate-200">{{ alert.employee_name }}</span>
+                                <span v-if="alert.user_code" class="font-mono text-slate-400">({{ alert.user_code }})</span>
+                            </div>
+                            <button
+                                v-if="alert.employee_id"
+                                @click="navigateToAttendance(alert.employee_id); isAlertsModalOpen = false;"
+                                class="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold flex items-center gap-0.5"
+                            >
+                                <span>Xem bảng công</span>
+                                <el-icon :size="10"><Right /></el-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-slate-400">Bộ luật Lao động 2019 & NĐ 145/2020/NĐ-CP</span>
+                    <div class="flex items-center space-x-2">
+                        <el-button @click="isAlertsModalOpen = false">Đóng</el-button>
+                        <el-button
+                            type="primary"
+                            @click="router.visit('/compliance'); isAlertsModalOpen = false;"
+                            class="!bg-indigo-600 hover:!bg-indigo-700 !border-none"
+                        >
+                            {{ t('dashboard.view_compliance_center') }}
+                        </el-button>
+                    </div>
                 </div>
             </template>
         </el-dialog>

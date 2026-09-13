@@ -12,7 +12,7 @@ import (
 )
 
 // AuthorPublicKeyHex là khóa công khai của tác giả được nhúng cứng vào file nhị phân Go
-const AuthorPublicKeyHex = "2459e6b349932dfcfaa04db0130bc2a197ac46de32354b8e93b068367c81ac2c"
+const AuthorPublicKeyHex = "d26114cc88643c69ae8534b63442f35808b6d59cc02da54d8dbbe49ebd63ee80"
 
 type LicenseFile struct {
 	Format    string `json:"format"`

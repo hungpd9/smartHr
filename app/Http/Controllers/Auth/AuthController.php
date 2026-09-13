@@ -25,17 +25,34 @@ class AuthController extends Controller
             return redirect()->intended(route('dashboard'));
         }
 
-        // Lấy danh sách 5 tài khoản demo để hiển thị nút 1-click test
+        // Lấy danh sách tài khoản demo đại diện: mỗi phân quyền đúng 1 tài khoản
+        $rolesOrder = [
+            UserRole::SUPER_ADMIN->value,
+            UserRole::HR_ADMIN->value,
+            UserRole::DEPARTMENT_MANAGER->value,
+            UserRole::ACCOUNTANT->value,
+            UserRole::EMPLOYEE->value,
+        ];
+
         $demoUsers = User::where('is_active', true)
+            ->orderBy('id', 'asc')
             ->get(['id', 'name', 'email', 'role'])
+            ->unique(fn ($u) => $u->role instanceof UserRole ? $u->role->value : (string) $u->role)
+            ->sortBy(function ($u) use ($rolesOrder) {
+                $val = $u->role instanceof UserRole ? $u->role->value : (string) $u->role;
+                $idx = array_search($val, $rolesOrder, true);
+                return $idx !== false ? $idx : 99;
+            })
+            ->values()
             ->map(function ($u) {
+                $roleEnum = $u->role instanceof UserRole ? $u->role : UserRole::from((string) $u->role);
                 return [
                     'id' => $u->id,
                     'name' => $u->name,
                     'email' => $u->email,
-                    'role' => $u->role->value,
-                    'role_label' => $u->role->label('vi'),
-                    'role_desc' => $u->role->description('vi'),
+                    'role' => $roleEnum->value,
+                    'role_label' => $roleEnum->label('vi'),
+                    'role_desc' => $roleEnum->description('vi'),
                 ];
             });
 
