@@ -33,6 +33,7 @@ import {
     ArrowRight,
 } from '@element-plus/icons-vue';
 import { useBrowserNavigation } from '@/Composables/useNavigationHistory';
+import AppBrandLogo from '@/Components/AppBrandLogo.vue';
 
 const page = usePage();
 const isSidebarCollapsed = ref(false);
@@ -259,15 +260,9 @@ const markAllNotificationsAsRead = () => {
                 >
                     <!-- Brand Header -->
                     <div class="h-16 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-800">
-                        <div class="flex items-center space-x-3 overflow-hidden">
-                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0">
-                                SH
-                            </div>
-                            <div v-show="!isSidebarCollapsed" class="flex flex-col">
-                                <span class="font-bold text-slate-800 dark:text-white leading-tight tracking-tight text-lg">Smart-HR</span>
-                                <span class="text-[11px] text-slate-400 font-medium tracking-wide uppercase">Enterprise HRMS</span>
-                            </div>
-                        </div>
+                        <Link href="/dashboard" class="flex items-center overflow-hidden hover:opacity-90 transition">
+                            <AppBrandLogo :is-collapsed="isSidebarCollapsed" size="md" />
+                        </Link>
                         <button
                             @click="isSidebarCollapsed = !isSidebarCollapsed"
                             class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition"

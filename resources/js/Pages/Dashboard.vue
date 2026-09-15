@@ -21,6 +21,7 @@ import {
     InfoFilled,
     WarningFilled,
     Right,
+    Calendar,
 } from '@element-plus/icons-vue';
 
 const props = defineProps<{
@@ -93,9 +94,13 @@ const props = defineProps<{
         user_code?: string;
         created_at: string;
     }>;
+    isWeekend?: boolean;
+    todayFormatted?: string;
 }>();
 
 const { t } = useThemeAndLocale();
+
+const isWeekendDay = computed(() => props.isWeekend ?? [0, 6].includes(new Date().getDay()));
 
 // Dynamic metrics with navigation URLs
 const stats = computed(() => [
@@ -142,8 +147,8 @@ const stats = computed(() => [
 ]);
 
 // Attendance & Career data from backend
-const todayAttendances = ref(props.todayAttendances);
-const careerEvents = ref(props.careerEvents);
+const todayAttendances = computed(() => props.todayAttendances || []);
+const careerEvents = computed(() => props.careerEvents || []);
 
 // Analytics computations
 const burnoutList = computed(() => props.analytics?.burnoutData || []);
@@ -200,6 +205,11 @@ const departmentColors = [
     { bg: 'bg-purple-500', text: 'text-purple-500', fill: '#a855f7' },
     { bg: 'bg-rose-500', text: 'text-rose-500', fill: '#f43f5e' },
 ];
+
+const getDepartmentColor = (idx: number | string) => {
+    const i = typeof idx === 'number' ? idx : parseInt(String(idx), 10) || 0;
+    return departmentColors[i % departmentColors.length] || departmentColors[0];
+};
 
 // Helper for burnout bar colors
 const getBurnoutProgressColor = (percentage: number) => {
@@ -467,7 +477,7 @@ const submitConsent = () => {
                                     v-for="(dept, idx) in headcountList"
                                     :key="dept.name"
                                     class="h-full transition-all"
-                                    :class="departmentColors[idx % departmentColors.length].bg"
+                                    :class="getDepartmentColor(idx).bg"
                                     :style="{ width: `${(dept.count / totalHeadcount) * 100}%` }"
                                     :title="t('dashboard.headcount_bar_tooltip', { name: dept.name, count: dept.count })"
                                 ></div>
@@ -481,7 +491,7 @@ const submitConsent = () => {
                                     class="flex items-center justify-between text-xs"
                                 >
                                     <div class="flex items-center gap-2 truncate pr-2">
-                                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :class="departmentColors[idx % departmentColors.length].bg"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :class="getDepartmentColor(idx).bg"></span>
                                         <span class="text-slate-700 dark:text-slate-300 font-medium truncate">{{ dept.name }}</span>
                                     </div>
                                     <div class="flex items-center gap-2 flex-shrink-0 font-mono">
@@ -605,6 +615,28 @@ const submitConsent = () => {
                                 <el-tag v-else type="info" size="small" round>{{ row.status }}</el-tag>
                             </template>
                         </el-table-column>
+                        <template #empty>
+                            <div class="py-8 px-4 text-center flex flex-col items-center justify-center">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-3 shadow-xs">
+                                    <el-icon :size="22"><Calendar /></el-icon>
+                                </div>
+                                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    {{ isWeekendDay ? t('dashboard.today_weekend_empty') : t('dashboard.today_no_data') }}
+                                </p>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-md leading-relaxed">
+                                    {{ isWeekendDay ? t('dashboard.today_weekend_desc') : t('dashboard.today_no_data_desc') }}
+                                </p>
+                                <el-button
+                                    size="small"
+                                    type="primary"
+                                    link
+                                    class="mt-3 !text-xs font-medium"
+                                    @click="navigateTo('/attendance')"
+                                >
+                                    {{ t('dashboard.view_full_timesheet') }} &rarr;
+                                </el-button>
+                            </div>
+                        </template>
                     </el-table>
                 </div>
 

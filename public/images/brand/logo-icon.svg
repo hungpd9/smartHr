@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+    <defs>
+        <!-- Primary Gradient (Indigo - Violet - Fuschia) -->
+        <linearGradient id="shIconGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4F46E5" />
+            <stop offset="45%" stop-color="#7C3AED" />
+            <stop offset="100%" stop-color="#A855F7" />
+        </linearGradient>
+
+        <!-- Secondary Ribbon Gradient (Cyan - Sky - Blue) -->
+        <linearGradient id="shIconGradRibbon" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#06B6D4" />
+            <stop offset="50%" stop-color="#0284C7" />
+            <stop offset="100%" stop-color="#4F46E5" />
+        </linearGradient>
+
+        <!-- Light Accents -->
+        <linearGradient id="shIconHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.9" />
+            <stop offset="100%" stop-color="#818CF8" stop-opacity="0.2" />
+        </linearGradient>
+
+        <!-- Glow Shadow -->
+        <filter id="shIconShadow" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#4338CA" flood-opacity="0.3" />
+        </filter>
+    </defs>
+
+    <g filter="url(#shIconShadow)">
+        <!-- Upright Pillar of 'H' (Back layer) -->
+        <path d="M68 34 C68 31.8 69.8 30 72 30 C74.2 30 76 31.8 76 34 L76 72 C76 74.2 74.2 76 72 76 C69.8 76 68 74.2 68 72 Z"
+              fill="url(#shIconGradMain)" opacity="0.85" />
+
+        <!-- Crossbar and lower right base connecting H -->
+        <path d="M52 52 H72" stroke="url(#shIconGradMain)" stroke-width="6" stroke-linecap="round" />
+
+        <!-- Human Figure Head (Center-Top) -->
+        <circle cx="50" cy="22" r="7.5" fill="url(#shIconGradRibbon)" />
+        <circle cx="48" cy="20" r="2.5" fill="#E0F2FE" opacity="0.7" />
+
+        <!-- Dynamic Rostering 'S' Curve & Rising Body -->
+        <!-- S top hook curling across human chest -->
+        <path d="M33 34 C35 28 44 27 50 31 C57 34 58 40 53 47 C47 54 30 55 29 65 C28 73 35 79 45 79 C54 79 60 74 63 69"
+              stroke="url(#shIconGradRibbon)" 
+              stroke-width="7" 
+              stroke-linecap="round" 
+              stroke-linejoin="round" />
+
+        <!-- Dynamic Arm/Spur reaching upward to the right (Growth & AI Precision) -->
+        <path d="M51 36 C55 33 63 26 69 22 C70.5 21 72 22.5 71.2 24 C67 31 61 40 57 45"
+              stroke="url(#shIconHighlight)" 
+              stroke-width="4.5" 
+              stroke-linecap="round" />
+
+        <!-- Precision Sync Sparkle at peak -->
+        <circle cx="71" cy="21" r="2" fill="#38BDF8" />
+    </g>
+</svg>

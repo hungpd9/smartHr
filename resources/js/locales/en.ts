@@ -71,6 +71,15 @@ export const en = {
         system_verified_tooltip: 'System verified with Ed25519 digital signature & DB cryptographic anchoring',
     },
 
+    // Brand Identity & Slogan
+    brand: {
+        name: 'Smart-HR',
+        title: 'Smart-HR Enterprise',
+        tagline: 'Enterprise HRMS & Rostering Platform',
+        slogan: 'Precision in Every Shift, Powering Future Growth',
+        slogan_alt: 'Smart Rostering, Transparent Rewards, Absolute Compliance',
+    },
+
     // 4. Authentication / Login
     auth: {
         brand_title: 'Smart-HR Enterprise',
@@ -261,6 +270,11 @@ export const en = {
         today_title: 'Today Attendance & Swipe Logs',
         today_subtitle: 'Real-time data from the Edge Collector Daemon secured via HMAC-SHA256',
         live_sync_badge: 'Live Sync Active',
+        today_weekend_empty: 'Today is a weekend day off (Sunday)',
+        today_weekend_desc: 'No standard shift roster or swipe records registered from Edge Collector devices.',
+        today_no_data: 'No attendance logs recorded today',
+        today_no_data_desc: 'Records will appear here automatically when employees check in via time attendance devices or mobile app.',
+        view_full_timesheet: 'View Full Monthly Timesheet',
         col_employee_code: 'Emp Code',
         col_employee_name: 'Full Name',
         col_check_in: 'Check-in',

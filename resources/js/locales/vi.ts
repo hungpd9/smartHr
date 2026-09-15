@@ -71,6 +71,15 @@ export const vi = {
         system_verified_tooltip: 'Hệ thống đã xác thực bản quyền Ed25519 & Mã hóa dữ liệu CSDL',
     },
 
+    // Brand Identity & Slogan
+    brand: {
+        name: 'Smart-HR',
+        title: 'Smart-HR Enterprise',
+        tagline: 'Enterprise HRMS & Rostering Platform',
+        slogan: 'Chuẩn xác từng ca kíp • Vững bước mọi tương lai',
+        slogan_alt: 'Phân ca thông minh • Minh bạch quyền lợi • Vững vàng pháp lý',
+    },
+
     // 4. Authentication / Login
     auth: {
         brand_title: 'Smart-HR Enterprise',
@@ -261,6 +270,11 @@ export const vi = {
         today_title: 'Điểm danh & Quẹt thẻ Hôm nay',
         today_subtitle: 'Dữ liệu thời gian thực từ Edge Collector Daemon qua HMAC-SHA256',
         live_sync_badge: 'Đang đồng bộ trực tiếp (Live Sync)',
+        today_weekend_empty: 'Hôm nay là ngày nghỉ cuối tuần (Chủ nhật)',
+        today_weekend_desc: 'Không có ca làm việc tiêu chuẩn hoặc lượt quẹt thẻ nào được ghi nhận từ thiết bị máy chấm công.',
+        today_no_data: 'Chưa có lượt điểm danh nào hôm nay',
+        today_no_data_desc: 'Dữ liệu sẽ tự động hiển thị ngay khi nhân sự quẹt thẻ qua máy chấm công hoặc ứng dụng.',
+        view_full_timesheet: 'Xem Bảng chấm công tổng hợp',
         col_employee_code: 'Mã NV',
         col_employee_name: 'Họ và Tên',
         col_check_in: 'Giờ Vào',

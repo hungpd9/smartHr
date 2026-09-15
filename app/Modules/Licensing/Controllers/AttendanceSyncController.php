@@ -6,6 +6,7 @@ namespace App\Modules\Licensing\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Attendance\Models\RawAttendanceLog;
+use App\Modules\Attendance\Services\AttendancePipelineService;
 use App\Modules\CoreHR\Models\Branch;
 use App\Modules\CoreHR\Models\Employee;
 use App\Modules\Licensing\Services\LicenseService;
@@ -17,7 +18,8 @@ use Illuminate\Support\Facades\Log;
 class AttendanceSyncController extends Controller
 {
     public function __construct(
-        protected LicenseService $licenseService
+        protected LicenseService $licenseService,
+        protected AttendancePipelineService $pipelineService
     ) {}
 
     /**
@@ -81,6 +83,7 @@ class AttendanceSyncController extends Controller
 
         $tenantId = $branch->tenant_id;
         $savedCount = 0;
+        $recalculateTargets = [];
 
         // 4. Lưu từng lượt quẹt thẻ vào bảng raw_attendance_logs
         foreach ($punches as $punch) {
@@ -104,11 +107,22 @@ class AttendanceSyncController extends Controller
                 continue;
             }
 
+            $parsedPunchTime = Carbon::parse($punchTime);
             $rawHash = hash('sha256', json_encode($punch, JSON_UNESCAPED_UNICODE));
+
+            // Đánh dấu đối tượng cần tính lại công (ngay cả khi log đã tồn tại để cập nhật In/Out mới)
+            $workDateStr = $parsedPunchTime->format('Y-m-d');
+            $targetKey = "{$employee->id}_{$workDateStr}";
+            if (!isset($recalculateTargets[$targetKey])) {
+                $recalculateTargets[$targetKey] = [
+                    'employee_id' => (int) $employee->id,
+                    'work_date' => $parsedPunchTime->copy()->startOfDay(),
+                ];
+            }
 
             // Kiểm tra trùng lặp log quẹt thẻ theo employee_id và punch_time
             $exists = RawAttendanceLog::where('employee_id', $employee->id)
-                ->where('punch_time', Carbon::parse($punchTime))
+                ->where('punch_time', $parsedPunchTime)
                 ->exists();
 
             if (!$exists) {
@@ -123,7 +137,7 @@ class AttendanceSyncController extends Controller
                     'tenant_id' => $tenantId,
                     'branch_id' => $branch->id,
                     'employee_id' => $employee->id,
-                    'punch_time' => Carbon::parse($punchTime),
+                    'punch_time' => $parsedPunchTime,
                     'punch_state' => $punchState,
                     'device_sn' => $punch['device_sn'] ?? 'GO-EDGE-COLLECTOR',
                     'verification_mode' => $verifyMode,
@@ -135,13 +149,74 @@ class AttendanceSyncController extends Controller
             }
         }
 
+        // 5. Tự động kích hoạt 7-Pipe Pipeline để tính toán ngay lập tức công ngày
+        $calculatedCount = 0;
+        foreach ($recalculateTargets as $target) {
+            try {
+                $this->pipelineService->calculateDate(
+                    $tenantId,
+                    $target['employee_id'],
+                    $target['work_date']
+                );
+                $calculatedCount++;
+            } catch (\Throwable $e) {
+                Log::error('Lỗi tính công tự động sau khi sync log:', [
+                    'tenant_id' => $tenantId,
+                    'employee_id' => $target['employee_id'],
+                    'work_date' => $target['work_date']->format('Y-m-d'),
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'status' => 'success',
-            'message' => "Đã tiếp nhận và xử lý thành công {$savedCount} bản ghi quẹt thẻ từ Edge Collector.",
+            'message' => "Đã tiếp nhận {$savedCount} bản ghi quẹt thẻ mới và tự động tính công cho {$calculatedCount} nhân sự/ngày.",
             'batch_id' => $batchId,
             'processed_records' => $savedCount,
+            'calculated_days' => $calculatedCount,
             'total_received' => count($punches),
             'timestamp' => now()->toIso8601String(),
         ], 200);
+    }
+
+    /**
+     * Cung cấp danh sách nhân sự đang làm việc tại chi nhánh cho Edge Collector / Simulator
+     */
+    public function employees(Request $request): JsonResponse
+    {
+        $branchCode = $request->header('X-SmartHR-Branch') ?? $request->query('branch_code', 'HN_HQ');
+        $branch = Branch::where('code', $branchCode)->first();
+        if (!$branch) {
+            return response()->json([
+                'error' => "Không tìm thấy chi nhánh với mã [{$branchCode}].",
+            ], 404);
+        }
+
+        $employees = Employee::where('tenant_id', $branch->tenant_id)
+            ->where('status', '!=', 'TERMINATED')
+            ->whereHas('currentTimeline.department', function ($q) use ($branch) {
+                $q->where('branch_id', $branch->id);
+            })
+            ->get(['id', 'user_code', 'attendance_code', 'full_name']);
+
+        if ($employees->isEmpty()) {
+            $employees = Employee::where('tenant_id', $branch->tenant_id)
+                ->where('status', '!=', 'TERMINATED')
+                ->get(['id', 'user_code', 'attendance_code', 'full_name']);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'branch_code' => $branchCode,
+            'branch_name' => $branch->name,
+            'total' => $employees->count(),
+            'employees' => $employees->map(fn ($emp) => [
+                'id' => $emp->id,
+                'user_code' => $emp->user_code,
+                'attendance_code' => $emp->attendance_code,
+                'full_name' => $emp->full_name,
+            ]),
+        ]);
     }
 }

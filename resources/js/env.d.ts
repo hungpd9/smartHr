@@ -11,3 +11,6 @@ declare module '@vue/runtime-core' {
         $t: (key: string, params?: Record<string, string | number>, fallback?: string) => string;
     }
 }
+
+export {};
+

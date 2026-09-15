@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 100" fill="none">
+    <defs>
+        <linearGradient id="fullGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4F46E5" />
+            <stop offset="50%" stop-color="#7C3AED" />
+            <stop offset="100%" stop-color="#A855F7" />
+        </linearGradient>
+        <linearGradient id="fullGradCyan" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#06B6D4" />
+            <stop offset="50%" stop-color="#0284C7" />
+            <stop offset="100%" stop-color="#4F46E5" />
+        </linearGradient>
+        <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4F46E5" />
+            <stop offset="100%" stop-color="#7C3AED" />
+        </linearGradient>
+        <filter id="fullShadow" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#4338CA" flood-opacity="0.25" />
+        </filter>
+    </defs>
+
+    <!-- Logo Icon Group (Left, scaled) -->
+    <g transform="translate(10, 5) scale(0.9)" filter="url(#fullShadow)">
+        <!-- Upright Pillar of 'H' -->
+        <path d="M68 34 C68 31.8 69.8 30 72 30 C74.2 30 76 31.8 76 34 L76 72 C76 74.2 74.2 76 72 76 C69.8 76 68 74.2 68 72 Z"
+              fill="url(#fullGradMain)" opacity="0.85" />
+        <path d="M52 52 H72" stroke="url(#fullGradMain)" stroke-width="6" stroke-linecap="round" />
+        <!-- Head -->
+        <circle cx="50" cy="22" r="7.5" fill="url(#fullGradCyan)" />
+        <circle cx="48" cy="20" r="2.5" fill="#E0F2FE" opacity="0.7" />
+        <!-- S Ribbon -->
+        <path d="M33 34 C35 28 44 27 50 31 C57 34 58 40 53 47 C47 54 30 55 29 65 C28 73 35 79 45 79 C54 79 60 74 63 69"
+              stroke="url(#fullGradCyan)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+        <!-- Rising gesture -->
+        <path d="M51 36 C55 33 63 26 69 22 C70.5 21 72 22.5 71.2 24 C67 31 61 40 57 45"
+              stroke="#38BDF8" stroke-width="4.5" stroke-linecap="round" />
+        <circle cx="71" cy="21" r="2" fill="#38BDF8" />
+    </g>
+
+    <!-- Wordmark & Slogan -->
+    <g transform="translate(105, 0)">
+        <!-- "Smart" Text -->
+        <text x="0" y="52" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="34" font-weight="800" fill="#1E293B" letter-spacing="-0.03em">
+            Smart<tspan fill="#6366F1">-</tspan>
+        </text>
+
+        <!-- "HR" Badge -->
+        <g transform="translate(112, 22)">
+            <rect width="64" height="34" rx="10" fill="url(#badgeGrad)" />
+            <text x="32" y="24" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="20" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.05em">
+                HR
+            </text>
+        </g>
+
+        <!-- "Enterprise" pill / label -->
+        <rect x="184" y="27" width="82" height="24" rx="6" fill="#EEF2FF" />
+        <text x="225" y="43" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#4F46E5" text-anchor="middle" letter-spacing="0.08em">
+            ENTERPRISE
+        </text>
+
+        <!-- Slogan -->
+        <text x="2" y="76" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="12.5" font-weight="500" fill="#64748B" letter-spacing="0.01em">
+            Chuẩn xác từng ca kíp • Vững bước mọi tương lai
+        </text>
+    </g>
+</svg>

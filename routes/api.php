@@ -14,4 +14,5 @@ use App\Modules\Licensing\Controllers\AttendanceSyncController;
 */
 Route::prefix('v1')->group(function () {
     Route::post('/attendance/sync', [AttendanceSyncController::class, 'sync'])->name('api.v1.attendance.sync');
+    Route::get('/attendance/employees', [AttendanceSyncController::class, 'employees'])->name('api.v1.attendance.employees');
 });

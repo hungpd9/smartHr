@@ -14,6 +14,7 @@ import {
     Management,
     Avatar,
 } from '@element-plus/icons-vue';
+import AppBrandLogo from '@/Components/AppBrandLogo.vue';
 
 interface DemoUser {
     id: number;
@@ -130,14 +131,8 @@ const getRoleBadgeColor = (role: string) => {
                 <div class="lg:col-span-7 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xl p-8 sm:p-10 flex flex-col justify-between">
                     <div>
                         <!-- Brand -->
-                        <div class="flex items-center space-x-3 mb-8">
-                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold text-2xl shadow-md shrink-0">
-                                SH
-                            </div>
-                            <div>
-                                <h1 class="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">{{ t('auth.brand_title') }}</h1>
-                                <p class="text-xs text-slate-400 font-medium">{{ t('auth.brand_subtitle') }}</p>
-                            </div>
+                        <div class="mb-8">
+                            <AppBrandLogo size="lg" :show-slogan="true" />
                         </div>
 
                         <div class="mb-6">

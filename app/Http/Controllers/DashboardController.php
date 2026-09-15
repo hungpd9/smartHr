@@ -21,16 +21,18 @@ class DashboardController extends Controller
 {
     public function index(Request $request): Response
     {
+        $tenantId = (int) ($request->user()?->tenant_id ?? 1);
         $today = Carbon::today();
 
         // 1. Thống kê số liệu thời gian thực
-        $totalEmployees = Employee::where('status', '!=', 'TERMINATED')->count();
-        $todayPunchesCount = RawAttendanceLog::whereDate('punch_time', $today)->count();
-        $pendingRequestsCount = ApprovalRequest::where('status', 'PENDING')->count();
-        $activeComplianceAlertsCount = ComplianceAlert::where('is_resolved', false)->count();
+        $totalEmployees = Employee::where('tenant_id', $tenantId)->where('status', '!=', 'TERMINATED')->count();
+        $todayPunchesCount = RawAttendanceLog::where('tenant_id', $tenantId)->whereDate('punch_time', $today)->count();
+        $pendingRequestsCount = ApprovalRequest::where('tenant_id', $tenantId)->where('status', 'PENDING')->count();
+        $activeComplianceAlertsCount = ComplianceAlert::where('tenant_id', $tenantId)->where('is_resolved', false)->count();
 
         // Danh sách tóm tắt cảnh báo tuân thủ chưa giải quyết để giải thích chi tiết
         $activeAlertsList = ComplianceAlert::with('employee')
+            ->where('tenant_id', $tenantId)
             ->where('is_resolved', false)
             ->orderByDesc('created_at')
             ->limit(10)
@@ -49,9 +51,10 @@ class DashboardController extends Controller
                 ];
             });
 
-        // 2. Điểm danh hôm nay
-        $todayAttendances = DailyAttendance::with(['employee', 'roster.shift'])
-            ->where('work_date', $today)
+        // 2. Điểm danh hôm nay (Chỉ lấy dữ liệu thực tế từ CSDL, không mock dữ liệu khi rỗng hoặc ngày nghỉ)
+        $todayAttendances = DailyAttendance::with(['employee.currentTimeline.department.currentVersion', 'roster.shift'])
+            ->where('tenant_id', $tenantId)
+            ->where('work_date', $today->format('Y-m-d'))
             ->limit(10)
             ->get()
             ->map(function ($att) {
@@ -67,26 +70,6 @@ class DashboardController extends Controller
                     'ot' => ($att->ot_day_hours + $att->ot_night_hours) . 'h',
                 ];
             });
-
-        // Nếu chưa có log ngày hôm nay, lấy danh sách nhân viên mẫu
-        if ($todayAttendances->isEmpty()) {
-            $todayAttendances = Employee::with(['careerTimelines.department.currentVersion'])
-                ->limit(5)
-                ->get()
-                ->map(function ($emp) {
-                    return [
-                        'employee_id' => $emp->id,
-                        'code' => $emp->user_code,
-                        'name' => $emp->full_name,
-                        'dept' => $emp->currentTimeline?->department?->currentVersion?->name ?? 'Khối Công nghệ & Phần mềm',
-                        'shift' => 'Ca Hành chính (08:00 - 17:00)',
-                        'in' => '07:55',
-                        'out' => '--:--',
-                        'status' => 'WORKING',
-                        'ot' => '0h',
-                    ];
-                });
-        }
 
         // 3. Cây Timeline Nghề nghiệp mẫu (Effective Dating)
         $careerEvents = EmployeeCareerTimeline::with(['department.currentVersion', 'position'])
@@ -257,6 +240,8 @@ class DashboardController extends Controller
             'careerEvents' => $careerEvents,
             'policyVersion' => $activePolicy?->code ?? 'POLICY_2026_V1',
             'activeAlertsList' => $activeAlertsList,
+            'isWeekend' => $today->isWeekend(),
+            'todayFormatted' => $today->locale('vi')->isoFormat('dddd, DD/MM/YYYY'),
         ]);
     }
 }
