@@ -37,6 +37,20 @@ type SyncBatchPayload struct {
 	SentAt       string            `json:"sent_at"`
 }
 
+type BranchItem struct {
+	ID               int    `json:"id"`
+	Code             string `json:"code"`
+	Name             string `json:"name"`
+	Address          string `json:"address"`
+	IsRemoteOrIsland bool   `json:"is_remote_or_island"`
+}
+
+type BranchesResponse struct {
+	Status   string       `json:"status"`
+	Total    int          `json:"total"`
+	Branches []BranchItem `json:"branches"`
+}
+
 type EmployeeItem struct {
 	ID             int    `json:"id"`
 	UserCode       string `json:"user_code"`
@@ -62,14 +76,20 @@ type SyncResponse struct {
 	Timestamp        string `json:"timestamp"`
 }
 
+type BranchContext struct {
+	Branch    BranchItem
+	DeviceSN  string
+	Employees []EmployeeItem
+}
+
 func main() {
 	serverURL := flag.String("server", "http://smart-hr.test", "URL máy chủ Smart-HR Cloud Backend")
-	branchCode := flag.String("branch", "HN_HQ", "Mã chi nhánh (ví dụ: HN_HQ, DN_HUB, PQ_STORE, HCM_BRANCH)")
+	branchCode := flag.String("branch", "ALL", "Mã chi nhánh (ví dụ: HN_HQ, DN_HUB, PQ_STORE, HCM_BRANCH) hoặc 'ALL' để mô phỏng toàn bộ công ty")
 	dateStr := flag.String("date", time.Now().Format("2006-01-02"), "Ngày cần mô phỏng chấm công (định dạng YYYY-MM-DD)")
 	mode := flag.String("mode", "fast", "Chế độ chạy: 'fast' (bơm tức thì cả ngày), 'daemon' (thời gian thực), 'checkin', 'checkout'")
 	licPath := flag.String("lic", "smart-hr.lic", "Đường dẫn tệp bản quyền smart-hr.lic")
 	secretKey := flag.String("secret", "", "Khóa HMAC Secret Key (nếu muốn ghi đè khóa trong license)")
-	deviceSN := flag.String("device", "ZK-K40-SIMULATOR-01", "Số sê-ri máy chấm công giả lập")
+	deviceSN := flag.String("device", "", "Số sê-ri máy chấm công giả lập (mặc định tự sinh theo chi nhánh: ZK-<BRANCH>-SIM-01)")
 	flag.Parse()
 
 	fmt.Println("======================================================================")
@@ -79,7 +99,6 @@ func main() {
 	fmt.Printf("✓ Chi nhánh:       %s\n", *branchCode)
 	fmt.Printf("✓ Ngày mô phỏng:   %s\n", *dateStr)
 	fmt.Printf("✓ Chế độ vận hành: %s\n", *mode)
-	fmt.Printf("✓ Mã thiết bị:     %s\n", *deviceSN)
 	fmt.Println("----------------------------------------------------------------------")
 
 	// 1. Xác định Khóa bí mật HMAC-SHA256
@@ -93,7 +112,6 @@ func main() {
 			allowedDomain = licPayload.AllowedDomain
 			fmt.Printf("✓ Bản quyền Ed25519 hợp lệ: %s (%s)\n", licPayload.CustomerName, licPayload.AllowedDomain)
 		} else {
-			// Fallback dùng khóa chi nhánh HN_HQ mặc định trong CSDL
 			activeSecret = "d250fe6be5bdc1f9e14bdb55cb93ff4d"
 			fmt.Printf("! Không đọc được %s (%v). Sử dụng khóa bí mật mặc định của chi nhánh.\n", *licPath, err)
 		}
@@ -101,24 +119,97 @@ func main() {
 		fmt.Println("✓ Sử dụng khóa HMAC Secret tùy chỉnh từ dòng lệnh.")
 	}
 
-	// 2. Thu thập danh sách Nhân sự
-	employees := fetchEmployees(*serverURL, *branchCode)
-	if len(employees) == 0 {
-		fmt.Println("! Không thể lấy danh sách qua API. Sử dụng danh sách nhân sự mẫu dự phòng (EMP001 -> EMP019).")
-		employees = getFallbackEmployees()
-	}
-	fmt.Printf("✓ Danh sách mô phỏng: %d nhân viên hoạt động tại chi nhánh [%s]\n\n", len(employees), *branchCode)
+	// 2. Xác định danh sách chi nhánh mục tiêu
+	isAllBranches := strings.ToUpper(strings.TrimSpace(*branchCode)) == "ALL" || *branchCode == "*"
+	var targetBranches []BranchItem
 
-	// 3. Thực thi theo chế độ
+	if isAllBranches {
+		targetBranches = fetchBranches(*serverURL)
+		fmt.Printf("✓ Chế độ TOÀN CÔNG TY (ALL BRANCHES): Phát hiện %d chi nhánh đang hoạt động.\n", len(targetBranches))
+	} else {
+		targetBranches = []BranchItem{
+			{Code: *branchCode, Name: fmt.Sprintf("Chi nhánh %s", *branchCode)},
+		}
+		fmt.Printf("✓ Chế độ ĐƠN CHI NHÁNH: Mục tiêu [%s]\n", *branchCode)
+	}
+
+	// 3. Chuẩn bị bối cảnh (Context) cho từng chi nhánh
+	var branchContexts []BranchContext
+	totalCompanyEmployees := 0
+
+	for _, b := range targetBranches {
+		sn := *deviceSN
+		if sn == "" {
+			sn = fmt.Sprintf("ZK-%s-SIM-01", b.Code)
+		}
+
+		emps := fetchEmployees(*serverURL, b.Code)
+		if len(emps) == 0 {
+			if !isAllBranches {
+				fmt.Printf("! Không thể lấy danh sách qua API cho [%s]. Sử dụng nhân sự mẫu dự phòng.\n", b.Code)
+				emps = getFallbackEmployees()
+			} else {
+				fmt.Printf("! Chi nhánh [%s - %s]: Không có nhân viên đang hoạt động, bỏ qua.\n", b.Code, b.Name)
+				continue
+			}
+		}
+
+		totalCompanyEmployees += len(emps)
+		branchContexts = append(branchContexts, BranchContext{
+			Branch:    b,
+			DeviceSN:  sn,
+			Employees: emps,
+		})
+
+		fmt.Printf("   • Chi nhánh [%-10s]: %-35s (%2d nhân sự | Device: %s)\n", b.Code, b.Name, len(emps), sn)
+	}
+
+	if len(branchContexts) == 0 {
+		fmt.Println("❌ Không có chi nhánh hợp lệ nào để mô phỏng. Dừng tiến trình.")
+		os.Exit(1)
+	}
+
+	fmt.Printf("\n✓ Tổng cộng: %d nhân viên trên toàn hệ thống sẵn sàng mô phỏng.\n", totalCompanyEmployees)
+	fmt.Println("----------------------------------------------------------------------")
+
+	// 4. Thực thi theo chế độ
 	switch *mode {
 	case "fast":
-		runFastSimulation(*serverURL, *branchCode, allowedDomain, activeSecret, *deviceSN, *dateStr, employees)
+		totalProcessed := 0
+		totalCalculated := 0
+		for idx, bc := range branchContexts {
+			fmt.Printf("\n🏢 [%d/%d] BẮT ĐẦU MÔ PHỎNG CHI NHÁNH: %s (%s) - %d nhân sự\n", idx+1, len(branchContexts), bc.Branch.Name, bc.Branch.Code, len(bc.Employees))
+			rec, calc := runFastSimulation(*serverURL, bc.Branch.Code, allowedDomain, activeSecret, bc.DeviceSN, *dateStr, bc.Employees)
+			totalProcessed += rec
+			totalCalculated += calc
+		}
+
+		if len(branchContexts) > 1 {
+			fmt.Println("\n======================================================================")
+			fmt.Println("🎉 HOÀN TẤT MÔ PHỎNG CHẤM CÔNG TOÀN CÔNG TY (ALL BRANCHES)")
+			fmt.Println("======================================================================")
+			fmt.Printf("✓ Tổng số chi nhánh:          %d chi nhánh\n", len(branchContexts))
+			fmt.Printf("✓ Tổng số nhân sự tham gia:    %d nhân viên\n", totalCompanyEmployees)
+			fmt.Printf("✓ Tổng bản ghi quẹt thẻ (log): %d lượt Check-in/Check-out\n", totalProcessed)
+			fmt.Printf("✓ Tổng ngày công đã tính:      %d ngày công (qua 7-Pipe Pipeline)\n", totalCalculated)
+			fmt.Println("👉 Toàn bộ Bảng Chấm Công (/attendance) của công ty đã sẵn sàng để kiểm thử!")
+		}
+
 	case "checkin":
-		runCheckInOnly(*serverURL, *branchCode, allowedDomain, activeSecret, *deviceSN, *dateStr, employees)
+		for idx, bc := range branchContexts {
+			fmt.Printf("[%d/%d] Gửi Check-in chi nhánh [%s]...\n", idx+1, len(branchContexts), bc.Branch.Code)
+			runCheckInOnly(*serverURL, bc.Branch.Code, allowedDomain, activeSecret, bc.DeviceSN, *dateStr, bc.Employees)
+		}
+
 	case "checkout":
-		runCheckOutOnly(*serverURL, *branchCode, allowedDomain, activeSecret, *deviceSN, *dateStr, employees)
+		for idx, bc := range branchContexts {
+			fmt.Printf("[%d/%d] Gửi Check-out chi nhánh [%s]...\n", idx+1, len(branchContexts), bc.Branch.Code)
+			runCheckOutOnly(*serverURL, bc.Branch.Code, allowedDomain, activeSecret, bc.DeviceSN, *dateStr, bc.Employees)
+		}
+
 	case "daemon":
-		runRealtimeDaemon(*serverURL, *branchCode, allowedDomain, activeSecret, *deviceSN, employees)
+		runRealtimeDaemonMultiBranch(*serverURL, allowedDomain, activeSecret, branchContexts)
+
 	default:
 		fmt.Printf("❌ Chế độ '%s' không hợp lệ. Hãy chọn: fast, daemon, checkin, checkout.\n", *mode)
 		os.Exit(1)
@@ -126,22 +217,20 @@ func main() {
 }
 
 // runFastSimulation sinh toàn bộ dữ liệu quẹt thẻ của cả ngày và gửi ngay lập tức
-func runFastSimulation(serverURL, branchCode, domain, secret, deviceSN, dateStr string, employees []EmployeeItem) {
-	fmt.Printf("[1/3] Đang lập lịch và sinh dữ liệu quẹt thẻ thực tế cho ngày %s...\n", dateStr)
+func runFastSimulation(serverURL, branchCode, domain, secret, deviceSN, dateStr string, employees []EmployeeItem) (int, int) {
+	fmt.Printf("   [1/3] Lập lịch & sinh quẹt thẻ ngẫu nhiên cho ngày %s...\n", dateStr)
 
-	// Xáo trộn danh sách để phân nhóm ngẫu nhiên chân thực
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	shuffled := make([]EmployeeItem, len(employees))
 	copy(shuffled, employees)
 	r.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
 
 	total := len(shuffled)
-	// Tỷ lệ: 80% - 90% đúng giờ, 10% - 15% đi muộn, 1-2 người vắng
 	onTimeCount := int(float64(total) * 0.85)
-	if onTimeCount >= total {
+	if onTimeCount >= total && total > 2 {
 		onTimeCount = total - 2
 	}
-	lateCount := total - onTimeCount - 1 // 1 người vắng mặt
+	lateCount := total - onTimeCount - 1
 	if lateCount < 1 && total > 2 {
 		lateCount = 1
 	}
@@ -150,15 +239,14 @@ func runFastSimulation(serverURL, branchCode, domain, secret, deviceSN, dateStr 
 	lateGroup := shuffled[onTimeCount : onTimeCount+lateCount]
 	absentGroup := shuffled[onTimeCount+lateCount:]
 
-	fmt.Printf("   -> Nhóm 1: %d nhân sự ĐÚNG GIỜ (Check-in 07:40 - 08:05)\n", len(onTimeGroup))
-	fmt.Printf("   -> Nhóm 2: %d nhân sự ĐI MUỘN (Check-in 08:20 - 08:45)\n", len(lateGroup))
-	fmt.Printf("   -> Nhóm 3: %d nhân sự VẮNG MẶT (Không quẹt thẻ)\n", len(absentGroup))
+	fmt.Printf("      -> Nhóm 1 (Đúng giờ 07:40 - 08:05): %d nhân sự\n", len(onTimeGroup))
+	fmt.Printf("      -> Nhóm 2 (Đi muộn 08:20 - 08:45):  %d nhân sự\n", len(lateGroup))
+	fmt.Printf("      -> Nhóm 3 (Vắng mặt):              %d nhân sự\n", len(absentGroup))
 
 	var allPunches []AttendancePunch
 
 	// 1. Sinh Check-in cho nhóm Đúng giờ: 07:40:00 - 08:04:59
 	for _, emp := range onTimeGroup {
-		// 07:40 đến 08:05 (ngẫu nhiên giây từ 7*3600+40*60 đến 8*3600+4*60+59)
 		inSec := randomBetween(r, 7*3600+40*60, 8*3600+4*60+59)
 		inTime := formatTimeOfDay(dateStr, inSec)
 
@@ -185,16 +273,14 @@ func runFastSimulation(serverURL, branchCode, domain, secret, deviceSN, dateStr 
 		})
 	}
 
-	// 3. Sinh Check-out cho tất cả nhân sự đã vào ca: 17:00:00 - 18:30:00
+	// 3. Sinh Check-out: 17:00:00 - 18:30:00
 	attendedEmployees := append(onTimeGroup, lateGroup...)
 	for idx, emp := range attendedEmployees {
 		var outSec int
 		if idx%3 == 0 {
-			// Làm thêm giờ OT: 17:35 đến 18:45
-			outSec = randomBetween(r, 17*3600+35*60, 18*3600+45*60)
+			outSec = randomBetween(r, 17*3600+35*60, 18*3600+45*60) // OT
 		} else {
-			// Về đúng giờ: 17:01 đến 17:15
-			outSec = randomBetween(r, 17*3600+1*60, 17*3600+15*60)
+			outSec = randomBetween(r, 17*3600+1*60, 17*3600+15*60) // Đúng giờ
 		}
 
 		outTime := formatTimeOfDay(dateStr, outSec)
@@ -207,45 +293,36 @@ func runFastSimulation(serverURL, branchCode, domain, secret, deviceSN, dateStr 
 		})
 	}
 
-	// Sắp xếp các bản ghi theo thời gian quẹt thẻ tăng dần
+	// Sắp xếp thời gian quẹt thẻ tăng dần
 	sort.Slice(allPunches, func(i, j int) bool {
 		return allPunches[i].PunchTime < allPunches[j].PunchTime
 	})
 
-	fmt.Printf("\n[2/3] Đã sinh tổng cộng %d lượt quẹt thẻ (Check-in + Check-out). Đang đóng gói & ký số HMAC-SHA256...\n", len(allPunches))
-
-	// In bảng preview tóm tắt
+	fmt.Printf("   [2/3] Đã sinh %d lượt quẹt thẻ. Đang đóng gói & ký số HMAC-SHA256...\n", len(allPunches))
 	printPunchesPreview(allPunches)
 
-	// Gửi lên máy chủ Laravel Core
-	batchID := fmt.Sprintf("SIM_%s_%d", strings.ReplaceAll(dateStr, "-", ""), time.Now().Unix()%100000)
+	batchID := fmt.Sprintf("SIM_%s_%s_%d", branchCode, strings.ReplaceAll(dateStr, "-", ""), time.Now().Unix()%10000)
 	resp, err := sendBatch(serverURL, branchCode, domain, secret, batchID, allPunches)
 	if err != nil {
-		fmt.Printf("\n❌ GỬI THẤT BẠI: %v\n\n", err)
-		os.Exit(1)
+		fmt.Printf("   ❌ LỖI GỬI LÔ [%s]: %v\n", branchCode, err)
+		return 0, 0
 	}
 
-	fmt.Printf("\n[3/3] ✅ KẾT QUẢ PHẢN HỒI TỪ MÁY CHỦ CLOUD CORE:\n")
-	fmt.Printf("   * Trạng thái:            %s\n", resp.Status)
-	fmt.Printf("   * Thông điệp:            %s\n", resp.Message)
-	fmt.Printf("   * Batch ID:              %s\n", resp.BatchID)
-	fmt.Printf("   * Bản ghi thô tiếp nhận: %d\n", resp.ProcessedRecords)
-	fmt.Printf("   * Ngày công đã tính lại: %d (Đã qua 7-Pipe Pipeline)\n\n", resp.CalculatedDays)
-	fmt.Println("👉 Dữ liệu đã đồng bộ tức thì lên Dashboard và Bảng Chấm công (/attendance)!")
+	fmt.Printf("   [3/3] ✅ CLOUD CORE: Tiếp nhận %d log thô | Đã tính công %d nhân sự/ngày\n", resp.ProcessedRecords, resp.CalculatedDays)
+	return resp.ProcessedRecords, resp.CalculatedDays
 }
 
 // runCheckInOnly chỉ sinh lượt Check-in buổi sáng
-func runCheckInOnly(serverURL, branchCode, domain, secret, deviceSN, dateStr string, employees []EmployeeItem) {
+func runCheckInOnly(serverURL, branchCode, domain, secret, deviceSN, dateStr string, employees []EmployeeItem) int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var punches []AttendancePunch
 
 	for idx, emp := range employees {
-		// 85% đúng giờ, 15% muộn
 		var sec int
 		if idx%6 == 0 {
-			sec = randomBetween(r, 8*3600+20*60, 8*3600+40*60) // Sau 8:20
+			sec = randomBetween(r, 8*3600+20*60, 8*3600+40*60)
 		} else {
-			sec = randomBetween(r, 7*3600+40*60, 8*3600+4*60) // 7:40 - 8:04
+			sec = randomBetween(r, 7*3600+40*60, 8*3600+4*60)
 		}
 
 		punches = append(punches, AttendancePunch{
@@ -257,26 +334,27 @@ func runCheckInOnly(serverURL, branchCode, domain, secret, deviceSN, dateStr str
 		})
 	}
 
-	batchID := fmt.Sprintf("SIM_IN_%d", time.Now().Unix()%100000)
+	batchID := fmt.Sprintf("SIM_IN_%s_%d", branchCode, time.Now().Unix()%100000)
 	resp, err := sendBatch(serverURL, branchCode, domain, secret, batchID, punches)
 	if err != nil {
-		fmt.Printf("❌ Lỗi gửi Check-in: %v\n", err)
-		return
+		fmt.Printf("   ❌ Lỗi gửi Check-in [%s]: %v\n", branchCode, err)
+		return 0
 	}
-	fmt.Printf("✓ Đã gửi thành công %d lượt Check-in: %s\n", len(punches), resp.Message)
+	fmt.Printf("   ✓ Chi nhánh [%s]: Gửi thành công %d lượt Check-in (%s)\n", branchCode, len(punches), resp.Message)
+	return len(punches)
 }
 
 // runCheckOutOnly chỉ sinh lượt Check-out buổi chiều
-func runCheckOutOnly(serverURL, branchCode, domain, secret, deviceSN, dateStr string, employees []EmployeeItem) {
+func runCheckOutOnly(serverURL, branchCode, domain, secret, deviceSN, dateStr string, employees []EmployeeItem) int {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var punches []AttendancePunch
 
 	for idx, emp := range employees {
 		var sec int
 		if idx%3 == 0 {
-			sec = randomBetween(r, 17*3600+35*60, 18*3600+30*60) // OT
+			sec = randomBetween(r, 17*3600+35*60, 18*3600+30*60)
 		} else {
-			sec = randomBetween(r, 17*3600+1*60, 17*3600+15*60) // Đúng giờ
+			sec = randomBetween(r, 17*3600+1*60, 17*3600+15*60)
 		}
 
 		punches = append(punches, AttendancePunch{
@@ -288,20 +366,22 @@ func runCheckOutOnly(serverURL, branchCode, domain, secret, deviceSN, dateStr st
 		})
 	}
 
-	batchID := fmt.Sprintf("SIM_OUT_%d", time.Now().Unix()%100000)
+	batchID := fmt.Sprintf("SIM_OUT_%s_%d", branchCode, time.Now().Unix()%100000)
 	resp, err := sendBatch(serverURL, branchCode, domain, secret, batchID, punches)
 	if err != nil {
-		fmt.Printf("❌ Lỗi gửi Check-out: %v\n", err)
-		return
+		fmt.Printf("   ❌ Lỗi gửi Check-out [%s]: %v\n", branchCode, err)
+		return 0
 	}
-	fmt.Printf("✓ Đã gửi thành công %d lượt Check-out: %s\n", len(punches), resp.Message)
+	fmt.Printf("   ✓ Chi nhánh [%s]: Gửi thành công %d lượt Check-out (%s)\n", branchCode, len(punches), resp.Message)
+	return len(punches)
 }
 
-// runRealtimeDaemon chạy thường trực theo nhịp đồng hồ thời gian thực
-func runRealtimeDaemon(serverURL, branchCode, domain, secret, deviceSN string, employees []EmployeeItem) {
-	fmt.Println("🚀 BẮT ĐẦU CHẾ ĐỘ THỜI GIAN THỰC (REALTIME DAEMON)...")
-	fmt.Println("   * 07:40 - 08:05: Tự động gửi Check-in (80% - 90% nhân sự)")
-	fmt.Println("   * 08:20 - 08:45: Tự động gửi Check-in số nhân sự đi muộn còn lại")
+// runRealtimeDaemonMultiBranch chạy thường trực theo nhịp đồng hồ thời gian thực cho toàn bộ các chi nhánh
+func runRealtimeDaemonMultiBranch(serverURL, domain, secret string, branchContexts []BranchContext) {
+	fmt.Println("🚀 BẮT ĐẦU CHẾ ĐỘ THỜI GIAN THỰC ĐA CHI NHÁNH (REALTIME DAEMON)...")
+	fmt.Printf("   * Số chi nhánh theo dõi: %d chi nhánh\n", len(branchContexts))
+	fmt.Println("   * 07:40 - 08:05: Tự động gửi Check-in Đúng giờ")
+	fmt.Println("   * 08:20 - 08:45: Tự động gửi Check-in Đi muộn")
 	fmt.Println("   * 17:00 - 18:00: Tự động gửi Check-out")
 	fmt.Println("----------------------------------------------------------------------")
 
@@ -322,7 +402,6 @@ func runRealtimeDaemon(serverURL, branchCode, domain, secret, deviceSN string, e
 			fmt.Println("\nĐang dừng Realtime Daemon an toàn...")
 			return
 		case now := <-ticker.C:
-			// Reset trạng thái khi qua ngày mới
 			if now.Day() != lastDay {
 				sentTodayOnTime = false
 				sentTodayLate = false
@@ -336,22 +415,28 @@ func runRealtimeDaemon(serverURL, branchCode, domain, secret, deviceSN string, e
 
 			// Khung 1: 07:40 - 08:05
 			if !sentTodayOnTime && ((hour == 7 && minute >= 40) || (hour == 8 && minute <= 5)) {
-				fmt.Printf("\n⏰ [%s] Đến khung 07:40 - 08:05: Đang gửi lượt Check-in Đúng giờ...\n", now.Format("15:04:05"))
-				runCheckInOnly(serverURL, branchCode, domain, secret, deviceSN, dateToday, employees)
+				fmt.Printf("\n⏰ [%s] Khung 07:40 - 08:05: Đang gửi Check-in Đúng giờ cho %d chi nhánh...\n", now.Format("15:04:05"), len(branchContexts))
+				for _, bc := range branchContexts {
+					runCheckInOnly(serverURL, bc.Branch.Code, domain, secret, bc.DeviceSN, dateToday, bc.Employees)
+				}
 				sentTodayOnTime = true
 			}
 
 			// Khung 2: 08:20 - 08:45
 			if !sentTodayLate && (hour == 8 && minute >= 20 && minute <= 45) {
-				fmt.Printf("\n⏰ [%s] Đến khung sau 08:20: Đang gửi lượt Check-in Đi muộn...\n", now.Format("15:04:05"))
-				runCheckInOnly(serverURL, branchCode, domain, secret, deviceSN, dateToday, employees)
+				fmt.Printf("\n⏰ [%s] Khung sau 08:20: Đang gửi Check-in Đi muộn cho %d chi nhánh...\n", now.Format("15:04:05"), len(branchContexts))
+				for _, bc := range branchContexts {
+					runCheckInOnly(serverURL, bc.Branch.Code, domain, secret, bc.DeviceSN, dateToday, bc.Employees)
+				}
 				sentTodayLate = true
 			}
 
 			// Khung 3: 17:00 - 18:00
 			if !sentTodayCheckOut && (hour >= 17 && hour < 18) {
-				fmt.Printf("\n⏰ [%s] Đến khung 17:00 - 18:00: Đang gửi lượt Check-out...\n", now.Format("15:04:05"))
-				runCheckOutOnly(serverURL, branchCode, domain, secret, deviceSN, dateToday, employees)
+				fmt.Printf("\n⏰ [%s] Khung 17:00 - 18:00: Đang gửi Check-out cho %d chi nhánh...\n", now.Format("15:04:05"), len(branchContexts))
+				for _, bc := range branchContexts {
+					runCheckOutOnly(serverURL, bc.Branch.Code, domain, secret, bc.DeviceSN, dateToday, bc.Employees)
+				}
 				sentTodayCheckOut = true
 			}
 		}
@@ -385,7 +470,7 @@ func sendBatch(serverURL, branchCode, domain, secretHex, batchID string, punches
 	req.Header.Set("X-SmartHR-Signature", signature)
 	req.Header.Set("X-SmartHR-Branch", branchCode)
 
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("không thể kết nối tới máy chủ (%s): %w", reqURL, err)
@@ -414,6 +499,33 @@ func calculateHMAC(data []byte, secretHex string) string {
 	h := hmac.New(sha256.New, secretBytes)
 	h.Write(data)
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func fetchBranches(serverURL string) []BranchItem {
+	reqURL := fmt.Sprintf("%s/api/v1/attendance/branches", strings.TrimRight(serverURL, "/"))
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	resp, err := client.Get(reqURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return getFallbackBranches()
+	}
+	defer resp.Body.Close()
+
+	var data BranchesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil || len(data.Branches) == 0 {
+		return getFallbackBranches()
+	}
+
+	return data.Branches
+}
+
+func getFallbackBranches() []BranchItem {
+	return []BranchItem{
+		{ID: 1, Code: "HN_HQ", Name: "Hội sở chính Hà Nội"},
+		{ID: 2, Code: "DN_HUB", Name: "Trung tâm R&D Đà Nẵng"},
+		{ID: 3, Code: "PQ_STORE", Name: "Trung tâm Phân phối Phú Quốc"},
+		{ID: 4, Code: "HCM_BRANCH", Name: "Chi nhánh TP.HCM"},
+	}
 }
 
 func fetchEmployees(serverURL, branchCode string) []EmployeeItem {
@@ -478,20 +590,20 @@ func randomVerifyMode(r *rand.Rand) string {
 }
 
 func printPunchesPreview(punches []AttendancePunch) {
-	fmt.Printf("   %-10s | %-19s | %-10s | %-12s\n", "MÃ NV", "THỜI GIAN QUẸT", "LOẠI", "PHƯƠNG THỨC")
-	fmt.Println("   " + strings.Repeat("-", 60))
+	fmt.Printf("      %-10s | %-19s | %-10s | %-12s\n", "MÃ NV", "THỜI GIAN QUẸT", "LOẠI", "PHƯƠNG THỨC")
+	fmt.Println("      " + strings.Repeat("-", 60))
 
-	previewCount := 8
+	previewCount := 4
 	if len(punches) < previewCount {
 		previewCount = len(punches)
 	}
 
 	for i := 0; i < previewCount; i++ {
 		p := punches[i]
-		fmt.Printf("   %-10s | %-19s | %-10s | %-12s\n", p.UserCode, p.PunchTime, p.PunchState, p.VerificationMode)
+		fmt.Printf("      %-10s | %-19s | %-10s | %-12s\n", p.UserCode, p.PunchTime, p.PunchState, p.VerificationMode)
 	}
 
 	if len(punches) > previewCount {
-		fmt.Printf("   ... và %d bản ghi khác tiếp theo ...\n", len(punches)-previewCount)
+		fmt.Printf("      ... và %d bản ghi khác tiếp theo ...\n", len(punches)-previewCount)
 	}
 }

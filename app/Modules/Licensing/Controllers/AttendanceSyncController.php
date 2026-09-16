@@ -219,4 +219,27 @@ class AttendanceSyncController extends Controller
             ]),
         ]);
     }
+
+    /**
+     * Cung cấp danh sách các chi nhánh đang hoạt động cho Edge Collector / Simulator
+     */
+    public function branches(Request $request): JsonResponse
+    {
+        $branches = Branch::where('is_active', true)
+            ->orderBy('id', 'asc')
+            ->get(['id', 'code', 'name', 'address', 'is_remote_or_island']);
+
+        return response()->json([
+            'status' => 'success',
+            'total' => $branches->count(),
+            'branches' => $branches->map(fn ($b) => [
+                'id' => $b->id,
+                'code' => $b->code,
+                'name' => $b->name,
+                'address' => $b->address,
+                'is_remote_or_island' => (bool)$b->is_remote_or_island,
+            ]),
+        ]);
+    }
 }
+
